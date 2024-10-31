@@ -8,6 +8,7 @@
 #include <QTextEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <iostream>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
