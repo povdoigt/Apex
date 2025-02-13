@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "Removing Qt development libraries and tools..."
+echo "Removing Qt development libraries, tools, and Qt Charts..."
 
 # Remove Qt-related packages
-sudo apt remove --purge -y qtbase5-dev qtchooser qt5-qmake qttools5-dev-tools g++ pkg-config make
+sudo apt remove --purge -y qtbase5-dev qtchooser qt5-qmake qttools5-dev-tools libqt5charts5-dev g++ pkg-config make
 
 # Clean up residual files
 echo "Cleaning up unused dependencies..."
@@ -28,6 +28,12 @@ if pkg-config --version &>/dev/null; then
     echo "Warning: pkg-config is still installed!"
 else
     echo "pkg-config successfully removed."
+fi
+
+if dpkg -l | grep -q libqt5charts5-dev; then
+    echo "Warning: Qt Charts is still installed!"
+else
+    echo "Qt Charts successfully removed."
 fi
 
 echo "Uninstallation process complete."
