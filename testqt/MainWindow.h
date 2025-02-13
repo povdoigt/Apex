@@ -1,4 +1,4 @@
-#include <QApplication>
+/*#include <QApplication>
 #include <QMainWindow>
 #include <QWidget>
 #include <QVBoxLayout>
@@ -8,7 +8,10 @@
 #include <QTextEdit>
 #include <QListWidget>
 #include <QPushButton>
-#include <iostream>
+#include <iostream>*/
+#include <QApplication>
+#include <QMainWindow>
+#include <QGridLayout>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
