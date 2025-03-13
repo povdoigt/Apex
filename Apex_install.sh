@@ -1,42 +1,38 @@
 #!/bin/bash
-# This script is intended to be used when the app is being worcked on.
-# It streamline the uptate prosess by uninstalling the previous vertion, pulling from git the new vertion before installing it.
-# While it is in the git file it expected to be one root above it to function correctly (e.g. : in the file "station" there is this shell scrpit and the file "Apex" witch is liked to the git)
+# This script is intended to be used when the app is being worked on.
+# It streamlines the update process by uninstalling the previous version, pulling the new version from git, and then installing it.
+# While it is in the git repository, it is expected to be one level above it for correct functionality (e.g., if the script is in the "station" directory, there is also an "Apex" directory linked to the git repository).
 
-
-
-# Clean previous install
+# Clean previous installation
 # Specify the directory and the file name
 dir="Apex"
-ufile="uninstalation.sh"
-ifile="instalation.sh"
+ufile="uninstallation.sh"
+ifile="installation.sh"
 
-
-if [ -f "$dir" ]; then # Check to see is Apex is allready cloned, I could not think of a way to make it worck without a previous clone.
-    
+if [ -d "$dir" ]; then # Check if Apex directory is already cloned
     echo "Instance of Apex found"
-    cd "$dir" || exit 1  # Change to the directory
+    cd "$dir" || exit 1  # Change to the directory or exit if failed
 
-    # Unistall previous instalation of the app to prevent potential error
-    if [ -f "$ufile"] #I run the uninstalation file only if I find it to prevent error
-        echo "Starting uninstalation..."
-        bash ./uninstalation.sh
-        echo "Uninstalation done."
+    # Uninstall previous installation to prevent potential errors
+    if [ -f "$ufile" ]; then  # Run the uninstallation script only if it exists
+        echo "Starting uninstallation..."
+        bash "$ufile"
+        echo "Uninstallation done."
     else
-        echo "No unistall file found"
+        echo "No uninstallation file found."
     fi
     
-    # Pull the new vertion of the project from git
+    # Pull the new version of the project from git
     git pull
 
     # Install the app
-    if [ -f "$ifile"] #I run the instalation file only if I find it to prevent error
-        echo "Starting instalation..."
-        bash ./instalation.sh
-        echo "Instalation done."
+    if [ -f "$ifile" ]; then  # Run the installation script only if it exists
+        echo "Starting installation..."
+        bash "$ifile"
+        echo "Installation done."
     else
-        echo "No istall file found"
+        echo "No installation file found."
     fi
 else
-    echo "No instance of Apesex found do a first instalation manualy"
+    echo "No instance of Apesex found. Please perform the first installation manually."
 fi
