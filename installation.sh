@@ -9,7 +9,7 @@ bash ./depedencies.sh
 # Intallation
 echo "Starting instalation..."
 echo "Installing testqt..."
-cd testqt
+cd ApexActual
 qmake qt_app.pro
 make
 

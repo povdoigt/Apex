@@ -6,5 +6,5 @@
 # Uninstallation
 echo "Starting uninstalation..."
 echo "Uninstalling testqt..."
-cd testqt
+cd ApexActual
 make distclean
