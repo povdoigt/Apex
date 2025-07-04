@@ -8,10 +8,14 @@ int main(int argc, char *argv[]) {
 }
 */
 #include "MainWindow.h"
+#include "TelemParser.h"
 #include <QApplication>
 #include <QTimer>
-#include <QtMath>
 #include <QString>
+#include <fstream>
+
+#define SERIAL_PORT "/dev/ttyACM0"
+#define CSV_FILE "output.csv"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -25,54 +29,73 @@ int main(int argc, char *argv[]) {
     Textwindow* data1 = window.getData1();
     Textwindow* data2 = window.getData2();
 
-    // Set colors for text (optional)
     log1->setTextColor(Qt::darkGreen);
     log2->setTextColor(Qt::darkBlue);
     data1->setTextColor(Qt::black);
     data2->setTextColor(Qt::black);
 
-    // Set logging mode
     log1->setLogMode(true);
     log2->setLogMode(true);
 
-    // Add curves
     int curveAcc = acc->addCurve("Acceleration");
     int curveAlt = alt->addCurve("Altitude");
 
     int counter = 0;
 
+    std::ifstream* serialInput = new std::ifstream();
+    TelemParser* parser = new TelemParser(CSV_FILE);
+    bool* serialConnected = new bool(false);
+
+    QTimer* retryTimer = new QTimer();
+    QObject::connect(retryTimer, &QTimer::timeout, [=]() {
+        if (*serialConnected) return;
+
+        serialInput->open(SERIAL_PORT, std::ios::binary);
+        if (serialInput->is_open()) {
+            *serialConnected = true;
+            log1->displayMessage("Serial port connected.");
+            log2->displayMessage("Serial port connected.");
+        } else {
+            log1->displayMessage("Failed to open serial port. Retrying...");
+            log2->displayMessage("Failed to open serial port. Retrying...");
+        }
+    });
+    retryTimer->start(3000);
+
     QTimer *timer = new QTimer();
     QObject::connect(timer, &QTimer::timeout, [=, &counter]() mutable {
-        qreal x = counter;
-        qreal accValue = qSin(x * 0.1) * 10 + 10;   // Fake acceleration data
-        qreal altValue = x * 0.8 + qSin(x * 0.05) * 5;  // Fake altitude
+        if (!*serialConnected) {
+            // If not connected, do nothing (or show message if you want)
+            return;
+        }
 
-        // Plot on graphs
-        acc->addDataPoint(curveAcc, x, accValue);
-        alt->addDataPoint(curveAlt, x, altValue);
+        TELEM_FORMAT_FT_APEX_DATA_MDR message;
+        if (parser->readFromStream(*serialInput, message)) {
+            parser->writeToCSV(message);
 
-        // Log values
-        log1->displayMessage(QString("t=%1 | ACC=%.2f").arg(x).arg(accValue));
-        log2->displayMessage(QString("t=%1 | ALT=%.2f").arg(x).arg(altValue));
+            qreal x = counter;
+            acc->addDataPoint(curveAcc, x, message.acc_z);
+            alt->addDataPoint(curveAlt, x, message.alt_gps);
 
-        // Simulate sensor values
-        qreal temp = 20.0 + qSin(x * 0.02) * 5;
-        qreal longi = 2.33 + qCos(x * 0.01);
-        qreal lati = 48.85 + qSin(x * 0.01);
-        qreal volt = 3.7 + qSin(x * 0.05) * 0.2;
+            log1->displayMessage(QString("t=%1 | ACC=%.2f").arg(x).arg(message.acc_z));
+            log2->displayMessage(QString("t=%1 | ALT=%.2f").arg(x).arg(message.alt_gps));
 
-        QString sensorText = QString("Temp: %1°C\nLong: %2\nLat: %3\nVolt: %4 V")
-                                .arg(temp, 0, 'f', 1)
-                                .arg(longi, 0, 'f', 4)
-                                .arg(lati, 0, 'f', 4)
-                                .arg(volt, 0, 'f', 2);
+            QString sensorText = QString("Temp: -- °C\nLong: %1\nLat: %2\nVolt: %3 V")
+                                    .arg(message.long_gps, 0, 'f', 4)
+                                    .arg(message.lat_gps, 0, 'f', 4)
+                                    .arg(message.volt, 0, 'f', 2);
 
-        data1->displayMessage(sensorText);
-        data2->displayMessage(sensorText);
+            data1->displayMessage(sensorText);
+            data2->displayMessage(sensorText);
 
-        counter++;
+            counter++;
+        } else if (serialInput->eof()) {
+            log1->displayMessage("⚠ Serial disconnected.");
+            log2->displayMessage("⚠ Serial disconnected.");
+            serialInput->close();
+            *serialConnected = false;
+        }
     });
-
     timer->start(500);
 
     return app.exec();
