@@ -1,0 +1,8 @@
+{
+    "cortex-debug.variableUseNaturalFormat": true,
+    "files.associations": {
+        "xutility": "c",
+        "spi.h": "c",
+        "usbd_cdc_if.h": "c"
+    }
+}

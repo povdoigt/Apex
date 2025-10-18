@@ -1,0 +1,28 @@
+\babel@toc {french}{}\relax 
+\contentsline {section}{\numberline {1}Mise en contexte}{2}{section.1}%
+\contentsline {section}{\numberline {2}Module électronique APEX}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Présentation du module}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Composants principaux}{3}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Microcontrôleur STM32F411RETx}{3}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Module de télémesure RFM95W}{3}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}BMI088}{4}{subsubsection.2.2.3}%
+\contentsline {subsubsection}{\numberline {2.2.4}ADXL370}{4}{subsubsection.2.2.4}%
+\contentsline {subsubsection}{\numberline {2.2.5}LSM303AGR}{4}{subsubsection.2.2.5}%
+\contentsline {subsubsection}{\numberline {2.2.6}BMP380}{4}{subsubsection.2.2.6}%
+\contentsline {subsubsection}{\numberline {2.2.7}W25Q512JV}{4}{subsubsection.2.2.7}%
+\contentsline {subsubsection}{\numberline {2.2.8}SAM M10Q}{4}{subsubsection.2.2.8}%
+\contentsline {subsubsection}{\numberline {2.2.9}Connectivités}{5}{subsubsection.2.2.9}%
+\contentsline {subsubsection}{\numberline {2.2.10}Alimentation}{5}{subsubsection.2.2.10}%
+\contentsline {subsubsection}{\numberline {2.2.11}Témoin utilisateur}{5}{subsubsection.2.2.11}%
+\contentsline {subsection}{\numberline {2.3}Conception du module}{6}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}CAO - Conception Assistée par Ordinateur}{6}{subsubsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.4}Soudure des composants}{8}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Programmation du module APEX}{9}{subsection.2.5}%
+\contentsline {section}{\numberline {3}Station sol APEX}{10}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Objectif du projet}{10}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Composition principale}{10}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Fonctionnement}{10}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Expériences et résultats}{11}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Prisma}{11}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Horizon}{11}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}MROM}{11}{subsection.4.3}%

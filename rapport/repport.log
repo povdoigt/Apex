@@ -1,0 +1,1491 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.3) (preloaded format=pdflatex 2025.3.17)  31 AUG 2025 23:51
+entering extended mode
+ \write18 enabled.
+ file:line:error style messages enabled.
+ %&-line parsing enabled.
+**c:/Users/alexi/Documents/scolaire/IPSA/AeroIpsa/APEX/rapport/repport.tex
+(c:/Users/alexi/Documents/scolaire/IPSA/AeroIpsa/APEX/rapport/repport.tex
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+(C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2024/06/29 v1.4n Standard LaTeX document class
+(C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo
+File: size10.clo 2024/06/29 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count196
+\c@section=\count197
+\c@subsection=\count198
+\c@subsubsection=\count199
+\c@paragraph=\count266
+\c@subparagraph=\count267
+\c@figure=\count268
+\c@table=\count269
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen141
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+Package: graphicx 2021/09/16 v1.2d Enhanced LaTeX Graphics (DPC,SPQR)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks17
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdftex.def
+File: pdftex.def 2024/04/13 v1.2c Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen142
+\Gin@req@width=\dimen143
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.sty
+Package: geometry 2020/01/02 v5.9 Page Geometry
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifvtex.sty
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+))
+\Gm@cnth=\count270
+\Gm@cntv=\count271
+\c@Gm@tempcnt=\count272
+\Gm@bindingoffset=\dimen144
+\Gm@wd@mp=\dimen145
+\Gm@odd@mp=\dimen146
+\Gm@even@mp=\dimen147
+\Gm@layoutwidth=\dimen148
+\Gm@layoutheight=\dimen149
+\Gm@layouthoffset=\dimen150
+\Gm@layoutvoffset=\dimen151
+\Gm@dimlist=\toks18
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.cfg)
+
+Package geometry Warning: Over-specification in `h'-direction.
+    `width' (469.75499pt) is ignored.
+
+
+Package geometry Warning: Over-specification in `v'-direction.
+    `height' (722.7pt) is ignored.
+
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+Package: fontenc 2021/04/29 v2.0v Standard LaTeX package
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/babel\babel.sty
+Package: babel 2025/02/14 v25.4 The multilingual framework for pdfLaTeX, LuaLaTeX and XeLaTeX
+\babel@savecnt=\count273
+\U@D=\dimen152
+\l@unhyphenated=\language79
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/babel\txtbabel.def)
+\bbl@readstream=\read2
+\bbl@dirlevel=\count274
+
+*************************************
+* Local config file bblopts.cfg used
+*
+(C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/arabi\bblopts.cfg
+File: bblopts.cfg 2005/09/08 v0.1 add Arabic and Farsi to "declared" options of babel
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/babel-french\french.ldf
+Language: french 2024-07-25 v3.6c French support from the babel system
+Package babel Info: Hyphen rules for 'acadian' set to \l@french
+(babel)             (\language22). Reported on input line 91.
+Package babel Info: Hyphen rules for 'canadien' set to \l@french
+(babel)             (\language22). Reported on input line 92.
+\FB@stdchar=\count275
+Package babel Info: Making : an active character on input line 421.
+Package babel Info: Making ; an active character on input line 422.
+Package babel Info: Making ! an active character on input line 423.
+Package babel Info: Making ? an active character on input line 424.
+\FBguill@level=\count276
+\FBold@everypar=\toks19
+\FB@Mht=\dimen153
+\mc@charclass=\count277
+\mc@charfam=\count278
+\mc@charslot=\count279
+\std@mcc=\count280
+\dec@mcc=\count281
+\FB@parskip=\dimen154
+\listindentFB=\dimen155
+\descindentFB=\dimen156
+\labelindentFB=\dimen157
+\labelwidthFB=\dimen158
+\leftmarginFB=\dimen159
+\parindentFFN=\dimen160
+\FBfnindent=\dimen161
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/babel/locale/fr\babel-french.tex
+Package babel Info: Importing font and identification data for french
+(babel)             from babel-fr.ini. Reported on input line 11.
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/carlisle\scalefnt.sty) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/hyphenat\hyphenat.sty
+Package: hyphenat 2009/09/02 v2.3c hyphenation utilities
+\langwohyphens=\language80
+LaTeX Info: Redefining \_ on input line 43.
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/fancybox\fancybox.sty
+Package: fancybox 2010/05/15 1.4
+
+Style option: `fancybox' v1.4 <2010/05/15> (tvz)
+\@fancybox=\box52
+\shadowsize=\dimen162
+\@Sbox=\box53
+\do@VerbBox=\toks20
+\the@fancyput=\toks21
+\this@fancyput=\toks22
+\EndVerbatimTokens=\toks23
+\Verbatim@Outfile=\write3
+\Verbatim@Infile=\read3
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/fancyhdr\fancyhdr.sty
+Package: fancyhdr 2025/02/07 v5.2 Extensive control of page headers and footers
+\f@nch@headwidth=\skip51
+\f@nch@offset@elh=\skip52
+\f@nch@offset@erh=\skip53
+\f@nch@offset@olh=\skip54
+\f@nch@offset@orh=\skip55
+\f@nch@offset@elf=\skip56
+\f@nch@offset@erf=\skip57
+\f@nch@offset@olf=\skip58
+\f@nch@offset@orf=\skip59
+\f@nch@height=\skip60
+\f@nch@footalignment=\skip61
+\f@nch@widthL=\skip62
+\f@nch@widthC=\skip63
+\f@nch@widthR=\skip64
+\@temptokenb=\toks24
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\pifont.sty
+Package: pifont 2020/03/25 PSNFSS-v9.3 Pi font support (SPQR) 
+LaTeX Font Info:    Trying to load font information for U+pzd on input line 63.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\upzd.fd
+File: upzd.fd 2001/06/04 font definitions for U/pzd.
+)
+LaTeX Font Info:    Trying to load font information for U+psy on input line 64.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\upsy.fd
+File: upsy.fd 2001/06/04 font definitions for U/psy.
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/frontendlayer\tikz.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgf.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfrcs.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfutil-common.tex
+\pgfutil@everybye=\toks25
+\pgfutil@tempdima=\dimen163
+\pgfutil@tempdimb=\dimen164
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfutil-latex.def
+\pgfutil@abb=\box54
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfrcs.code.tex (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf\pgf.revision.tex)
+Package: pgfrcs 2023-01-15 v3.1.10 (3.1.10)
+))
+Package: pgf 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgfcore.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/systemlayer\pgfsys.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsys.code.tex
+Package: pgfsys 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfkeys.code.tex
+\pgfkeys@pathtoks=\toks26
+\pgfkeys@temptoks=\toks27
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfkeyslibraryfiltered.code.tex
+\pgfkeys@tmptoks=\toks28
+))
+\pgf@x=\dimen165
+\pgf@y=\dimen166
+\pgf@xa=\dimen167
+\pgf@ya=\dimen168
+\pgf@xb=\dimen169
+\pgf@yb=\dimen170
+\pgf@xc=\dimen171
+\pgf@yc=\dimen172
+\pgf@xd=\dimen173
+\pgf@yd=\dimen174
+\w@pgf@writea=\write4
+\r@pgf@reada=\read4
+\c@pgf@counta=\count282
+\c@pgf@countb=\count283
+\c@pgf@countc=\count284
+\c@pgf@countd=\count285
+\t@pgf@toka=\toks29
+\t@pgf@tokb=\toks30
+\t@pgf@tokc=\toks31
+\pgf@sys@id@count=\count286
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgf.cfg
+File: pgf.cfg 2023-01-15 v3.1.10 (3.1.10)
+)
+Driver file for pgf: pgfsys-pdftex.def
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsys-pdftex.def
+File: pgfsys-pdftex.def 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsys-common-pdf.def
+File: pgfsys-common-pdf.def 2023-01-15 v3.1.10 (3.1.10)
+))) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsyssoftpath.code.tex
+File: pgfsyssoftpath.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfsyssoftpath@smallbuffer@items=\count287
+\pgfsyssoftpath@bigbuffer@items=\count288
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsysprotocol.code.tex
+File: pgfsysprotocol.code.tex 2023-01-15 v3.1.10 (3.1.10)
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcore.code.tex
+Package: pgfcore 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmath.code.tex (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathutil.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathparser.code.tex
+\pgfmath@dimen=\dimen175
+\pgfmath@count=\count289
+\pgfmath@box=\box55
+\pgfmath@toks=\toks32
+\pgfmath@stack@operand=\toks33
+\pgfmath@stack@operation=\toks34
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.basic.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.trigonometric.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.random.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.comparison.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.base.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.round.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.misc.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunctions.integerarithmetics.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathcalc.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfloat.code.tex
+\c@pgfmathroundto@lastzeros=\count290
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfint.code.tex) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorepoints.code.tex
+File: pgfcorepoints.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@picminx=\dimen176
+\pgf@picmaxx=\dimen177
+\pgf@picminy=\dimen178
+\pgf@picmaxy=\dimen179
+\pgf@pathminx=\dimen180
+\pgf@pathmaxx=\dimen181
+\pgf@pathminy=\dimen182
+\pgf@pathmaxy=\dimen183
+\pgf@xx=\dimen184
+\pgf@xy=\dimen185
+\pgf@yx=\dimen186
+\pgf@yy=\dimen187
+\pgf@zx=\dimen188
+\pgf@zy=\dimen189
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorepathconstruct.code.tex
+File: pgfcorepathconstruct.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@path@lastx=\dimen190
+\pgf@path@lasty=\dimen191
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorepathusage.code.tex
+File: pgfcorepathusage.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@shorten@end@additional=\dimen192
+\pgf@shorten@start@additional=\dimen193
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorescopes.code.tex
+File: pgfcorescopes.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfpic=\box56
+\pgf@hbox=\box57
+\pgf@layerbox@main=\box58
+\pgf@picture@serial@count=\count291
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcoregraphicstate.code.tex
+File: pgfcoregraphicstate.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgflinewidth=\dimen194
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcoretransformations.code.tex
+File: pgfcoretransformations.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@pt@x=\dimen195
+\pgf@pt@y=\dimen196
+\pgf@pt@temp=\dimen197
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorequick.code.tex
+File: pgfcorequick.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcoreobjects.code.tex
+File: pgfcoreobjects.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorepathprocessing.code.tex
+File: pgfcorepathprocessing.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorearrows.code.tex
+File: pgfcorearrows.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfarrowsep=\dimen198
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcoreshade.code.tex
+File: pgfcoreshade.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@max=\dimen199
+\pgf@sys@shading@range@num=\count292
+\pgf@shadingcount=\count293
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcoreimage.code.tex
+File: pgfcoreimage.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcoreexternal.code.tex
+File: pgfcoreexternal.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfexternal@startupbox=\box59
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorelayers.code.tex
+File: pgfcorelayers.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcoretransparency.code.tex
+File: pgfcoretransparency.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorepatterns.code.tex
+File: pgfcorepatterns.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcorerdf.code.tex
+File: pgfcorerdf.code.tex 2023-01-15 v3.1.10 (3.1.10)
+))) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgfmoduleshapes.code.tex
+File: pgfmoduleshapes.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfnodeparttextbox=\box60
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgfmoduleplot.code.tex
+File: pgfmoduleplot.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/compatibility\pgfcomp-version-0-65.sty
+Package: pgfcomp-version-0-65 2023-01-15 v3.1.10 (3.1.10)
+\pgf@nodesepstart=\dimen256
+\pgf@nodesepend=\dimen257
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/compatibility\pgfcomp-version-1-18.sty
+Package: pgfcomp-version-1-18 2023-01-15 v3.1.10 (3.1.10)
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgffor.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfkeys.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfkeys.code.tex)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/math\pgfmath.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmath.code.tex)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgffor.code.tex
+Package: pgffor 2023-01-15 v3.1.10 (3.1.10)
+\pgffor@iter=\dimen258
+\pgffor@skip=\dimen259
+\pgffor@stack=\toks35
+\pgffor@toks=\toks36
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tikz\tikz.code.tex
+Package: tikz 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/libraries\pgflibraryplothandlers.code.tex
+File: pgflibraryplothandlers.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgf@plot@mark@count=\count294
+\pgfplotmarksize=\dimen260
+)
+\tikz@lastx=\dimen261
+\tikz@lasty=\dimen262
+\tikz@lastxsaved=\dimen263
+\tikz@lastysaved=\dimen264
+\tikz@lastmovetox=\dimen265
+\tikz@lastmovetoy=\dimen266
+\tikzleveldistance=\dimen267
+\tikzsiblingdistance=\dimen268
+\tikz@figbox=\box61
+\tikz@figbox@bg=\box62
+\tikz@tempbox=\box63
+\tikz@tempbox@bg=\box64
+\tikztreelevel=\count295
+\tikznumberofchildren=\count296
+\tikznumberofcurrentchild=\count297
+\tikz@fig@count=\count298
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgfmodulematrix.code.tex
+File: pgfmodulematrix.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\pgfmatrixcurrentrow=\count299
+\pgfmatrixcurrentcolumn=\count300
+\pgf@matrix@numberofcolumns=\count301
+)
+\tikz@expandcount=\count302
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tikz/libraries\tikzlibrarytopaths.code.tex
+File: tikzlibrarytopaths.code.tex 2023-01-15 v3.1.10 (3.1.10)
+))) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/tikz-3dplot\tikz-3dplot.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/base\ifthen.sty
+Package: ifthen 2024/03/16 v1.1e Standard LaTeX ifthen package (DPC)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tikz/libraries\tikzlibrarycalc.code.tex
+File: tikzlibrarycalc.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tikz/libraries\tikzlibrary3d.code.tex
+File: tikzlibrary3d.code.tex 2023-01-15 v3.1.10 (3.1.10)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tikz/libraries\tikzlibraryarrows.code.tex
+File: tikzlibraryarrows.code.tex 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/libraries\pgflibraryarrows.code.tex
+File: pgflibraryarrows.code.tex 2023-01-15 v3.1.10 (3.1.10)
+\arrowsize=\dimen269
+))) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/siunitx\siunitx.sty
+Package: siunitx 2025-02-27 v3.4.6 A comprehensive (SI) units package
+\l__siunitx_number_uncert_offset_int=\count303
+\l__siunitx_number_exponent_fixed_int=\count304
+\l__siunitx_number_min_decimal_int=\count305
+\l__siunitx_number_min_integer_int=\count306
+\l__siunitx_number_round_precision_int=\count307
+\l__siunitx_number_lower_threshold_int=\count308
+\l__siunitx_number_upper_threshold_int=\count309
+\l__siunitx_number_group_first_int=\count310
+\l__siunitx_number_group_size_int=\count311
+\l__siunitx_number_group_minimum_int=\count312
+\l__siunitx_angle_tmp_dim=\dimen270
+\l__siunitx_angle_marker_box=\box65
+\l__siunitx_angle_unit_box=\box66
+\l__siunitx_compound_count_int=\count313
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/translations\translations.sty
+Package: translations 2022/02/05 v1.12 internationalization of LaTeX2e packages (CN)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty
+Package: etoolbox 2025/02/11 v2.5l e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count314
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pdftexcmds\pdftexcmds.sty
+Package: pdftexcmds 2020-06-27 v0.33 Utility functions of pdfTeX for LuaTeX (HO)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/infwarerr\infwarerr.sty
+Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty
+Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
+)
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
+Package: amstext 2021/08/26 v2.01 AMS text
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0 generic functions
+\@emptytoks=\toks37
+\ex@=\dimen271
+))
+\l__siunitx_table_tmp_box=\box67
+\l__siunitx_table_tmp_dim=\dimen272
+\l__siunitx_table_column_width_dim=\dimen273
+\l__siunitx_table_integer_box=\box68
+\l__siunitx_table_decimal_box=\box69
+\l__siunitx_table_uncert_box=\box70
+\l__siunitx_table_before_box=\box71
+\l__siunitx_table_after_box=\box72
+\l__siunitx_table_before_dim=\dimen274
+\l__siunitx_table_carry_dim=\dimen275
+\l__siunitx_unit_tmp_int=\count315
+\l__siunitx_unit_position_int=\count316
+\l__siunitx_unit_total_int=\count317
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+Package: array 2024/10/17 v2.6g Tabular extension package (FMi)
+\col@sep=\dimen276
+\ar@mcellbox=\box73
+\extrarowheight=\dimen277
+\NC@list=\toks38
+\extratabsurround=\skip65
+\backup@length=\skip66
+\ar@cellbox=\box74
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lm\lmodern.sty
+Package: lmodern 2015/05/01 v1.6.1 Latin Modern Fonts
+LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
+(Font)                  OT1/cmr/m/n --> OT1/lmr/m/n on input line 22.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `normal'
+(Font)                  OML/cmm/m/it --> OML/lmm/m/it on input line 23.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `normal'
+(Font)                  OMS/cmsy/m/n --> OMS/lmsy/m/n on input line 24.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `normal'
+(Font)                  OMX/cmex/m/n --> OMX/lmex/m/n on input line 25.
+LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
+(Font)                  OT1/cmr/bx/n --> OT1/lmr/bx/n on input line 26.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `bold'
+(Font)                  OML/cmm/b/it --> OML/lmm/b/it on input line 27.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `bold'
+(Font)                  OMS/cmsy/b/n --> OMS/lmsy/b/n on input line 28.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `bold'
+(Font)                  OMX/cmex/m/n --> OMX/lmex/m/n on input line 29.
+LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
+(Font)                  OT1/cmr/bx/n --> OT1/lmr/bx/n on input line 31.
+LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
+(Font)                  OT1/cmss/m/n --> OT1/lmss/m/n on input line 32.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
+(Font)                  OT1/cmr/m/it --> OT1/lmr/m/it on input line 33.
+LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
+(Font)                  OT1/cmtt/m/n --> OT1/lmtt/m/n on input line 34.
+LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `bold'
+(Font)                  OT1/cmr/bx/n --> OT1/lmr/bx/n on input line 35.
+LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
+(Font)                  OT1/cmss/bx/n --> OT1/lmss/bx/n on input line 36.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
+(Font)                  OT1/cmr/bx/it --> OT1/lmr/bx/it on input line 37.
+LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
+(Font)                  OT1/cmtt/m/n --> OT1/lmtt/m/n on input line 38.
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen278
+\lightrulewidth=\dimen279
+\cmidrulewidth=\dimen280
+\belowrulesep=\dimen281
+\belowbottomsep=\dimen282
+\aboverulesep=\dimen283
+\abovetopsep=\dimen284
+\cmidrulesep=\dimen285
+\cmidrulekern=\dimen286
+\defaultaddspace=\dimen287
+\@cmidla=\count318
+\@cmidlb=\count319
+\@aboverulesep=\dimen288
+\@belowrulesep=\dimen289
+\@thisruleclass=\count320
+\@lastruleclass=\count321
+\@thisrulewidth=\dimen290
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.sty
+\lst@mode=\count322
+\lst@gtempboxa=\box75
+\lst@token=\toks39
+\lst@length=\count323
+\lst@currlwidth=\dimen291
+\lst@column=\count324
+\lst@pos=\count325
+\lst@lostspace=\dimen292
+\lst@width=\dimen293
+\lst@newlines=\count326
+\lst@lineno=\count327
+\lst@maxwidth=\dimen294
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstpatch.sty
+File: lstpatch.sty 2024/09/23 1.10c (Carsten Heinz)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstmisc.sty
+File: lstmisc.sty 2024/09/23 1.10c (Carsten Heinz)
+\c@lstnumber=\count328
+\lst@skipnumbers=\count329
+\lst@framebox=\box76
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.cfg
+File: listings.cfg 2024/09/23 1.10c listings configuration
+))
+Package: listings 2024/09/23 1.10c (Carsten Heinz)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/matlab-prettifier\matlab-prettifier.sty
+Package: matlab-prettifier 2014/06/19 v0.3 A package for prettyprinting Matlab source code
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/base\textcomp.sty
+Package: textcomp 2024/04/24 v2.1b Standard LaTeX package
+)
+\netBracketCount@mlpr=\count330
+\blkLvl@mlpr=\count331
+\blkLvlAtClassdef@mlpr=\count332
+\emHeight@mlpr=\skip67
+\jayDepth@mlpr=\skip68
+\sectionRuleOffset@mlpr=\skip69
+\toks@mlpr=\toks40
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tikz/libraries\tikzlibraryshapes.geometric.code.tex
+File: tikzlibraryshapes.geometric.code.tex 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/libraries/shapes\pgflibraryshapes.geometric.code.tex
+File: pgflibraryshapes.geometric.code.tex 2023-01-15 v3.1.10 (3.1.10)
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tikz/libraries\tikzlibraryshapes.symbols.code.tex
+File: tikzlibraryshapes.symbols.code.tex 2023-01-15 v3.1.10 (3.1.10)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/libraries/shapes\pgflibraryshapes.symbols.code.tex
+File: pgflibraryshapes.symbols.code.tex 2023-01-15 v3.1.10 (3.1.10)
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption.sty
+Package: caption 2023/08/05 v3.6o Customizing captions (AR)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption3.sty
+Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
+\caption@tempdima=\dimen295
+\captionmargin=\dimen296
+\caption@leftmargin=\dimen297
+\caption@rightmargin=\dimen298
+\caption@width=\dimen299
+\caption@indent=\dimen300
+\caption@parindent=\dimen301
+\caption@hangindent=\dimen302
+Package caption Info: Standard document class detected.
+Package caption Info: french babel package is loaded.
+)
+\c@caption@flags=\count333
+\c@continuedfloat=\count334
+Package caption Info: listings package is loaded.
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/caption\subcaption.sty
+Package: subcaption 2023/07/28 v1.6b Sub-captions (AR)
+Package caption Info: New subtype `subfigure' on input line 238.
+\c@subfigure=\count335
+Package caption Info: New subtype `subtable' on input line 238.
+\c@subtable=\count336
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/cprotect\cprotect.sty
+Package: cprotect 2011/01/27 v1.0e (Bruno Le Floch)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/bigfoot\suffix.sty
+Package: suffix 2006/07/15 1.5a Variant command support
+)
+\CPT@WriteOut=\write5
+\c@CPT@WriteCount=\count337
+\c@CPT@numB=\count338
+\CPT@commandatend@toks=\toks41
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty
+Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
+\TX@col@width=\dimen303
+\TX@old@table=\dimen304
+\TX@old@col=\dimen305
+\TX@target=\dimen306
+\TX@delta=\dimen307
+\TX@cols=\count339
+\TX@ftn=\toks42
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/tabularray\tabularray.sty (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+Package: expl3 2025-01-18 L3 programming layer (loader) 
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-pdftex.def
+File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count340
+\l__pdf_internal_box=\box77
+))
+Package: tabularray 2024-02-16 v2024A Typeset tabulars and arrays with LaTeX3
+\l__tblr_a_int=\count341
+\l__tblr_c_int=\count342
+\l__tblr_r_int=\count343
+\l__tblr_d_dim=\dimen308
+\l__tblr_h_dim=\dimen309
+\l__tblr_o_dim=\dimen310
+\l__tblr_p_dim=\dimen311
+\l__tblr_q_dim=\dimen312
+\l__tblr_r_dim=\dimen313
+\l__tblr_s_dim=\dimen314
+\l__tblr_t_dim=\dimen315
+\l__tblr_v_dim=\dimen316
+\l__tblr_w_dim=\dimen317
+\l__tblr_a_box=\box78
+\l__tblr_b_box=\box79
+\l__tblr_c_box=\box80
+\l__tblr_d_box=\box81
+\g__tblr_table_count_int=\count344
+\c@rownum=\count345
+\c@colnum=\count346
+\c@rowcount=\count347
+\c@colcount=\count348
+\abovesep=\dimen318
+\belowsep=\dimen319
+\leftsep=\dimen320
+\rightsep=\dimen321
+\g_tblr_level_int=\count349
+\g__tblr_data_row_key_count_int=\count350
+\g__tblr_data_column_key_count_int=\count351
+\g__tblr_data_cell_key_count_int=\count352
+\g__tblr_array_int=\count353
+\l__tblr_key_count_int=\count354
+\l__tblr_key_quotient_int=\count355
+\l__tblr_key_quotient_two_int=\count356
+\l__tblr_key_remainder_int=\count357
+\g__tblr_data_str_value_count_int=\count358
+\rulewidth=\dimen322
+\l__tblr_strut_dp_dim=\dimen323
+\l__tblr_strut_ht_dim=\dimen324
+\g__tblr_cell_wd_dim=\dimen325
+\g__tblr_cell_ht_dim=\dimen326
+\g__tblr_cell_head_dim=\dimen327
+\g__tblr_cell_foot_dim=\dimen328
+\l__column_target_dim=\dimen329
+\l__tblr_caption_box=\box82
+\l__tblr_caption_left_box=\box83
+\l__tblr_row_head_box=\box84
+\l__tblr_row_foot_box=\box85
+\l__tblr_row_head_foot_dim=\dimen330
+\tablewidth=\dimen331
+\l__tblr_table_firsthead_box=\box86
+\l__tblr_table_middlehead_box=\box87
+\l__tblr_table_lasthead_box=\box88
+\l__tblr_table_firstfoot_box=\box89
+\l__tblr_table_middlefoot_box=\box90
+\l__tblr_table_lastfoot_box=\box91
+\l__tblr_remain_height_dim=\dimen332
+\l__tblr_long_from_int=\count359
+\l__tblr_long_to_int=\count360
+\l__tblr_curr_i_int=\count361
+\l__tblr_prev_i_int=\count362
+\l__tblr_table_page_int=\count363
+\l__tblr_table_head_box=\box92
+\l__tblr_table_foot_box=\box93
+\l__tblr_table_head_foot_dim=\dimen333
+\l__tblr_table_head_body_foot_dim=\dimen334
+\l__tblr_table_box=\box94
+\l__tblr_table_hlines_box=\box95
+\l__tblr_hline_box=\box96
+\l__tblr_row_box=\box97
+\l__tblr_col_o_wd_dim=\dimen335
+\l__tblr_col_b_wd_dim=\dimen336
+\l__tblr_hline_leftskip_dim=\dimen337
+\l__tblr_hline_rightskip_dim=\dimen338
+\l__tblr_row_ht_dim=\dimen339
+\l__tblr_row_dp_dim=\dimen340
+\l__tblr_row_abovesep_dim=\dimen341
+\l__tblr_row_belowsep_dim=\dimen342
+\l__tblr_row_vlines_box=\box98
+\l__tblr_vline_box=\box99
+\l__tblr_cell_box=\box100
+\l__row_upper_dim=\dimen343
+\l__row_lower_dim=\dimen344
+\l__row_vpace_dim=\dimen345
+\l__tblr_vline_aboveskip_dim=\dimen346
+\l__tblr_vline_belowskip_dim=\dimen347
+\l__tblr_cell_wd_dim=\dimen348
+\l__tblr_cell_ht_dim=\dimen349
+\l__tblr_diag_box=\box101
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
+Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
+\multirow@colwidth=\skip70
+\multirow@cntb=\count364
+\multirow@dima=\skip71
+\bigstrutjot=\dimen350
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pdfpages\pdfpages.sty
+Package: pdfpages 2025/01/30 v0.6e Insert pages of external PDF documents (AM)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/tools\calc.sty
+Package: calc 2023/07/08 v4.3 Infix arithmetic (KKT,FJ)
+\calc@Acount=\count365
+\calc@Bcount=\count366
+\calc@Adimen=\dimen351
+\calc@Bdimen=\dimen352
+\calc@Askip=\skip72
+\calc@Bskip=\skip73
+LaTeX Info: Redefining \setlength on input line 80.
+LaTeX Info: Redefining \addtolength on input line 81.
+\calc@Ccount=\count367
+\calc@Cskip=\skip74
+)
+(C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/eso-pic\eso-pic.sty
+Package: eso-pic 2023/05/03 v3.0c eso-pic (RN)
+\ESO@tempdima=\dimen353
+\ESO@tempdimb=\dimen354
+)
+\AM@pagewidth=\dimen355
+\AM@pageheight=\dimen356
+\AM@fboxrule=\dimen357
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pdfpages\pppdftex.def
+File: pppdftex.def 2025/01/30 v0.6e Pdfpages driver for pdfTeX (AM)
+)
+\pdfpages@includegraphics@status=\count368
+\AM@pagebox=\box102
+\AM@global@opts=\toks43
+\AM@pagecnt=\count369
+\AM@toc@title=\toks44
+\AM@lof@heading=\toks45
+\c@AM@survey=\count370
+\AM@templatesizebox=\box103
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lastpage\lastpage.sty
+Package: lastpage 2025/01/27 v2.1e lastpage: 2.09 or 2e? (HMM)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lastpage\lastpage2e.sty
+Package: lastpage2e 2025/01/27 v2.1e Decide which 2e lastpage version to use (HMM)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lastpage\lastpagemodern.sty
+Package: lastpagemodern 2025-01-27 v2.1e Refers to last page's name (HMM; JPG)
+\c@lastpagecount=\count371
+) 
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+Package: hyperref 2024-11-05 v7.01l Hypertext links for LaTeX
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty
+Package: kvsetkeys 2022-10-05 v1.19 Key value parser (HO)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/kvdefinekeys\kvdefinekeys.sty
+Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.sty
+Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty
+Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+Package: nameref 2023-11-26 v2.56 Cross-referencing by name of section
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty
+Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/gettitlestring\gettitlestring.sty
+Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/kvoptions\kvoptions.sty
+Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
+))
+\c@section@level=\count372
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/stringenc\stringenc.sty
+Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO)
+)
+\@linkdim=\dimen358
+\Hy@linkcounter=\count373
+\Hy@pagecounter=\count374
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def
+File: pd1enc.def 2024-11-05 v7.01l Hyperref: PDFDocEncoding definition (HO)
+Now handling font encoding PD1 ...
+... no UTF-8 mapping file for font encoding PD1
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty
+Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
+)
+\Hy@SavedSpaceFactor=\count375
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def
+File: puenc.def 2024-11-05 v7.01l Hyperref: PDF Unicode definition (HO)
+Now handling font encoding PU ...
+... no UTF-8 mapping file for font encoding PU
+)
+Package hyperref Info: Option `colorlinks' set `true' on input line 4040.
+Package hyperref Info: Hyper figures OFF on input line 4157.
+Package hyperref Info: Link nesting OFF on input line 4162.
+Package hyperref Info: Hyper index ON on input line 4165.
+Package hyperref Info: Plain pages OFF on input line 4172.
+Package hyperref Info: Backreferencing OFF on input line 4177.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4424.
+\c@Hy@tempcnt=\count376
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
+\Urlmuskip=\muskip17
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 4763.
+\XeTeXLinkMargin=\dimen359
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
+Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/bigintcalc\bigintcalc.sty
+Package: bigintcalc 2019/12/15 v1.5 Expandable calculations on big integers (HO)
+))
+\Fld@menulength=\count377
+\Field@Width=\dimen360
+\Fld@charsize=\dimen361
+Package hyperref Info: Hyper figures OFF on input line 6042.
+Package hyperref Info: Link nesting OFF on input line 6047.
+Package hyperref Info: Hyper index ON on input line 6050.
+Package hyperref Info: backreferencing OFF on input line 6057.
+Package hyperref Info: Link coloring ON on input line 6060.
+Package hyperref Info: Link coloring with OCG OFF on input line 6067.
+Package hyperref Info: PDF/A mode OFF on input line 6072.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/base\atbegshi-ltx.sty
+Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
+package with kernel methods
+)
+\Hy@abspage=\count378
+\c@Item=\count379
+\c@Hfootnote=\count380
+)
+Package hyperref Info: Driver (autodetected): hpdftex.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hpdftex.def
+File: hpdftex.def 2024-11-05 v7.01l Hyperref driver for pdfTeX
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/base\atveryend-ltx.sty
+Package: atveryend-ltx 2020/08/19 v1.0a Emulation of the original atveryend package
+with kernel methods
+)
+\Fld@listcount=\count381
+\c@bookmark@seq@number=\count382
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/rerunfilecheck\rerunfilecheck.sty
+Package: rerunfilecheck 2022-07-10 v1.10 Rerun checks for auxiliary files (HO)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/generic/uniquecounter\uniquecounter.sty
+Package: uniquecounter 2019/12/15 v1.4 Provide unlimited unique counter (HO)
+)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 285.
+)
+\Hy@SectionHShift=\skip75
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+Package: amsmath 2024/11/05 v2.17t AMS math features
+\@mathmargin=\skip76
+
+For additional information on amsmath, use the `?' option.
+(C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d Bold Symbols
+\pmbraise@=\dimen362
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
+Package: amsopn 2022/04/08 v2.04 operator names
+)
+\inf@bad=\count383
+LaTeX Info: Redefining \frac on input line 233.
+\uproot@=\count384
+\leftroot@=\count385
+LaTeX Info: Redefining \overline on input line 398.
+LaTeX Info: Redefining \colon on input line 409.
+\classnum@=\count386
+\DOTSCASE@=\count387
+LaTeX Info: Redefining \ldots on input line 495.
+LaTeX Info: Redefining \dots on input line 498.
+LaTeX Info: Redefining \cdots on input line 619.
+\Mathstrutbox@=\box104
+\strutbox@=\box105
+LaTeX Info: Redefining \big on input line 721.
+LaTeX Info: Redefining \Big on input line 722.
+LaTeX Info: Redefining \bigg on input line 723.
+LaTeX Info: Redefining \Bigg on input line 724.
+\big@size=\dimen363
+LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
+\macc@depth=\count388
+LaTeX Info: Redefining \bmod on input line 904.
+LaTeX Info: Redefining \pmod on input line 909.
+LaTeX Info: Redefining \smash on input line 939.
+LaTeX Info: Redefining \relbar on input line 969.
+LaTeX Info: Redefining \Relbar on input line 970.
+\c@MaxMatrixCols=\count389
+\dotsspace@=\muskip18
+\c@parentequation=\count390
+\dspbrk@lvl=\count391
+\tag@help=\toks46
+\row@=\count392
+\column@=\count393
+\maxfields@=\count394
+\andhelp@=\toks47
+\eqnshift@=\dimen364
+\alignsep@=\dimen365
+\tagshift@=\dimen366
+\tagwidth@=\dimen367
+\totwidth@=\dimen368
+\lineht@=\dimen369
+\@envbody=\toks48
+\multlinegap=\skip77
+\multlinetaggap=\skip78
+\mathdisplay@stack=\toks49
+LaTeX Info: Redefining \[ on input line 2953.
+LaTeX Info: Redefining \] on input line 2954.
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/mathtools\empheq.sty
+Package: empheq 2024/08/09 v2.17 Emphasizing equations
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/mathtools\mhsetup.sty
+Package: mhsetup 2021/03/18 v1.4 programming setup (MH)
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/mathtools\mathtools.sty
+Package: mathtools 2024/10/04 v1.31 mathematical typesetting tools
+\g_MT_multlinerow_int=\count395
+\l_MT_multwidth_dim=\dimen370
+\origjot=\skip79
+\l_MT_shortvdotswithinadjustabove_dim=\dimen371
+\l_MT_shortvdotswithinadjustbelow_dim=\dimen372
+\l_MT_above_intertext_sep=\dimen373
+\l_MT_below_intertext_sep=\dimen374
+\l_MT_above_shortintertext_sep=\dimen375
+\l_MT_below_shortintertext_sep=\dimen376
+\xmathstrut@box=\box106
+\xmathstrut@dim=\dimen377
+)
+\l_EQ_equationtype_int=\count396
+\l_EQ_alignmentmode_int=\count397
+\l_EQ_totalwidth_dim=\dimen378
+\l_EQ_displaywidth_dim=\dimen379
+\l_EQ_temp_linewidth_dim=\dimen380
+\l_EQ_linewidth_dim=\dimen381
+\EmphEqdelimitershortfall=\dimen382
+\EmphEqdelimiterfactor=\count398
+\g_EQ_toptag_height_dim=\dimen383
+\g_EQ_bottomtag_depth_dim=\dimen384
+\g_EQ_toprow_height_dim=\dimen385
+\g_EQ_bottomrow_depth_dim=\dimen386
+\g_EQ_widesttag_dim=\dimen387
+\EQ_mathdisplay_box=\box107
+\EQ_tag_box=\box108
+\g_EQ_temprow_int=\count399
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/xfrac\xfrac.sty
+Package: xfrac 2024-06-04 Split-level fractions
+\l__xfrac_slash_box=\box109
+\l__xfrac_tmp_box=\box110
+\l__xfrac_denominator_bot_sep_dim=\dimen388
+\l__xfrac_numerator_bot_sep_dim=\dimen389
+\l__xfrac_numerator_top_sep_dim=\dimen390
+\l__xfrac_slash_left_sep_dim=\dimen391
+\l__xfrac_slash_right_sep_dim=\dimen392
+\l__xfrac_slash_left_muskip=\muskip19
+\l__xfrac_slash_right_muskip=\muskip20
+
+LaTeX template Info: Declaring template type 'xfrac' taking 3 argument(s) on
+(template)           line 100.
+
+
+LaTeX template Info: Declaring instance 'cmr' of type xfrac on line 392.
+
+
+LaTeX template Info: Declaring instance 'cmss' of type xfrac on line 392.
+
+
+LaTeX template Info: Declaring instance 'cmtt' of type xfrac on line 392.
+
+)
+\larg=\skip80
+LaTeX Font Info:    Trying to load font information for T1+lmr on input line 139.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lm\t1lmr.fd
+File: t1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+) (repport.aux)
+\openout1 = `repport.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 139.
+LaTeX Font Info:    ... okay on input line 139.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count400
+\scratchdimen=\dimen393
+\scratchbox=\box111
+\nofMPsegments=\count401
+\nofMParguments=\count402
+\everyMPshowfont=\toks50
+\MPscratchCnt=\count403
+\MPscratchDim=\dimen394
+\MPnumerator=\count404
+\makeMPintoPDFobject=\count405
+\everyMPtoPDFconversion=\toks51
+) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
+))
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: a4paper
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(51.21504pt, 495.07779pt, 51.21504pt)
+* v-part:(T,H,B)=(51.21504pt, 742.61676pt, 51.21504pt)
+* \paperwidth=597.50787pt
+* \paperheight=845.04684pt
+* \textwidth=495.07779pt
+* \textheight=742.61676pt
+* \oddsidemargin=-21.05495pt
+* \evensidemargin=-21.05495pt
+* \topmargin=-58.05495pt
+* \headheight=12.0pt
+* \headsep=25.0pt
+* \topskip=10.0pt
+* \footskip=30.0pt
+* \marginparwidth=65.0pt
+* \marginparsep=11.0pt
+* \columnsep=10.0pt
+* \skip\footins=9.0pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+LaTeX Info: Redefining \degres on input line 139.
+LaTeX Info: Redefining \up on input line 139.
+(C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/translations/dicts\translations-basic-dictionary-french.trsl
+File: translations-basic-dictionary-french.trsl (french translation file `translations-basic-dictionary')
+)
+Package translations Info: loading dictionary `translations-basic-dictionary' for `french'. on input line 139.
+\c@lstlisting=\count406
+Package caption Info: Begin \AtBeginDocument code.
+Package caption Info: hyperref package is loaded.
+Package caption Info: End \AtBeginDocument code.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/ninecolors\ninecolors.sty
+Package: ninecolors 2022-02-13 v2022D Select colors with proper color contrast
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xparse.sty
+Package: xparse 2024-08-16 L3 Experimental document command parser
+)) (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pdflscape\pdflscape.sty
+Package: pdflscape 2022-10-27 v0.13 Display of landscape pages in PDF
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/pdflscape\pdflscape-nometadata.sty
+Package: pdflscape-nometadata 2022-10-28 v0.13 Display of landscape pages in PDF (HO)
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\lscape.sty
+Package: lscape 2020/05/28 v3.02 Landscape Pages (DPC)
+)
+Package pdflscape Info: Auto-detected driver: pdftex on input line 81.
+))
+Package hyperref Info: Link coloring ON on input line 139.
+ (repport.out) (repport.out)
+\@outlinefile=\write6
+\openout6 = `repport.out'.
+
+LaTeX Font Info:    Trying to load font information for OT1+lmr on input line 161.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lm\ot1lmr.fd
+File: ot1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+)
+LaTeX Font Info:    Trying to load font information for OML+lmm on input line 161.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lm\omllmm.fd
+File: omllmm.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+)
+LaTeX Font Info:    Trying to load font information for OMS+lmsy on input line 161.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lm\omslmsy.fd
+File: omslmsy.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+)
+LaTeX Font Info:    Trying to load font information for OMX+lmex on input line 161.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lm\omxlmex.fd
+File: omxlmex.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+)
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <10> on input line 161.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <7> on input line 161.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <5> on input line 161.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 161.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 161.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+<image/Logo_Alpha2.png, id=114, 501.875pt x 355.3275pt>
+File: image/Logo_Alpha2.png Graphic file (type png)
+<use image/Logo_Alpha2.png>
+Package pdftex.def Info: image/Logo_Alpha2.png  used on input line 161.
+(pdftex.def)             Requested size: 123.76944pt x 87.62799pt.
+
+Overfull \hbox (24.0pt too wide) in paragraph at lines 161--161
+ [] 
+ []
+
+<image/apex_pres.jpg, id=116, 3035.34pt x 3035.34pt>
+File: image/apex_pres.jpg Graphic file (type jpg)
+<use image/apex_pres.jpg>
+Package pdftex.def Info: image/apex_pres.jpg  used on input line 161.
+(pdftex.def)             Requested size: 297.04968pt x 297.0213pt.
+
+Underfull \hbox (badness 10000) in paragraph at lines 161--161
+
+ []
+
+
+Overfull \hbox (39.0pt too wide) in paragraph at lines 161--161
+[][] 
+ []
+
+
+
+<image/AEROIPSA_HEADER.png, id=117, 707.64375pt x 61.73062pt>
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 163.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+<image/AEROIPSA_FOOTER.png, id=118, 193.47281pt x 61.73062pt>
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 163.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[1
+
+{C:/Users/alexi/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ec.enc} <./image/AEROIPSA_HEADER.png> <./image/AEROIPSA_FOOTER.png> <./image/Logo_Alpha2.png> <./image/apex_pres.jpg>] (repport.toc)
+\tf@toc=\write7
+\openout7 = `repport.toc'.
+
+ (repport.lof)
+\tf@lof=\write8
+\openout8 = `repport.lof'.
+
+
+
+
+Package fancyhdr Warning: \headheight is too small (12.0pt): 
+(fancyhdr)                Make it at least 12.80502pt, for example:
+(fancyhdr)                \setlength{\headheight}{12.80502pt}.
+(fancyhdr)                You might also make \topmargin smaller:
+(fancyhdr)                \addtolength{\topmargin}{-0.80502pt}.
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 177.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 177.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[1]
+Underfull \hbox (badness 10000) in paragraph at lines 180--181
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 182--184
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 245.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 245.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[2]
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 255.
+ (C:\Users\alexi\AppData\Local\Programs\MiKTeX\tex/latex/lm\ts1lmr.fd
+File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+)
+Underfull \hbox (badness 10000) in paragraph at lines 258--261
+
+ []
+
+<image/APEX_FRONT.jpg, id=189, 2100.84875pt x 2802.47pt>
+File: image/APEX_FRONT.jpg Graphic file (type jpg)
+<use image/APEX_FRONT.jpg>
+Package pdftex.def Info: image/APEX_FRONT.jpg  used on input line 269.
+(pdftex.def)             Requested size: 166.34392pt x 221.89302pt.
+
+Overfull \hbox (5.17363pt too wide) in paragraph at lines 317--318
+ [][] 
+ []
+
+<image/APEX_BACK.jpg, id=190, 2125.9425pt x 2835.59375pt>
+File: image/APEX_BACK.jpg Graphic file (type jpg)
+<use image/APEX_BACK.jpg>
+Package pdftex.def Info: image/APEX_BACK.jpg  used on input line 324.
+(pdftex.def)             Requested size: 166.34392pt x 221.83308pt.
+
+Underfull \hbox (badness 10000) in paragraph at lines 359--372
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 384--392
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 392.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 392.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[3{C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-ts1.enc} <./image/APEX_FRONT.jpg> <./image/APEX_BACK.jpg>]
+Underfull \hbox (badness 10000) in paragraph at lines 406--416
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 419--424
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 431--434
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 440--445
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 451.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 451.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[4{C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-mathsy.enc}{C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-rm.enc}{C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/lm/lm-mathit.enc}]
+Underfull \hbox (badness 10000) in paragraph at lines 472--481
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 482.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 482.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[5]
+<image/Sheet_1.png, id=227, 1173.38374pt x 830.10126pt>
+File: image/Sheet_1.png Graphic file (type png)
+<use image/Sheet_1.png>
+Package pdftex.def Info: image/Sheet_1.png  used on input line 497.
+(pdftex.def)             Requested size: 371.30833pt x 262.67392pt.
+<image/Sheet_2.png, id=228, 1173.38374pt x 831.105pt>
+File: image/Sheet_2.png Graphic file (type png)
+<use image/Sheet_2.png>
+Package pdftex.def Info: image/Sheet_2.png  used on input line 498.
+(pdftex.def)             Requested size: 371.30833pt x 262.99153pt.
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 508.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 508.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[6 <./image/Sheet_1.png> <./image/Sheet_2.png>]
+<image/TopLayer.png, id=239, 286.06876pt x 371.13657pt>
+File: image/TopLayer.png Graphic file (type png)
+<use image/TopLayer.png>
+Package pdftex.def Info: image/TopLayer.png  used on input line 525.
+(pdftex.def)             Requested size: 198.02809pt x 256.91698pt.
+<image/Inner1.png, id=240, 286.06876pt x 371.13657pt>
+File: image/Inner1.png Graphic file (type png)
+<use image/Inner1.png>
+Package pdftex.def Info: image/Inner1.png  used on input line 531.
+(pdftex.def)             Requested size: 198.02809pt x 256.91698pt.
+<image/Inner2.png, id=241, 286.06876pt x 371.13657pt>
+File: image/Inner2.png Graphic file (type png)
+<use image/Inner2.png>
+Package pdftex.def Info: image/Inner2.png  used on input line 537.
+(pdftex.def)             Requested size: 198.02809pt x 256.91698pt.
+<image/BottomLayer.png, id=242, 285.31593pt x 371.13657pt>
+File: image/BottomLayer.png Graphic file (type png)
+<use image/BottomLayer.png>
+Package pdftex.def Info: image/BottomLayer.png  used on input line 543.
+(pdftex.def)             Requested size: 198.02809pt x 257.59088pt.
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 551.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 551.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[7 <./image/TopLayer.png> <./image/Inner1.png> <./image/Inner2.png> <./image/BottomLayer.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 557--571
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 572--580
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 581--583
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 584--589
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 589--594
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 605.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 605.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[8]
+Underfull \hbox (badness 10000) in paragraph at lines 609--619
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 620--626
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 631.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 631.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[9]
+<image/station_sol_zoom.jpg, id=262, 1072.75781pt x 1125.45468pt>
+File: image/station_sol_zoom.jpg Graphic file (type jpg)
+<use image/station_sol_zoom.jpg>
+Package pdftex.def Info: image/station_sol_zoom.jpg  used on input line 667.
+(pdftex.def)             Requested size: 371.30833pt x 389.53592pt.
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 673.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 673.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[10 <./image/station_sol_zoom.jpg>]
+Underfull \hbox (badness 10000) in paragraph at lines 677--684
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 687--690
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 691--696
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 705--709
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 710--713
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 714--720
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 723--726
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 727--731
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 732--740
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 741.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 741.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[11]
+<image/MROM_acc.png, id=279, 661.72218pt x 409.53pt>
+File: image/MROM_acc.png Graphic file (type png)
+<use image/MROM_acc.png>
+Package pdftex.def Info: image/MROM_acc.png  used on input line 759.
+(pdftex.def)             Requested size: 396.06374pt x 245.11374pt.
+<image/MROM_gry.png, id=280, 666.23906pt x 402.00188pt>
+File: image/MROM_gry.png Graphic file (type png)
+<use image/MROM_gry.png>
+Package pdftex.def Info: image/MROM_gry.png  used on input line 765.
+(pdftex.def)             Requested size: 396.06374pt x 238.98245pt.
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 779.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 779.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[12 <./image/MROM_acc.png> <./image/MROM_gry.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 783--791
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 792--802
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 803--810
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 811--818
+
+ []
+
+
+
+File: image/AEROIPSA_HEADER.png Graphic file (type png)
+<use image/AEROIPSA_HEADER.png>
+Package pdftex.def Info: image/AEROIPSA_HEADER.png  used on input line 830.
+(pdftex.def)             Requested size: 407.72343pt x 35.56593pt.
+File: image/AEROIPSA_FOOTER.png Graphic file (type png)
+<use image/AEROIPSA_FOOTER.png>
+Package pdftex.def Info: image/AEROIPSA_FOOTER.png  used on input line 830.
+(pdftex.def)             Requested size: 111.47331pt x 35.56593pt.
+[13] 
+enddocument/afterlastpage (AED): lastpage setting LastPage.
+(repport.aux)
+ ***********
+LaTeX2e <2024-11-01> patch level 2
+L3 programming layer <2025-01-18>
+ ***********
+Package rerunfilecheck Info: File `repport.out' has not changed.
+(rerunfilecheck)             Checksum: C8A9BB21739CEDE67F61C6FF01CD29B8;3989.
+ ) 
+Here is how much of TeX's memory you used:
+ 37241 strings out of 473522
+ 765641 string characters out of 5714609
+ 1148896 words of memory out of 5000000
+ 59829 multiletter control sequences out of 15000+600000
+ 620220 words of font info for 71 fonts, out of 8000000 for 9000
+ 1143 hyphenation exceptions out of 8191
+ 84i,13n,91p,469b,1047s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx10.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmbx12.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmcsc10.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmmi10.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr10.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr17.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr7.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr8.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmr9.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmri10.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmri8.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsy10.pfb><C:/Users/alexi/AppData/Local/Programs/MiKTeX/fonts/type1/public/lm/lmsy7.pfb>
+Output written on repport.pdf (14 pages, 2231019 bytes).
+PDF statistics:
+ 375 PDF objects out of 1000 (max. 8388607)
+ 65 named destinations out of 1000 (max. 500000)
+ 304 words of extra memory for PDF output out of 10000 (max. 10000000)
+

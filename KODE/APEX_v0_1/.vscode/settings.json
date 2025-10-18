@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "usart.h": "c",
+        "stdlib.h": "c",
+        "stdio.h": "c",
+        "string.h": "c",
+        "scheduler.h": "c",
+        "usbd_cdc_if.h": "c",
+        "tools.h": "c",
+        "usb_device.h": "c",
+        "bmi088.h": "c",
+        "buzzer.h": "c",
+        "gps.h": "c",
+        "main.h": "c",
+        "flash_stream.h": "c",
+        "LSM303AGR.C": "cpp"
+    },
+    "cortex-debug.variableUseNaturalFormat": true
+}
