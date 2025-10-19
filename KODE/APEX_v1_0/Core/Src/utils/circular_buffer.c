@@ -1,78 +1,135 @@
 #include "utils/circular_buffer.h"
+#include <string.h>
 
+/* --------------------------------------------------------------------------
+ *   Fonctions internes (non exportées)
+ * -------------------------------------------------------------------------- */
 
-void CIRCULAR_BUFFER_one_byte_push(CIRCULAR_BUFFER_WRITTER *cbw, uint8_t data);
-uint8_t CIRCULAR_BUFFER_one_byte_pop(CIRCULAR_BUFFER_READER *cbr);
-size_t CIRCULAR_BUFFER_get_relative_index(CIRCULAR_BUFFER_WRITTER *cbw, size_t origine, int i);
-void CIRCULAR_BUFFER_set_from(CIRCULAR_BUFFER_WRITTER *cbw, void *data, size_t origine, int i);
-void CIRCULAR_BUFFER_get_from(CIRCULAR_BUFFER_READER *cbr, void *data, size_t origine, int i);
-
-
-void CIRCULAR_BUFFER_init(CIRCULAR_BUFFER_WRITTER *cbw, uint8_t *buffer, size_t data_size, size_t capacity) {
-    cbw->buffer = buffer;
-    cbw->head = 0;
-    cbw->capacity = capacity;
-    cbw->max_size = data_size * capacity;
-    cbw->data_size = data_size;
+// Effectue une addition modulo avec un offset pouvant être négatif.
+// Permet de gérer les index circulaires.
+static inline size_t wrap_add(size_t base, int offset, size_t mod) {
+    int result = (int)base + offset;
+    int wrapped = (result % (int)mod + (int)mod) % (int)mod;
+    return (size_t)wrapped;
 }
 
-void CIRCULAR_BUFFER_one_byte_push(CIRCULAR_BUFFER_WRITTER *cbw, uint8_t data) {
-    cbw->buffer[cbw->head] = data;
-    cbw->head = (cbw->head + 1) % cbw->max_size;
+/* --------------------------------------------------------------------------
+ *   Initialisation / reset
+ * -------------------------------------------------------------------------- */
+
+void cb_init(circular_buffer_t *cb,
+             void *storage, size_t elem_size, size_t capacity,
+             cb_overflow_policy_t policy) {
+    if (!cb || !storage || elem_size == 0u || capacity == 0u) return;
+
+    cb->storage = (uint8_t *)storage;
+    cb->elem_size = elem_size;
+    cb->capacity  = capacity;
+    cb->head = 0u;
+    cb->tail = 0u;
+    cb->count = 0u;
+    cb->policy = policy;
 }
 
-uint8_t CIRCULAR_BUFFER_one_byte_pop(CIRCULAR_BUFFER_READER *cbr) {
-    uint8_t data = cbr->cbw->buffer[cbr->tail];
-    cbr->tail = (cbr->tail + 1) % cbr->cbw->max_size;
-    return data;
+void cb_reset(circular_buffer_t *cb) {
+    cb->head = 0u;
+    cb->tail = 0u;
+    cb->count = 0u;
 }
 
-void CIRCULAR_BUFFER_push(CIRCULAR_BUFFER_WRITTER *cbw, void *data) {
-    for (size_t i = 0; i < cbw->data_size; i++) {
-        CIRCULAR_BUFFER_one_byte_push(cbw, *(uint8_t *)((uintptr_t)data + i));
+/* --------------------------------------------------------------------------
+ *   Opérations principales
+ * -------------------------------------------------------------------------- */
+
+cb_status_t cb_push(circular_buffer_t *cb, const void *elem) {
+    if (!cb || !elem) return CB_BAD_ARG;
+
+    cb_status_t status = CB_OK;
+    /* Cas plein */
+    if (cb->count == cb->capacity) {
+        if (cb->policy == CB_REJECT_NEW) {
+            return CB_FULL;
+        }
+        /* Overwrite oldest: on avance le tail */
+        cb->tail = wrap_add(cb->tail, 1, cb->capacity);
+        status = CB_OVERWROTE_OLDEST;
+        /* count reste saturé */
+    } else {
+        cb->count++;
     }
+
+    /* Copie de l’élément au head */
+    uint8_t *dst = cb->storage + (cb->head * cb->elem_size);
+    memcpy(dst, elem, cb->elem_size);
+    cb->head = wrap_add(cb->head, 1, cb->capacity);
+
+    return status;
 }
 
-void CIRCULAR_BUFFER_pop(CIRCULAR_BUFFER_READER *cbr, void *data) {
-    for (size_t i = 0; i < cbr->cbw->data_size; i++) {
-        *(uint8_t *)((uintptr_t)data + i) = CIRCULAR_BUFFER_one_byte_pop(cbr);
-    }
+cb_status_t cb_pop(circular_buffer_t *cb, void *out) {
+    if (!cb)             return CB_BAD_ARG;
+    if (cb->count == 0u) return CB_EMPTY;
+    if (!out)            return CB_BAD_ARG;
+
+    const uint8_t *src = cb->storage + (cb->tail * cb->elem_size);
+    memcpy(out, src, cb->elem_size);
+
+    cb->tail = wrap_add(cb->tail, 1, cb->capacity);
+    cb->count--;
+    return CB_OK;
 }
 
-size_t CIRCULAR_BUFFER_get_relative_index(CIRCULAR_BUFFER_WRITTER *cbw, size_t origine, int i) {
-    int i0 = ((int)origine + i * ((int)(cbw->data_size))) % ((int)(cbw->max_size));
-    if (i0 < 0) {
-        i0 += cbw->max_size;
-    }
-    return (size_t)i0;
+/* --------------------------------------------------------------------------
+ *   Accès pointeur (bas niveau, sans copie)
+ * -------------------------------------------------------------------------- */
+
+/**
+ * @brief Retourne un pointeur constant vers un élément à un index absolu (wrap permissif).
+ */
+const void *cb_peek_ptr(const circular_buffer_t *cb, size_t idx) {
+    if (!cb || !cb->storage) return NULL;
+
+    /* wrap permissif : idx peut être supérieur à capacity */
+    size_t index = idx % cb->capacity;
+    return cb->storage + (index * cb->elem_size);
 }
 
-void CIRCULAR_BUFFER_set_from(CIRCULAR_BUFFER_WRITTER *cbw, void *data, size_t origine, int i) {
-    size_t index = CIRCULAR_BUFFER_get_relative_index(cbw, origine, i);
-    for (size_t j = 0; j < cbw->data_size; j++) {
-        cbw->buffer[index + j] = *(uint8_t *)((uintptr_t)data + j);
-    }
+/**
+ * @brief Retourne un pointeur constant vers un élément relatif à une origine.
+ * @param origin Index de base (souvent cb->tail)
+ * @param offset Décalage relatif (positif ou négatif, wrap automatique)
+ */
+const void *cb_peek_relative_ptr(const circular_buffer_t *cb,
+                                 size_t origin, int offset) {
+    if (!cb || !cb->storage) return NULL;
+
+    int idx = (int)origin + offset;
+    int mod = (idx % (int)cb->capacity + (int)cb->capacity) % (int)cb->capacity;
+
+    return cb->storage + ((size_t)mod * cb->elem_size);
 }
 
-void CIRCULAR_BUFFER_get_from(CIRCULAR_BUFFER_READER *cbr, void *data, size_t origine, int i) {
-    size_t index = CIRCULAR_BUFFER_get_relative_index(cbr->cbw, origine, i);
-    for (size_t j = 0; j < cbr->cbw->data_size; j++) {
-        *(uint8_t *)((uintptr_t)data + j) = cbr->cbw->buffer[index + j];
-    }
+/* --------------------------------------------------------------------------
+ *   Accès lecture (haut niveau, avec copie)
+ * -------------------------------------------------------------------------- */
+
+cb_status_t cb_peek(const circular_buffer_t *cb, size_t idx, void *out) {
+    if (!cb || !out) return CB_BAD_ARG;
+
+    const void *src = cb_peek_ptr(cb, idx);
+    if (!src) return CB_BAD_ARG;
+
+    memcpy(out, src, cb->elem_size);
+    return CB_OK;
 }
 
-// void CIRCULAR_BUFFER_set_from_tail(CIRCULAR_BUFFER *cb, void *data, int i) {
-//     CIRCULAR_BUFFER_set_from(cb, data, cb->tail, i);
-// }
+cb_status_t cb_peek_relative(const circular_buffer_t *cb,
+                             size_t origin, int offset, void *out) {
+    if (!cb || !out) return CB_BAD_ARG;
 
-// void CIRCULAR_BUFFER_set_from_head(CIRCULAR_BUFFER *cb, void *data, int i) {
-//     CIRCULAR_BUFFER_set_from(cb, data, cb->head, i);
-// }
+    const void *src = cb_peek_relative_ptr(cb, origin, offset);
+    if (!src) return CB_BAD_ARG;
 
-// void CIRCULAR_BUFFER_get_from_tail(CIRCULAR_BUFFER *cb, void *data, int i) {
-//     CIRCULAR_BUFFER_get_from(cb, data, cb->tail, i);
-// }
-
-// void CIRCULAR_BUFFER_get_from_head(CIRCULAR_BUFFER *cb, void *data, int i) {
-//     CIRCULAR_BUFFER_get_from(cb, data, cb->head, i);
-// }
+    memcpy(out, src, cb->elem_size);
+    return CB_OK;
+}

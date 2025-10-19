@@ -4,7 +4,7 @@
 #include "stm32f4xx_hal.h"
 #include "peripherals/i2c.h"
 
-#include "utils/data_publisher.h"
+#include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
 
