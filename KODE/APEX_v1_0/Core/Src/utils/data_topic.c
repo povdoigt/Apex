@@ -1,5 +1,6 @@
 #include "utils/data_topic.h"
 #include <string.h>
+#include <stdbool.h>
 
 /* --------------------------------------------------------------------------
  *   Fonctions internes (non exportées)
@@ -22,7 +23,7 @@ void data_topic_init(data_topic_t *topic,
                      cb_overflow_policy_t policy) {
     if (!topic) return;
 
-    cb_init(&topic->ring, storage, elem_size, capacity, policy);
+    cb_init(&(topic->cb), storage, elem_size, capacity, policy);
     topic->pub_seq = 0u;
     topic->subscriber_count = 0u;
 }
@@ -30,7 +31,7 @@ void data_topic_init(data_topic_t *topic,
 data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
     if (!topic || !elem) return DT_BAD_ARG;
 
-    cb_status_t s = cb_push(&topic->ring, elem);
+    cb_status_t s = cb_push(&(topic->cb), elem);
     if (s == CB_FULL) return DT_FULL;
 
     /* Publication validée */
@@ -39,12 +40,12 @@ data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
 }
 
 /* --------------------------------------------------------------------------
- *   Subscriber : attachement / détachement
+ *   Subscriber : attachement / détachement / synchronisation
  * -------------------------------------------------------------------------- */
 
-data_status_t data_subscriber_attach(data_subscriber_t *sub,
-                                     data_topic_t *topic,
-                                     data_attach_mode_t mode) {
+data_status_t data_sub_attach(data_subscriber_t *sub,
+                              data_topic_t *topic,
+                              data_attach_mode_t mode) {
     if (!sub || !topic) return DT_BAD_ARG;
     if (sub->attached) return DT_OK; /* déjà attaché */
 
@@ -53,18 +54,18 @@ data_status_t data_subscriber_attach(data_subscriber_t *sub,
     sub->last_seq = topic->pub_seq;
 
     if (mode == DATA_ATTACH_FROM_OLDEST) {
-        sub->tail = topic->ring.tail;
+        sub->tail = topic->cb.tail;
         /* Ajuste last_seq pour correspondre à la plus ancienne donnée encore présente */
-        sub->last_seq -= topic->ring.count;
+        sub->last_seq -= topic->cb.count;
     } else {
-        sub->tail = topic->ring.head;
+        sub->tail = topic->cb.head;
     }
 
     topic->subscriber_count++;
     return DT_OK;
 }
 
-data_status_t data_subscriber_detach(data_subscriber_t *sub) {
+data_status_t data_sub_detach(data_subscriber_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
@@ -80,46 +81,81 @@ data_status_t data_subscriber_detach(data_subscriber_t *sub) {
     return DT_OK;
 }
 
-/* --------------------------------------------------------------------------
- *   Subscriber : lecture et détection de nouveautés
- * -------------------------------------------------------------------------- */
-
-uint32_t data_subscriber_num_new(const data_subscriber_t *sub) {
-    if (!sub || !sub->attached) return 0;
-
-    // Calcul du delta entre la dernière séquence lue et la séquence de publication actuelle
-    return sub->topic->pub_seq - sub->last_seq;
-}
-
-data_status_t data_subscriber_read(data_subscriber_t *sub, void *out_elem){
-    if (!sub || !out_elem || !sub->attached) return DT_BAD_ARG;
+data_status_t data_sub_sync(data_subscriber_t *sub) {
+    if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
-    circular_buffer_t *cb = &(topic->ring);
+    sub->tail = topic->cb.head;
+    sub->last_seq = topic->pub_seq;
 
-    if (cb->count == 0u) return DT_EMPTY;
+    return DT_OK;
+}
 
-    uint32_t delta = data_subscriber_num_new(sub);
-    if (delta == 0) return DT_EMPTY; /* aucune nouvelle donnée */
+/* --------------------------------------------------------------------------
+ *   Subscriber : logique commune (paramétrable)
+ * -------------------------------------------------------------------------- */
+
+data_status_t data_sub_peek_relative_ptr(data_subscriber_t *sub, const void **out_ptr, size_t origin, int offset) {
+    if (!sub || !sub->attached) return DT_BAD_ARG;
+    if (!out_ptr) return DT_BAD_ARG;
+
+    if (sub->topic->cb.count == 0u) return DT_EMPTY;
+
+    uint32_t delta = data_sub_num_to_read(sub);
+    if (delta == 0) return DT_EMPTY;
 
     data_status_t result = DT_OK;
 
-    /* Si delta > capacity → overflow, on réaligne le subscriber */
-    if (delta > cb->capacity) {
-        sub->tail = cb->tail;
-        sub->last_seq = topic->pub_seq - cb->count;
+    /* Overflow : plus de messages publiés que la capacité ne peut en garder */
+    if (delta > sub->topic->cb.capacity) {
+        data_sub_sync(sub);
         result = DT_DATA_LOSS;
     }
 
-    /* Lecture de la donnée pointée par tail (copie unique) */
-    const void *src = cb_peek_relative_ptr(cb, sub->tail, 0);
+    const void *src = cb_peek_relative_ptr(&(sub->topic->cb), origin, offset);
     if (!src) return DT_BAD_ARG;
-
-    memcpy(out_elem, src, cb->elem_size);
-
-    /* Avancement logique */
-    sub->tail = wrap_add(sub->tail, 1, cb->capacity);
-    sub->last_seq++;
+    
+    *out_ptr = src;
 
     return result;
+}
+
+data_status_t data_sub_peek_ptr(data_subscriber_t *sub, const void **out_ptr, int idx) {
+    return data_sub_peek_relative_ptr(sub, out_ptr, 0, idx);
+}
+
+data_status_t data_sub_read_ptr(data_subscriber_t *sub, const void **out_ptr) {
+    data_status_t status = data_sub_peek_relative_ptr(sub, out_ptr, sub->tail, 0);
+    if (status != DT_BAD_ARG && status != DT_EMPTY) {
+        // Avance la position de l’abonné
+        sub->tail = wrap_add(sub->tail, 1, sub->topic->cb.capacity);
+        sub->last_seq++;
+    }
+    return status;
+}
+
+data_status_t data_sub_peek_relative(data_subscriber_t *sub, void *out_elem, size_t origin, int offset) {
+    if (!out_elem) return DT_BAD_ARG;
+
+    const void *src_ptr = NULL;
+    data_status_t status = data_sub_peek_relative_ptr(sub, &src_ptr, origin, offset);
+    if (status != DT_BAD_ARG && status != DT_EMPTY) {
+        memcpy(out_elem, src_ptr, sub->topic->cb.elem_size);
+    }
+    return status;
+}
+
+data_status_t data_sub_peek(data_subscriber_t *sub, void *out_elem, int idx) {
+    return data_sub_peek_relative(sub, out_elem, 0, idx);
+}
+
+data_status_t data_sub_read(data_subscriber_t *sub, void *out_elem) {
+    if (!out_elem) return DT_BAD_ARG;
+
+    const void *src_ptr = NULL;
+    data_status_t status = data_sub_read_ptr(sub, &src_ptr);
+    if (status != DT_BAD_ARG && status != DT_EMPTY) {
+        memcpy(out_elem, src_ptr, sub->topic->cb.elem_size);
+    }
+    return status;
 }

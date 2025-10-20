@@ -83,45 +83,23 @@ cb_status_t cb_pop(circular_buffer_t *cb, void *out) {
  *   Accès pointeur (bas niveau, sans copie)
  * -------------------------------------------------------------------------- */
 
-/**
- * @brief Retourne un pointeur constant vers un élément à un index absolu (wrap permissif).
- */
-const void *cb_peek_ptr(const circular_buffer_t *cb, size_t idx) {
-    if (!cb || !cb->storage) return NULL;
 
-    /* wrap permissif : idx peut être supérieur à capacity */
-    size_t index = idx % cb->capacity;
-    return cb->storage + (index * cb->elem_size);
-}
-
-/**
- * @brief Retourne un pointeur constant vers un élément relatif à une origine.
- * @param origin Index de base (souvent cb->tail)
- * @param offset Décalage relatif (positif ou négatif, wrap automatique)
- */
 const void *cb_peek_relative_ptr(const circular_buffer_t *cb,
                                  size_t origin, int offset) {
     if (!cb || !cb->storage) return NULL;
 
-    int idx = (int)origin + offset;
-    int mod = (idx % (int)cb->capacity + (int)cb->capacity) % (int)cb->capacity;
+    size_t index = wrap_add(origin, offset, cb->capacity);
 
-    return cb->storage + ((size_t)mod * cb->elem_size);
+    return cb->storage + (index * cb->elem_size);
+}
+
+const void *cb_peek_ptr(const circular_buffer_t *cb, size_t idx) {
+    return cb_peek_relative_ptr(cb, 0, (int)idx);
 }
 
 /* --------------------------------------------------------------------------
  *   Accès lecture (haut niveau, avec copie)
  * -------------------------------------------------------------------------- */
-
-cb_status_t cb_peek(const circular_buffer_t *cb, size_t idx, void *out) {
-    if (!cb || !out) return CB_BAD_ARG;
-
-    const void *src = cb_peek_ptr(cb, idx);
-    if (!src) return CB_BAD_ARG;
-
-    memcpy(out, src, cb->elem_size);
-    return CB_OK;
-}
 
 cb_status_t cb_peek_relative(const circular_buffer_t *cb,
                              size_t origin, int offset, void *out) {
@@ -132,4 +110,8 @@ cb_status_t cb_peek_relative(const circular_buffer_t *cb,
 
     memcpy(out, src, cb->elem_size);
     return CB_OK;
+}
+
+cb_status_t cb_peek(const circular_buffer_t *cb, size_t idx, void *out) {
+    return cb_peek_relative(cb, 0, (int)idx, out);
 }
