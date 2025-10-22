@@ -6,7 +6,8 @@
 #include <stdbool.h>
 #include "peripherals/spi.h"
 
-#include "utils/data_publisher.h"
+#include "utils/data_topic.h"
+#include "utils/types.h"
 #include "utils/scheduler.h"
 
 /* Register defines */

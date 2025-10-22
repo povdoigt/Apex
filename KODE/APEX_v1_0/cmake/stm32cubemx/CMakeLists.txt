@@ -50,7 +50,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/usart.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/circular_buffer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/data_publisher.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/data_topic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/flash_stream.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/gms.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/iir_filter.c
@@ -60,6 +60,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/telem_format.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/tools.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/types.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/crc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/freertos.c

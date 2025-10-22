@@ -13,7 +13,7 @@
 #include "drivers/rfm96w.h"
 #include "drivers/w25q_mem.h"
 
-#include "utils/data_publisher.h"
+#include "utils/data_topic.h"
 #include "utils/flash_stream.h"
 #include "utils/telem_format.h"
 
@@ -116,7 +116,6 @@ typedef struct MACHINE {
     COMPONENTS* components;
     FLASH_STREAM* flash_stream;
     // DATAS* datas;
-    DATA_ALL_TIMESTAMP datas;
 
     char           tx_buff[256];
     uint8_t        usb_watchdog_bfr[3];

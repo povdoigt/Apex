@@ -229,7 +229,6 @@ void TASK_Program_start() {
 
   	TASK_BMI088_ReadAcc_ARGS args0 = {
 		.imu = &BMI088_imu,
-		.data_pub = NULL,
 		.delay = 100,        // 100 ms delay
 		.data_buffer = NULL, // Will be allocated in the task
 		.timer_start = 0,
@@ -244,7 +243,6 @@ void TASK_Program_start() {
 
   	TASK_BMI088_ReadGyr_ARGS args1 = {
 		.imu = &BMI088_imu,
-		.data_pub = NULL,
 		.delay = 100,        // 100 ms delay
 		.data_buffer = NULL, // Will be allocated in the task
 		.timer_start = 0,

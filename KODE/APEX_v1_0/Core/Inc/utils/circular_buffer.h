@@ -1,39 +1,148 @@
-#include "stm32f4xx_hal.h"
-
 #ifndef CIRCULAR_BUFFER_H
 #define CIRCULAR_BUFFER_H
 
-typedef struct CIRCULAR_BUFFER_WRITTER {
-    uint8_t *buffer;    // Pointer to the buffer
-    size_t head;        // Index of the head of the buffer
-    size_t capacity;    // Maximum size of the buffer in elements
-    size_t max_size;    // Maximum size of the buffer in bytes
-    size_t data_size;   // Size of each data element in the buffer
-} CIRCULAR_BUFFER_WRITTER;
+#include <stdint.h>
+#include <stddef.h>
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
 
-typedef struct CIRCULAR_BUFFER_READER {
-    CIRCULAR_BUFFER_WRITTER *cbw;
-    size_t tail;
-} CIRCULAR_BUFFER_READER;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#define CIRCULAR_BUFFER_SIZE(data_size, capacity) (capacity * data_size)
+/* --------------------------------------------------------------------------
+ *   Types et configuration
+ * -------------------------------------------------------------------------- */
 
-void CIRCULAR_BUFFER_init(CIRCULAR_BUFFER_WRITTER *cbw, uint8_t *buffer, size_t data_size, size_t capacity);
+/**
+ * @brief Politique à appliquer en cas de dépassement de capacité.
+ */
+typedef enum {
+    CB_OVERWRITE_OLDEST = 0,  /**< Écrase la donnée la plus ancienne si plein. */
+    CB_REJECT_NEW             /**< Rejette la nouvelle donnée si plein.       */
+} cb_overflow_policy_t;
 
-void CIRCULAR_BUFFER_push(CIRCULAR_BUFFER_WRITTER *cbw, void *data);
+/**
+ * @brief Codes de statut renvoyés par les fonctions du circular buffer.
+ */
+typedef enum {
+    CB_OK = 0,                /**< Opération réussie. */
+    CB_EMPTY,                 /**< Aucune donnée à lire. */
+    CB_FULL,                  /**< Tampon plein, nouvelle écriture refusée. */
+    CB_OVERWROTE_OLDEST,      /**< Donnée la plus ancienne écrasée. */
+    CB_BAD_ARG                /**< Paramètre invalide (pointeur NULL, etc.). */
+} cb_status_t;
 
-void CIRCULAR_BUFFER_pop(CIRCULAR_BUFFER_READER *cbr, void *data);
+/**
+ * @brief Structure d’un tampon circulaire générique.
+ *
+ * La mémoire de stockage n’est pas allouée par le buffer.
+ * L’appelant doit fournir un pointeur vers un bloc de taille :
+ * `elem_size * capacity` octets.
+ */
+typedef struct {
+    uint8_t *storage;               /**< Mémoire externe du buffer. */
+    size_t   elem_size;             /**< Taille d’un élément (en octets). */
+    size_t   capacity;              /**< Nombre maximal d’éléments. */
+    size_t   head;                  /**< Prochaine position d’écriture. */
+    size_t   tail;                  /**< Position du plus ancien élément. */
+    size_t   count;                 /**< Nombre d’éléments actuellement stockés. */
+    cb_overflow_policy_t policy;    /**< Politique en cas de dépassement. */
+    // Verouillage par mutex
+    osMutexId_t mutex_id;           /**< ID du mutex pour accès thread-safe. */
+    StaticSemaphore_t mutex_cm;     /**< Mémoire statique pour le mutex. */
+} circular_buffer_t;
 
-void CIRCULAR_BUFFER_set_from(CIRCULAR_BUFFER_WRITTER *cbw, void *data, size_t origine, int i);
+/**
+ * @brief Calcule la taille mémoire nécessaire pour stocker `n` éléments du type donné.
+ */
+#define CIRCULAR_BUFFER_BYTES(type, n) ((size_t)(sizeof(type) * (n)))
 
-void CIRCULAR_BUFFER_get_from(CIRCULAR_BUFFER_READER *cbr, void *data, size_t origine, int i);
+/* --------------------------------------------------------------------------
+ *   Initialisation / reset
+ * -------------------------------------------------------------------------- */
 
-// void CIRCULAR_BUFFER_set_from_tail(CIRCULAR_BUFFER *cb, void *data, int i);
+/**
+ * @brief Initialise un tampon circulaire sur une mémoire externe.
+ * @param cb        Pointeur vers la structure à initialiser.
+ * @param storage   Mémoire fournie (doit être allouée par l’appelant).
+ * @param elem_size Taille d’un élément (en octets).
+ * @param capacity  Nombre maximal d’éléments.
+ * @param policy    Politique en cas de dépassement.
+ */
+void cb_init(circular_buffer_t *cb,
+             void *storage, size_t elem_size, size_t capacity,
+             cb_overflow_policy_t policy);
 
-// void CIRCULAR_BUFFER_set_from_head(CIRCULAR_BUFFER *cb, void *data, int i);
+/**
+ * @brief Vide le buffer sans modifier la mémoire de stockage.
+ */
+void cb_reset(circular_buffer_t *cb);
 
-// void CIRCULAR_BUFFER_get_from_tail(CIRCULAR_BUFFER *cb, void *data, int i);
+/* --------------------------------------------------------------------------
+ *   Écriture / lecture destructive
+ * -------------------------------------------------------------------------- */
 
-// void CIRCULAR_BUFFER_get_from_head(CIRCULAR_BUFFER *cb, void *data, int i);
+/**
+ * @brief Ajoute une donnée au buffer (copie complète).
+ *
+ * Si le buffer est plein :
+ * - en mode CB_OVERWRITE_OLDEST, l’élément le plus ancien est écrasé,
+ * - en mode CB_REJECT_NEW, l’écriture est refusée.
+ */
+cb_status_t cb_push(circular_buffer_t *cb, const void *elem);
 
-#endif // CIRCULAR_BUFFER_H
+/**
+ * @brief Retire et copie la donnée la plus ancienne (FIFO).
+ */
+cb_status_t cb_pop(circular_buffer_t *cb, void *out);
+
+/* --------------------------------------------------------------------------
+ *   Accès pointeur (sans copie)
+ * -------------------------------------------------------------------------- */
+
+/**
+ * @brief Retourne un pointeur constant vers un élément à un index absolu.
+ *
+ * @note Comportement "wrap permissif" :
+ *       si `idx >= capacity`, l’indice est ramené automatiquement par modulo.
+ *       Aucun contrôle n’est effectué sur la validité temporelle de la donnée.
+ */
+const void *cb_peek_ptr(circular_buffer_t *cb, size_t idx);
+
+/**
+ * @brief Retourne un pointeur constant vers un élément relatif à une origine.
+ *
+ * @param cb      Pointeur vers le buffer.
+ * @param origin  Index de base (souvent cb->tail).
+ * @param offset  Décalage relatif (peut être positif ou négatif).
+ *
+ * @note Le comportement est également "wrap permissif".
+ */
+const void *cb_peek_relative_ptr(circular_buffer_t *cb,
+                                 size_t origin, int offset);
+
+/* --------------------------------------------------------------------------
+ *   Accès lecture (avec copie)
+ * -------------------------------------------------------------------------- */
+
+/**
+ * @brief Copie la donnée à un index absolu dans le buffer.
+ *
+ * Équivalent à : memcpy(out, cb_peek_ptr(cb, idx), elem_size)
+ */
+cb_status_t cb_peek(circular_buffer_t *cb, size_t idx, void *out);
+
+/**
+ * @brief Copie la donnée à un offset relatif à une origine donnée.
+ *
+ * Équivalent à : memcpy(out, cb_peek_relative_ptr(cb, origin, offset), elem_size)
+ */
+cb_status_t cb_peek_relative(circular_buffer_t *cb,
+                             size_t origin, int offset, void *out);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* CIRCULAR_BUFFER_H */
