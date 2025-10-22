@@ -14,6 +14,14 @@ static inline size_t wrap_add(size_t base, int offset, size_t mod) {
     return (size_t)wrapped;
 }
 
+static inline void dt_lock(data_topic_t *dt) {
+    osMutexAcquire(dt->cb.mutex_id, osWaitForever);
+}
+
+static inline void dt_unlock(data_topic_t *dt) {
+    osMutexRelease(dt->cb.mutex_id);
+}
+
 /* --------------------------------------------------------------------------
  *   Topic : initialisation et publication
  * -------------------------------------------------------------------------- */
@@ -25,6 +33,7 @@ void data_topic_init(data_topic_t *topic,
 
     cb_init(&(topic->cb), storage, elem_size, capacity, policy);
     topic->pub_seq = 0u;
+    dt_lock(topic);
     topic->subscriber_count = 0u;
 }
 
@@ -61,7 +70,10 @@ data_status_t data_sub_attach(data_subscriber_t *sub,
         sub->tail = topic->cb.head;
     }
 
+    dt_lock(topic);
     topic->subscriber_count++;
+    dt_unlock(topic);
+
     return DT_OK;
 }
 
@@ -69,9 +81,12 @@ data_status_t data_sub_detach(data_subscriber_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
+
+    dt_lock(topic);
     if (topic->subscriber_count > 0u) {
         topic->subscriber_count--;
     }
+    dt_unlock(topic);
 
     sub->attached = 0;
     sub->topic = NULL;

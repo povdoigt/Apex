@@ -44,8 +44,8 @@ typedef enum {
  * Il ne possède pas de mémoire propre pour les données.
  */
 typedef struct {
-    circular_buffer_t cb;      /**< Buffer circulaire associé. */
-    uint32_t          pub_seq; /**< Compteur global de publications. */
+    circular_buffer_t cb;               /**< Buffer circulaire associé. */
+    uint32_t          pub_seq;          /**< Compteur global de publications. */
     size_t            subscriber_count; /**< Nombre d’abonnés actuellement attachés. */
 } data_topic_t;
 

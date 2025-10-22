@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,13 +41,16 @@ typedef enum {
  * `elem_size * capacity` octets.
  */
 typedef struct {
-    uint8_t *storage;         /**< Mémoire externe du buffer. */
-    size_t   elem_size;       /**< Taille d’un élément (en octets). */
-    size_t   capacity;        /**< Nombre maximal d’éléments. */
-    size_t   head;            /**< Prochaine position d’écriture. */
-    size_t   tail;            /**< Position du plus ancien élément. */
-    size_t   count;           /**< Nombre d’éléments actuellement stockés. */
-    cb_overflow_policy_t policy;
+    uint8_t *storage;               /**< Mémoire externe du buffer. */
+    size_t   elem_size;             /**< Taille d’un élément (en octets). */
+    size_t   capacity;              /**< Nombre maximal d’éléments. */
+    size_t   head;                  /**< Prochaine position d’écriture. */
+    size_t   tail;                  /**< Position du plus ancien élément. */
+    size_t   count;                 /**< Nombre d’éléments actuellement stockés. */
+    cb_overflow_policy_t policy;    /**< Politique en cas de dépassement. */
+    // Verouillage par mutex
+    osMutexId_t mutex_id;           /**< ID du mutex pour accès thread-safe. */
+    StaticSemaphore_t mutex_cm;     /**< Mémoire statique pour le mutex. */
 } circular_buffer_t;
 
 /**
@@ -103,7 +108,7 @@ cb_status_t cb_pop(circular_buffer_t *cb, void *out);
  *       si `idx >= capacity`, l’indice est ramené automatiquement par modulo.
  *       Aucun contrôle n’est effectué sur la validité temporelle de la donnée.
  */
-const void *cb_peek_ptr(const circular_buffer_t *cb, size_t idx);
+const void *cb_peek_ptr(circular_buffer_t *cb, size_t idx);
 
 /**
  * @brief Retourne un pointeur constant vers un élément relatif à une origine.
@@ -114,7 +119,7 @@ const void *cb_peek_ptr(const circular_buffer_t *cb, size_t idx);
  *
  * @note Le comportement est également "wrap permissif".
  */
-const void *cb_peek_relative_ptr(const circular_buffer_t *cb,
+const void *cb_peek_relative_ptr(circular_buffer_t *cb,
                                  size_t origin, int offset);
 
 /* --------------------------------------------------------------------------
@@ -126,14 +131,14 @@ const void *cb_peek_relative_ptr(const circular_buffer_t *cb,
  *
  * Équivalent à : memcpy(out, cb_peek_ptr(cb, idx), elem_size)
  */
-cb_status_t cb_peek(const circular_buffer_t *cb, size_t idx, void *out);
+cb_status_t cb_peek(circular_buffer_t *cb, size_t idx, void *out);
 
 /**
  * @brief Copie la donnée à un offset relatif à une origine donnée.
  *
  * Équivalent à : memcpy(out, cb_peek_relative_ptr(cb, origin, offset), elem_size)
  */
-cb_status_t cb_peek_relative(const circular_buffer_t *cb,
+cb_status_t cb_peek_relative(circular_buffer_t *cb,
                              size_t origin, int offset, void *out);
 
 #ifdef __cplusplus
