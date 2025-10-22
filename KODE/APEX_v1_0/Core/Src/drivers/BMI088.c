@@ -36,7 +36,7 @@ uint8_t BMI088_Init(BMI088 *imu,
 	 *
 	 */
 
-	uint8_t ACC_Range = BMI_ACC_RANGE_3G;
+	uint8_t ACC_Range = BMI_ACC_RANGE_24G;
 
 	/* Accelerometer requires rising edge on CSB at start-up to activate SPI */
 	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_RESET);
