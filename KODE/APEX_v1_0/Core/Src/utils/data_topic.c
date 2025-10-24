@@ -32,9 +32,10 @@ void data_topic_init(data_topic_t *topic,
     if (!topic) return;
 
     cb_init(&(topic->cb), storage, elem_size, capacity, policy);
-    topic->pub_seq = 0u;
     dt_lock(topic);
+    topic->pub_seq = 0u;
     topic->subscriber_count = 0u;
+    dt_unlock(topic);
 }
 
 data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
@@ -109,6 +110,13 @@ data_status_t data_sub_sync(data_subscriber_t *sub) {
 /* --------------------------------------------------------------------------
  *   Subscriber : logique commune (paramétrable)
  * -------------------------------------------------------------------------- */
+
+uint32_t data_sub_num_to_read(const data_subscriber_t *sub) {
+    if (!sub || !sub->attached || !sub->topic) return 0u;
+
+    uint32_t delta = sub->topic->pub_seq - sub->last_seq;
+    return delta;
+}
 
 data_status_t data_sub_peek_relative_ptr(data_subscriber_t *sub, const void **out_ptr, size_t origin, int offset) {
     if (!sub || !sub->attached) return DT_BAD_ARG;

@@ -85,19 +85,24 @@ void osThreadExit_Cstm() {
 TASK_POOL_ALLOCATE(TASK_Idle);
 
 void TASK_Idle(void *argument) {
+    osThreadId_t task_id;
+    KEY_TASK_POOL_OBJ *key;
+    osStatus_t status;
+    osThreadState_t state;
     for (;;) {
-        osThreadId_t task_id;
-        if (osMessageQueueGet(msg_queue_cleanup_id, &task_id, NULL, osWaitForever) == osOK) {
+        status = osMessageQueueGet(msg_queue_cleanup_id, &task_id, NULL, osWaitForever);
+        if (status == osOK) {
             if (task_id != NULL) {
-                if (osThreadGetState(task_id) == osThreadTerminated) {
-                    KEY_TASK_POOL_OBJ *key = TASK_POOL_OBJ_TABLE_find(&task_pool_obj_table, task_id);
+                state = osThreadGetState(task_id);
+                if (state == osThreadTerminated) {
+                    key = TASK_POOL_OBJ_TABLE_find(&task_pool_obj_table, task_id);
                     if (key != NULL) {
-                        osMemoryPoolFree(key->pool_id, key->obj);
+                        status = osMemoryPoolFree(key->pool_id, key->obj);
                         TASK_POOL_OBJ_TABLE_remove(&task_pool_obj_table, key);
                     }
                 } else {
                     // The task is not terminated yet, requeue it
-                    osMessageQueuePut(msg_queue_cleanup_id, &task_id, 0, 0);
+                    status = osMessageQueuePut(msg_queue_cleanup_id, &task_id, 0, 0);
                 }
             }
         }
@@ -141,7 +146,7 @@ void TASK_POOL_OBJ_TABLE_add(TASK_POOL_OBJ_TABLE *table, osThreadId_t thread_id,
 
 KEY_TASK_POOL_OBJ *TASK_POOL_OBJ_TABLE_find(TASK_POOL_OBJ_TABLE *table, osThreadId_t thread_id) {
     for (size_t i = 0; i < MAX_TASK; i++) {
-        if ((table->elems)[i].pool_id == thread_id) {
+        if (table->elems[i].thread_id == thread_id) {
             return table->elems + i;
         }
     }

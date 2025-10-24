@@ -1,8 +1,13 @@
 #include "drivers/BMI088.h"
 #include "cmsis_os2.h"
 #include "peripherals/spi.h"
+#include "utils/circular_buffer.h"
+#include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
+#include "utils/types.h"
+#include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 
@@ -398,9 +403,16 @@ void TASK_BMI088_ReadAcc(void *argument) {
 	TASK_BMI088_ReadAcc_ARGS *args = (TASK_BMI088_ReadAcc_ARGS*)(argument);
 
 	BMI088 *imu = args->imu;
-	// DATA_PUB *data_pub = args->data_pub;
+	data_topic_t **dt_ptr = args->dt;
 	uint32_t delay = args->delay;
-	// uint8_t *data_buffer = args->data_buffer;
+
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(FLOAT3, 16)];
+	data_topic_t dt;
+	*dt_ptr = &dt;
+
+	data_topic_init(&dt, storage, sizeof(FLOAT3), 16, CB_OVERWRITE_OLDEST);
+
+	FLOAT3 accData;
 
 	for (;;) {
 		uint8_t txBuf[8] = {(BMI_ACC_DATA | 0x80), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* Register addr, 1 byte dummy, 6 bytes data */
@@ -414,10 +426,12 @@ void TASK_BMI088_ReadAcc(void *argument) {
 		int16_t accY = (int16_t) ((rxBuf[5] << 8) | rxBuf[4]);
 		int16_t accZ = (int16_t) ((rxBuf[7] << 8) | rxBuf[6]);
 
-		/* Convert to m/s^2 */
-		imu->acc_mps2.x = imu->accConversion * accX - imu->acc_mps2_offset.x;
-		imu->acc_mps2.y = imu->accConversion * accY - imu->acc_mps2_offset.y;
-		imu->acc_mps2.z = imu->accConversion * accZ - imu->acc_mps2_offset.z;
+		/* Convert to m/s^2 and construct FLOAT3 */
+		accData.x = imu->accConversion * accX - imu->acc_mps2_offset.x;
+		accData.y = imu->accConversion * accY - imu->acc_mps2_offset.y;
+		accData.z = imu->accConversion * accZ - imu->acc_mps2_offset.z;
+
+		data_topic_publish(&dt, &accData);
 
 		osDelay(delay);
 	}
@@ -429,9 +443,16 @@ void TASK_BMI088_ReadGyr(void *argument) {
 	TASK_BMI088_ReadGyr_ARGS *args = (TASK_BMI088_ReadGyr_ARGS*)(argument);
 
 	BMI088 *imu = args->imu;
-	// DATA_PUB *data_pub = args->data_pub;
+	data_topic_t **dt_ptr = args->dt;
 	uint32_t delay = args->delay;
-	// uint8_t *data_buffer = args->data_buffer;
+
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(FLOAT3, 16)];
+	data_topic_t dt;
+	*dt_ptr = &dt;
+
+	data_topic_init(&dt, storage, sizeof(FLOAT3), 16, CB_OVERWRITE_OLDEST);
+
+	FLOAT3 gyrData;
 
 	for (;;) {
 		uint8_t txBuf[7] = {(BMI_GYR_DATA | 0x80), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* Register addr, 1 byte dummy, 6 bytes data */
@@ -445,10 +466,12 @@ void TASK_BMI088_ReadGyr(void *argument) {
 		int16_t gyrY = (int16_t) ((rxBuf[4] << 8) | rxBuf[3]);
 		int16_t gyrZ = (int16_t) ((rxBuf[6] << 8) | rxBuf[5]);
 
-		/* Convert to rad/s */
-		imu->gyr_rps.x = imu->gyrConversion * gyrX - imu->gyr_rps_offset.x;
-		imu->gyr_rps.y = imu->gyrConversion * gyrY - imu->gyr_rps_offset.y;
-		imu->gyr_rps.z = imu->gyrConversion * gyrZ - imu->gyr_rps_offset.z;
+		/* Convert to rad/s and construct FLOAT3 */
+		gyrData.x = imu->gyrConversion * gyrX - imu->gyr_rps_offset.x;
+		gyrData.y = imu->gyrConversion * gyrY - imu->gyr_rps_offset.y;
+		gyrData.z = imu->gyrConversion * gyrZ - imu->gyr_rps_offset.z;
+
+		data_topic_publish(&dt, &gyrData);
 
 		osDelay(delay);
 	}

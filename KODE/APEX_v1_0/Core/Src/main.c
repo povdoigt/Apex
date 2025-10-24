@@ -34,7 +34,10 @@
 #include "peripherals/tim.h"
 #include "peripherals/usart.h"
 
+#include "utils/data_topic.h"
 #include "utils/scheduler.h"
+#include "utils/tools.h"
+#include "utils/usb.h"
 
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_hal_adc.h"
@@ -78,6 +81,10 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 BMI088 BMI088_imu;
+
+data_topic_t *data_topic_acc_ptr;
+data_topic_t *data_topic_gyr_ptr;
+
 /* USER CODE END 0 */
 
 /**
@@ -119,6 +126,7 @@ int main(void) {
 	MX_SPI1_Init();
 	MX_TIM3_Init();
 	MX_CRC_Init();
+	MX_USB_DEVICE_Init();
 	/* USER CODE BEGIN 2 */
 
 	// const osThreadAttr_t TASK_start_Led0R_attributes = {
@@ -138,18 +146,22 @@ int main(void) {
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
+	
 	TASK_POOL_CREATE(TASK_Program_start);
 	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
 	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+	TASK_POOL_CREATE(TASK_USB_Transmit);
+	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
 
 	Init_cleanup();
 	Init_spi_semaphores();
+	USB_Init();
 
 	osThreadAttr_t attr = {
 		.name = TASK_Program_start_name,
 	};
-
 	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+
 	/* USER CODE END 2 */
 
 	/* Init scheduler */
@@ -227,10 +239,12 @@ void TASK_Program_start() {
 		.priority = (osPriority_t)osPriorityNormal,
 	};
 
+	data_topic_acc_ptr = NULL;
+
   	TASK_BMI088_ReadAcc_ARGS args0 = {
 		.imu = &BMI088_imu,
 		.delay = 100,        // 100 ms delay
-		.data_buffer = NULL, // Will be allocated in the task
+		.dt = &data_topic_acc_ptr,
 		.timer_start = 0,
 		.timer_delay = 0,
   	};
@@ -241,20 +255,91 @@ void TASK_Program_start() {
 		.priority = (osPriority_t)osPriorityNormal,
 	};
 
+	data_topic_gyr_ptr = NULL;
+
   	TASK_BMI088_ReadGyr_ARGS args1 = {
 		.imu = &BMI088_imu,
 		.delay = 100,        // 100 ms delay
-		.data_buffer = NULL, // Will be allocated in the task
+		.dt = &data_topic_gyr_ptr,
 		.timer_start = 0,
 		.timer_delay = 0,
   	};
   	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, args1, attr1, osWaitForever);
+
+
+	TASK_Data_USB_Transmit_ARGS usb_args = {
+		.dt = &data_topic_acc_ptr,
+		.delay = 100,
+	};
+	osThreadAttr_t usb_attr = {
+		.name = "TASK_Data_USB_Transmit",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
+
 
   	osThreadExit_Cstm();
 	// for (;;) {
 	// 	osDelay(osWaitForever);
 	// }
 }
+
+TASK_POOL_ALLOCATE(TASK_Data_USB_Transmit);
+
+void TASK_Data_USB_Transmit(void *argument) {
+	TASK_Data_USB_Transmit_ARGS *args = (TASK_Data_USB_Transmit_ARGS *)argument;
+
+	data_topic_t **dt = args->dt;
+	uint32_t delay = args->delay;
+
+	char buffer[64];
+	char buffer_x[10];
+	char buffer_y[10];
+	char buffer_z[10];
+	FLOAT3 data;
+	uint32_t len;
+
+	while (*dt == NULL) {
+		osDelay(10);
+	}
+	data_subscriber_t sub = {0};
+	data_sub_attach(&sub, *dt, DATA_ATTACH_FROM_NOW);
+
+	osThreadAttr_t usb_attr = {
+		.name = "TASK_USB_Transmit",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	TASK_USB_Transmit_ARGS usb_args = {
+		.buff = buffer,
+		.len = 0,
+	};
+
+	for (;;) {
+		if (data_sub_num_to_read(&sub)) {
+			data_sub_read(&sub, &data);
+			
+			// Format data into CSV string
+			float_format(buffer_x, data.x, 4, 10);
+			float_format(buffer_y, data.y, 4, 10);
+			float_format(buffer_z, data.z, 4, 10);
+			strcpy(buffer, "Acc : ");
+			strcat(buffer, buffer_x);
+			strcat(buffer, ", ");
+			strcat(buffer, buffer_y);
+			strcat(buffer, ", ");
+			strcat(buffer, buffer_z);
+			strcat(buffer, "\n");
+
+			// // Transmit data over USB
+			usb_args.len = strlen(buffer);
+			OS_THREAD_NEW_CSTM(TASK_USB_Transmit, usb_args, usb_attr, osWaitForever);
+		}
+
+		osDelay(delay); // Adjust delay as needed
+	}
+}
+
+
 
 /* USER CODE END 4 */
 

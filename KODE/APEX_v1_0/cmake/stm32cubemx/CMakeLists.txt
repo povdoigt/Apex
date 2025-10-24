@@ -61,6 +61,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/tools.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/types.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/usb.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/crc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/freertos.c

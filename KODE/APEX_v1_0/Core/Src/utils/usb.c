@@ -1,4 +1,5 @@
 #include "utils/usb.h"
+#include "cmsis_os2.h"
 #include "usbd_cdc_if.h"
 
 static StaticSemaphore_t usb_semaphore_buffer;
@@ -19,7 +20,7 @@ TASK_POOL_ALLOCATE(TASK_USB_Transmit);
 void TASK_USB_Transmit(void *argument) {
     TASK_USB_Transmit_ARGS *args = (TASK_USB_Transmit_ARGS *)argument;
 
-    for (;;) {
+    // for (;;) {
         // Acquire the semaphore before transmitting
         osSemaphoreAcquire(usb_semaphore_id, osWaitForever);
 
@@ -28,7 +29,8 @@ void TASK_USB_Transmit(void *argument) {
         // Release the semaphore after transmission
         osSemaphoreRelease(usb_semaphore_id);
 
-        osDelay(100); // Adjust delay as needed
-    }
+    // }
+
+    osThreadExit_Cstm();
 }
 

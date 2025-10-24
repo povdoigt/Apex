@@ -23,6 +23,8 @@
 #define __MAIN_H
 
 #include "utils/scheduler.h"
+#include "utils/data_topic.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -98,6 +100,18 @@ typedef struct TASK_Program_start_ARGS { } TASK_Program_start_ARGS;
 TASK_POOL_CONFIGURE(TASK_Program_start, 1, 512)
 
 void TASK_Program_start();
+
+
+typedef struct TASK_Data_USB_Transmit_ARGS {
+    data_topic_t **dt;
+    uint32_t delay;
+} TASK_Data_USB_Transmit_ARGS;
+
+TASK_POOL_CONFIGURE(TASK_Data_USB_Transmit, 1, 1024);
+
+void TASK_Data_USB_Transmit(void *argument);
+
+
 
 /* USER CODE END Private defines */
 
