@@ -86,7 +86,7 @@ struct KEY_TASK_POOL_OBJ {
     osThreadId_t thread_id;
     osMemoryPoolId_t pool_id;
     void *obj;
-    struct KEY_TASK_POOL_OBJ *next;
+    // struct KEY_TASK_POOL_OBJ *next;
 };
 typedef struct KEY_TASK_POOL_OBJ KEY_TASK_POOL_OBJ;
 

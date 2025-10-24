@@ -114,11 +114,11 @@ void TASK_POOL_OBJ_TABLE_init(TASK_POOL_OBJ_TABLE *table) {
     table->head = table->elems;
     table->count = 0;
 
-    KEY_TASK_POOL_OBJ *last = table->elems;
-    for (size_t i = 1; i < MAX_TASK; i++) {
-        last->next = &table->elems[i];
-        last = last->next;
-    }
+    // KEY_TASK_POOL_OBJ *last = table->elems;
+    // for (size_t i = 1; i < MAX_TASK; i++) {
+    //     last->next = &table->elems[i];
+    //     last = last->next;
+    // }
 }
 
 void TASK_POOL_OBJ_TABLE_add(TASK_POOL_OBJ_TABLE *table, osThreadId_t thread_id, osMemoryPoolId_t pool_id, void *obj) {
