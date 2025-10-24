@@ -297,12 +297,11 @@ void TASK_Data_USB_Transmit(void *argument) {
 	char buffer_y[10];
 	char buffer_z[10];
 	FLOAT3 data;
-	uint32_t len;
 
 	while (*dt == NULL) {
 		osDelay(10);
 	}
-	data_subscriber_t sub = {0};
+	data_sub_t sub = {0};
 	data_sub_attach(&sub, *dt, DATA_ATTACH_FROM_NOW);
 
 	osThreadAttr_t usb_attr = {
@@ -310,7 +309,7 @@ void TASK_Data_USB_Transmit(void *argument) {
 		.priority = (osPriority_t)osPriorityNormal,
 	};
 	TASK_USB_Transmit_ARGS usb_args = {
-		.buff = buffer,
+		.buff = (uint8_t*)buffer,
 		.len = 0,
 	};
 

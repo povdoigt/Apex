@@ -34,7 +34,8 @@ void data_topic_init(data_topic_t *topic,
     cb_init(&(topic->cb), storage, elem_size, capacity, policy);
     dt_lock(topic);
     topic->pub_seq = 0u;
-    topic->subscriber_count = 0u;
+    topic->sub_count = 0u;
+    topic->subs = NULL;
     dt_unlock(topic);
 }
 
@@ -53,7 +54,7 @@ data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
  *   Subscriber : attachement / détachement / synchronisation
  * -------------------------------------------------------------------------- */
 
-data_status_t data_sub_attach(data_subscriber_t *sub,
+data_status_t data_sub_attach(data_sub_t *sub,
                               data_topic_t *topic,
                               data_attach_mode_t mode) {
     if (!sub || !topic) return DT_BAD_ARG;
@@ -72,20 +73,43 @@ data_status_t data_sub_attach(data_subscriber_t *sub,
     }
 
     dt_lock(topic);
-    topic->subscriber_count++;
+
+    sub->prev = NULL;
+    sub->next = NULL;
+
+    data_sub_t *old_head = topic->subs;
+    if (old_head != NULL) {
+        old_head->prev = sub;
+        sub->next = old_head;
+    }
+    topic->subs = sub;
+
+    topic->sub_count++;
     dt_unlock(topic);
 
     return DT_OK;
 }
 
-data_status_t data_sub_detach(data_subscriber_t *sub) {
+data_status_t data_sub_detach(data_sub_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
 
     dt_lock(topic);
-    if (topic->subscriber_count > 0u) {
-        topic->subscriber_count--;
+
+    /* Retire de la liste chainée */
+
+    if (sub->next != NULL) {
+        sub->next->prev = sub->prev;
+    }
+    if (sub->prev != NULL) {
+        sub->prev->next = sub->next;
+    } else {
+        topic->subs = sub->next;
+    }
+
+    if (topic->sub_count > 0u) {
+        topic->sub_count--;
     }
     dt_unlock(topic);
 
@@ -97,7 +121,7 @@ data_status_t data_sub_detach(data_subscriber_t *sub) {
     return DT_OK;
 }
 
-data_status_t data_sub_sync(data_subscriber_t *sub) {
+data_status_t data_sub_sync(data_sub_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
@@ -111,14 +135,14 @@ data_status_t data_sub_sync(data_subscriber_t *sub) {
  *   Subscriber : logique commune (paramétrable)
  * -------------------------------------------------------------------------- */
 
-uint32_t data_sub_num_to_read(const data_subscriber_t *sub) {
+uint32_t data_sub_num_to_read(const data_sub_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return 0u;
 
     uint32_t delta = sub->topic->pub_seq - sub->last_seq;
     return delta;
 }
 
-data_status_t data_sub_peek_relative_ptr(data_subscriber_t *sub, const void **out_ptr, size_t origin, int offset) {
+data_status_t data_sub_peek_relative_ptr(data_sub_t *sub, const void **out_ptr, size_t origin, int offset) {
     if (!sub || !sub->attached) return DT_BAD_ARG;
     if (!out_ptr) return DT_BAD_ARG;
 
@@ -143,11 +167,11 @@ data_status_t data_sub_peek_relative_ptr(data_subscriber_t *sub, const void **ou
     return result;
 }
 
-data_status_t data_sub_peek_ptr(data_subscriber_t *sub, const void **out_ptr, int idx) {
+data_status_t data_sub_peek_ptr(data_sub_t *sub, const void **out_ptr, int idx) {
     return data_sub_peek_relative_ptr(sub, out_ptr, 0, idx);
 }
 
-data_status_t data_sub_read_ptr(data_subscriber_t *sub, const void **out_ptr) {
+data_status_t data_sub_read_ptr(data_sub_t *sub, const void **out_ptr) {
     data_status_t status = data_sub_peek_relative_ptr(sub, out_ptr, sub->tail, 0);
     if (status != DT_BAD_ARG && status != DT_EMPTY) {
         // Avance la position de l’abonné
@@ -157,7 +181,7 @@ data_status_t data_sub_read_ptr(data_subscriber_t *sub, const void **out_ptr) {
     return status;
 }
 
-data_status_t data_sub_peek_relative(data_subscriber_t *sub, void *out_elem, size_t origin, int offset) {
+data_status_t data_sub_peek_relative(data_sub_t *sub, void *out_elem, size_t origin, int offset) {
     if (!out_elem) return DT_BAD_ARG;
 
     const void *src_ptr = NULL;
@@ -168,11 +192,11 @@ data_status_t data_sub_peek_relative(data_subscriber_t *sub, void *out_elem, siz
     return status;
 }
 
-data_status_t data_sub_peek(data_subscriber_t *sub, void *out_elem, int idx) {
+data_status_t data_sub_peek(data_sub_t *sub, void *out_elem, int idx) {
     return data_sub_peek_relative(sub, out_elem, 0, idx);
 }
 
-data_status_t data_sub_read(data_subscriber_t *sub, void *out_elem) {
+data_status_t data_sub_read(data_sub_t *sub, void *out_elem) {
     if (!out_elem) return DT_BAD_ARG;
 
     const void *src_ptr = NULL;
