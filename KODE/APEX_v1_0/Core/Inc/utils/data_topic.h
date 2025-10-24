@@ -43,7 +43,7 @@ typedef enum {
  * des publications ainsi que le suivi du nombre d’abonnés.
  * Il ne possède pas de mémoire propre pour les données.
  */
-typedef struct {
+typedef struct data_topic_t {
     circular_buffer_t    cb;        /**< Buffer circulaire associé. */
     uint32_t             pub_seq;   /**< Compteur global de publications. */
     size_t               sub_count; /**< Nombre d’abonnés actuellement attachés. */
