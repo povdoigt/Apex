@@ -63,6 +63,7 @@ struct data_sub_t {
     int                  attached;  /**< 0 = détaché, 1 = attaché. */
     struct data_sub_t   *prev;      /**< Pointeur vers l’abonné précédent (liste chainée). */
     struct data_sub_t   *next;      /**< Pointeur vers l’abonné suivant (liste chainée). */
+    StaticSemaphore_t    sem_cb;    /**< Sémaphore pour call-back. */
 };
 typedef struct data_sub_t data_sub_t;
 
