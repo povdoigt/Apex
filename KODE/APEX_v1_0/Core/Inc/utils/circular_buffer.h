@@ -79,6 +79,8 @@ void cb_init(circular_buffer_t *cb,
  */
 void cb_reset(circular_buffer_t *cb);
 
+void cb_free(circular_buffer_t *cb);
+
 /* --------------------------------------------------------------------------
  *   Écriture / lecture destructive
  * -------------------------------------------------------------------------- */

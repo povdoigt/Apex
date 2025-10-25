@@ -8,7 +8,7 @@ static osSemaphoreId_t usb_semaphore_id;
 
 void USB_Init(void) {
     const osSemaphoreAttr_t usb_semaphore_attr = {
-        .name = "USB_Transmit_Semaphore",
+        // .name = "USB_Transmit_Semaphore",
         .cb_mem = &usb_semaphore_buffer,
         .cb_size = sizeof(usb_semaphore_buffer),
     };

@@ -41,7 +41,7 @@ void cb_init(circular_buffer_t *cb,
 
     // Initialisation du mutex
     const osMutexAttr_t mutex_attr = {
-        .name = "CB_Mutex",
+        // .name = "CB_Mutex",
         .cb_mem = &cb->mutex_cm,
         .cb_size = sizeof(cb->mutex_cm)
     };
@@ -58,6 +58,14 @@ void cb_reset(circular_buffer_t *cb) {
     cb->tail = 0u;
     cb->count = 0u;
     cb_unlock(cb);
+}
+
+void cb_free(circular_buffer_t *cb) {
+    if (!cb) return;
+    if (cb->mutex_id) {
+        osMutexDelete(cb->mutex_id);
+        cb->mutex_id = NULL;
+    }
 }
 
 /* --------------------------------------------------------------------------

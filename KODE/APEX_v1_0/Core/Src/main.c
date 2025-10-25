@@ -17,11 +17,16 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
 #include "main.h"
-#include "cmsis_gcc.h"
-#include "cmsis_os.h"
 #include "cmsis_os2.h"
 #include "crc.h"
+
+#include <string.h>
+
 #include "drivers/ADXL375.h"
 #include "drivers/BMI088.h"
 #include "drivers/led.h"
@@ -43,11 +48,6 @@
 #include "stm32f4xx_hal_adc.h"
 #include "stm32f4xx_ll_adc.h"
 #include "usb_device.h"
-#include <string.h>
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -88,46 +88,48 @@ data_topic_t *data_topic_gyr_ptr;
 /* USER CODE END 0 */
 
 /**
- * @brief  The application entry point.
- * @retval int
- */
-int main(void) {
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
 
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick.
-	*/
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_DMA_Init();
-	MX_I2C3_Init();
-	MX_SPI2_Init();
-	MX_TIM2_Init();
-	MX_TIM4_Init();
-	MX_USART1_UART_Init();
-	MX_ADC1_Init();
-	MX_SPI1_Init();
-	MX_TIM3_Init();
-	MX_CRC_Init();
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_I2C3_Init();
+  MX_SPI2_Init();
+  MX_TIM2_Init();
+  MX_TIM4_Init();
+  MX_USART1_UART_Init();
+  MX_ADC1_Init();
+  MX_SPI1_Init();
+  MX_TIM3_Init();
+  MX_CRC_Init();
+  MX_TIM11_Init();
+  /* USER CODE BEGIN 2 */
+
 	MX_USB_DEVICE_Init();
-	/* USER CODE BEGIN 2 */
 
 	// const osThreadAttr_t TASK_start_Led0R_attributes = {
 	// 	.name = "TASK_start_Led0R",
@@ -162,44 +164,44 @@ int main(void) {
 	};
 	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
 
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-	/* Init scheduler */
-	osKernelInitialize(); /* Call init function for freertos objects (in
-							cmsis_os2.c) */
-	MX_FREERTOS_Init();
+  /* Init scheduler */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
 
-	/* Start scheduler */
-	osKernelStart();
+  /* Start scheduler */
+  osKernelStart();
 
-	/* We should never get here as control is now taken by the scheduler */
+  /* We should never get here as control is now taken by the scheduler */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1) {
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
-void SystemClock_Config(void) {
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
-   */
+  */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
-   * in the RCC_OscInitTypeDef structure.
-   */
+  * in the RCC_OscInitTypeDef structure.
+  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -208,20 +210,22 @@ void SystemClock_Config(void) {
   RCC_OscInitStruct.PLL.PLLN = 96;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
     Error_Handler();
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
-                                RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK) {
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  {
     Error_Handler();
   }
 }
@@ -232,7 +236,7 @@ void SystemClock_Config(void) {
 
 TASK_POOL_ALLOCATE(TASK_Program_start);
 
-void TASK_Program_start() {
+void TASK_Program_start(void *argument) {
 
   	osThreadAttr_t attr0 = {
 		.name = "TASK_BMI088_ReadAcc",
@@ -259,7 +263,7 @@ void TASK_Program_start() {
 
   	TASK_BMI088_ReadGyr_ARGS args1 = {
 		.imu = &BMI088_imu,
-		.delay = 100,        // 100 ms delay
+		.delay = 1000,        // 100 ms delay
 		.dt = &data_topic_gyr_ptr,
 		.timer_start = 0,
 		.timer_delay = 0,
@@ -269,7 +273,7 @@ void TASK_Program_start() {
 
 	TASK_Data_USB_Transmit_ARGS usb_args = {
 		.dt = &data_topic_acc_ptr,
-		.delay = 100,
+		.delay = 200,
 	};
 	osThreadAttr_t usb_attr = {
 		.name = "TASK_Data_USB_Transmit",
@@ -293,6 +297,7 @@ void TASK_Data_USB_Transmit(void *argument) {
 	uint32_t delay = args->delay;
 
 	char buffer[64];
+	char buffer_status[9];
 	char buffer_x[10];
 	char buffer_y[10];
 	char buffer_z[10];
@@ -301,7 +306,7 @@ void TASK_Data_USB_Transmit(void *argument) {
 	while (*dt == NULL) {
 		osDelay(10);
 	}
-	data_sub_t sub = {0};
+	data_sub_t sub = { 0 };
 	data_sub_attach(&sub, *dt, DATA_ATTACH_FROM_NOW);
 
 	osThreadAttr_t usb_attr = {
@@ -314,25 +319,50 @@ void TASK_Data_USB_Transmit(void *argument) {
 	};
 
 	for (;;) {
-		if (data_sub_num_to_read(&sub)) {
-			data_sub_read(&sub, &data);
-			
-			// Format data into CSV string
+		data_sub_wait_for_data(&sub, osWaitForever);
+		data_status_t status = data_sub_read(&sub, &data);
+		switch (status) {
+		case DT_OK:
+			strcpy(buffer_status, "OK");
+			break;
+		case DT_EMPTY:
+			strcpy(buffer_status, "EMPTY");
+			break;
+		case DT_DATA_LOSS:
+			strcpy(buffer_status, "LOSS");
+			break;
+		case DT_FULL:
+			strcpy(buffer_status, "FULL");
+			break;
+		case DT_BAD_ARG:
+			strcpy(buffer_status, "BAD_ARG");
+			break;
+		}
+		if (status == DT_OK || status == DT_DATA_LOSS) {
 			float_format(buffer_x, data.x, 4, 10);
 			float_format(buffer_y, data.y, 4, 10);
 			float_format(buffer_z, data.z, 4, 10);
-			strcpy(buffer, "Acc : ");
-			strcat(buffer, buffer_x);
-			strcat(buffer, ", ");
-			strcat(buffer, buffer_y);
-			strcat(buffer, ", ");
-			strcat(buffer, buffer_z);
-			strcat(buffer, "\n");
-
-			// // Transmit data over USB
-			usb_args.len = strlen(buffer);
-			OS_THREAD_NEW_CSTM(TASK_USB_Transmit, usb_args, usb_attr, osWaitForever);
+		} else {
+			float_format(buffer_x, +9999.9999, 4, 10);
+			float_format(buffer_y, +9999.9999, 4, 10);
+			float_format(buffer_z, +9999.9999, 4, 10);
 		}
+
+
+		// Format data into CSV string
+		strcpy(buffer, "Status: ");
+		strcat(buffer, buffer_status);
+		strcat(buffer, ", Acc : ");
+		strcat(buffer, buffer_x);
+		strcat(buffer, ", ");
+		strcat(buffer, buffer_y);
+		strcat(buffer, ", ");
+		strcat(buffer, buffer_z);
+		strcat(buffer, "\n");
+
+		// // Transmit data over USB
+		usb_args.len = strlen(buffer);
+		OS_THREAD_NEW_CSTM(TASK_USB_Transmit, usb_args, usb_attr, osWaitForever);
 
 		osDelay(delay); // Adjust delay as needed
 	}
@@ -343,18 +373,20 @@ void TASK_Data_USB_Transmit(void *argument) {
 /* USER CODE END 4 */
 
 /**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM1 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- * @retval None
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM10 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1) {
+  if (htim->Instance == TIM10)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -363,10 +395,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
- */
-void Error_Handler(void) {
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
@@ -376,13 +409,14 @@ void Error_Handler(void) {
 }
 #ifdef USE_FULL_ASSERT
 /**
- * @brief  Reports the name of the source file and the source line number
- *         where the assert_param error has occurred.
- * @param  file: pointer to the source file name
- * @param  line: assert_param error line source number
- * @retval None
- */
-void assert_failed(uint8_t *file, uint32_t line) {
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line
      number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,

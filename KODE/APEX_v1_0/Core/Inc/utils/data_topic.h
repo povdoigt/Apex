@@ -1,6 +1,7 @@
 #ifndef DATA_TOPIC_H
 #define DATA_TOPIC_H
 
+#include "cmsis_os2.h"
 #include "utils/circular_buffer.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -63,7 +64,8 @@ struct data_sub_t {
     int                  attached;  /**< 0 = détaché, 1 = attaché. */
     struct data_sub_t   *prev;      /**< Pointeur vers l’abonné précédent (liste chainée). */
     struct data_sub_t   *next;      /**< Pointeur vers l’abonné suivant (liste chainée). */
-    StaticSemaphore_t    sem_cb;    /**< Sémaphore pour call-back. */
+    StaticSemaphore_t    sem_cm;    /**< Sémaphore pour call-back. */
+    osSemaphoreId_t      sem_id;    /**< ID du sémaphore pour call-back. */
 };
 typedef struct data_sub_t data_sub_t;
 
@@ -83,6 +85,8 @@ typedef struct data_sub_t data_sub_t;
 void data_topic_init(data_topic_t *topic,
                      void *storage, size_t elem_size, size_t capacity,
                      cb_overflow_policy_t policy);
+
+void data_topic_free(data_topic_t *topic);
 
 /**
  * @brief Publie une nouvelle donnée dans le topic.
@@ -192,6 +196,13 @@ data_status_t data_sub_peek(data_sub_t *sub, void *out_elem, int idx);
  * @param out_elem Buffer de sortie.
  */
 data_status_t data_sub_read(data_sub_t *sub, void *out_elem);
+
+/* --------------------------------------------------------------------------
+ *   API Subscriber : Fonctions avec callback
+ * -------------------------------------------------------------------------- */
+
+void data_sub_wait_for_data(data_sub_t *sub, uint32_t timeout_ms);
+void data_sub_clear_data_waiting(data_sub_t *sub);
 
 #ifdef __cplusplus
 }
