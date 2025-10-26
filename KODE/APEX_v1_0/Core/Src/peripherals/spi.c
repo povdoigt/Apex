@@ -306,12 +306,12 @@ const char SPI2_dma_semaphore_name[19] = "SPI2_dma_semaphore";
 void Init_spi_semaphores() {
 #ifdef SPI1
   	const osSemaphoreAttr_t spi1_sem_use_attr = {
-		.name = SPI1_use_semaphore_name,
+		// .name = SPI1_use_semaphore_name,
 		.cb_mem = &spi_semaphores.spi1_use_semaphore,
 		.cb_size = sizeof(spi_semaphores.spi1_use_semaphore),
 	};
   	const osSemaphoreAttr_t spi1_sem_dma_attr = {
-		.name = SPI1_dma_semaphore_name,
+		// .name = SPI1_dma_semaphore_name,
 		.cb_mem = &spi_semaphores.spi1_dma_semaphore,
 		.cb_size = sizeof(spi_semaphores.spi1_dma_semaphore),
 	};
@@ -320,12 +320,12 @@ void Init_spi_semaphores() {
 #endif
 #ifdef SPI2
   	const osSemaphoreAttr_t spi2_sem_use_attr = {
-		.name = SPI2_use_semaphore_name,
+		// .name = SPI2_use_semaphore_name,
 		.cb_mem = &spi_semaphores.spi2_use_semaphore,
 		.cb_size = sizeof(spi_semaphores.spi2_use_semaphore),
 	};
   	const osSemaphoreAttr_t spi2_sem_dma_attr = {
-		.name = SPI2_dma_semaphore_name,
+		// .name = SPI2_dma_semaphore_name,
 		.cb_mem = &spi_semaphores.spi2_dma_semaphore,
 		.cb_size = sizeof(spi_semaphores.spi2_dma_semaphore),
 	};

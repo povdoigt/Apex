@@ -22,7 +22,6 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
-#include "utils/scheduler.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,6 +32,9 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "utils/scheduler.h"
+
+#include "utils/data_topic.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -95,9 +97,21 @@ void Error_Handler(void);
 
 typedef struct TASK_Program_start_ARGS { } TASK_Program_start_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_Program_start, 1, 512)
+TASK_POOL_CONFIGURE(TASK_Program_start, 1, 512);
 
-void TASK_Program_start();
+void TASK_Program_start(void *argument);
+
+
+typedef struct TASK_Data_USB_Transmit_ARGS {
+    data_topic_t **dt;
+    uint32_t delay;
+} TASK_Data_USB_Transmit_ARGS;
+
+TASK_POOL_CONFIGURE(TASK_Data_USB_Transmit, 1, 1024);
+
+void TASK_Data_USB_Transmit(void *argument);
+
+
 
 /* USER CODE END Private defines */
 

@@ -40,7 +40,7 @@ typedef enum {
  * L’appelant doit fournir un pointeur vers un bloc de taille :
  * `elem_size * capacity` octets.
  */
-typedef struct {
+typedef struct circular_buffer_t {
     uint8_t *storage;               /**< Mémoire externe du buffer. */
     size_t   elem_size;             /**< Taille d’un élément (en octets). */
     size_t   capacity;              /**< Nombre maximal d’éléments. */
@@ -78,6 +78,8 @@ void cb_init(circular_buffer_t *cb,
  * @brief Vide le buffer sans modifier la mémoire de stockage.
  */
 void cb_reset(circular_buffer_t *cb);
+
+void cb_free(circular_buffer_t *cb);
 
 /* --------------------------------------------------------------------------
  *   Écriture / lecture destructive

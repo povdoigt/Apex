@@ -1,4 +1,6 @@
 #include "utils/data_topic.h"
+#include "cmsis_os2.h"
+#include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 
@@ -32,9 +34,20 @@ void data_topic_init(data_topic_t *topic,
     if (!topic) return;
 
     cb_init(&(topic->cb), storage, elem_size, capacity, policy);
-    topic->pub_seq = 0u;
     dt_lock(topic);
-    topic->subscriber_count = 0u;
+    topic->pub_seq = 0u;
+    topic->sub_count = 0u;
+    topic->subs = NULL;
+    dt_unlock(topic);
+}
+
+void data_topic_free(data_topic_t *topic) {
+    if (!topic) return;
+
+    cb_free(&(topic->cb));
+    topic->pub_seq = 0u;
+    topic->sub_count = 0u;
+    topic->subs = NULL;
 }
 
 data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
@@ -42,6 +55,10 @@ data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
 
     cb_status_t s = cb_push(&(topic->cb), elem);
     if (s == CB_FULL) return DT_FULL;
+
+    for (data_sub_t *sub = topic->subs; sub != NULL; sub = sub->next) {
+        osSemaphoreRelease(sub->sem_id);
+    }
 
     /* Publication validée */
     topic->pub_seq++;
@@ -52,7 +69,7 @@ data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
  *   Subscriber : attachement / détachement / synchronisation
  * -------------------------------------------------------------------------- */
 
-data_status_t data_sub_attach(data_subscriber_t *sub,
+data_status_t data_sub_attach(data_sub_t *sub,
                               data_topic_t *topic,
                               data_attach_mode_t mode) {
     if (!sub || !topic) return DT_BAD_ARG;
@@ -70,21 +87,54 @@ data_status_t data_sub_attach(data_subscriber_t *sub,
         sub->tail = topic->cb.head;
     }
 
+    const osSemaphoreAttr_t sem_attr = {
+        // .name = "DataSub_Sem",
+        .cb_mem = &sub->sem_cm,
+        .cb_size = sizeof(sub->sem_cm)
+    };
+
+    uint32_t initial_count = data_sub_num_to_read(sub) > 0 ? 1 : 0;
+    sub->sem_id = osSemaphoreNew(1, initial_count, &sem_attr);
+
+
     dt_lock(topic);
-    topic->subscriber_count++;
+
+    sub->prev = NULL;
+    sub->next = NULL;
+
+    data_sub_t *old_head = topic->subs;
+    if (old_head != NULL) {
+        old_head->prev = sub;
+        sub->next = old_head;
+    }
+    topic->subs = sub;
+
+    topic->sub_count++;
     dt_unlock(topic);
 
     return DT_OK;
 }
 
-data_status_t data_sub_detach(data_subscriber_t *sub) {
+data_status_t data_sub_detach(data_sub_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
 
     dt_lock(topic);
-    if (topic->subscriber_count > 0u) {
-        topic->subscriber_count--;
+
+    /* Retire de la liste chainée */
+
+    if (sub->next != NULL) {
+        sub->next->prev = sub->prev;
+    }
+    if (sub->prev != NULL) {
+        sub->prev->next = sub->next;
+    } else {
+        topic->subs = sub->next;
+    }
+
+    if (topic->sub_count > 0u) {
+        topic->sub_count--;
     }
     dt_unlock(topic);
 
@@ -93,10 +143,15 @@ data_status_t data_sub_detach(data_subscriber_t *sub) {
     sub->tail = 0u;
     sub->last_seq = 0u;
 
+    if (sub->sem_id) {
+        osSemaphoreDelete(sub->sem_id);
+        sub->sem_id = NULL;
+    }
+
     return DT_OK;
 }
 
-data_status_t data_sub_sync(data_subscriber_t *sub) {
+data_status_t data_sub_sync(data_sub_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
@@ -110,7 +165,14 @@ data_status_t data_sub_sync(data_subscriber_t *sub) {
  *   Subscriber : logique commune (paramétrable)
  * -------------------------------------------------------------------------- */
 
-data_status_t data_sub_peek_relative_ptr(data_subscriber_t *sub, const void **out_ptr, size_t origin, int offset) {
+uint32_t data_sub_num_to_read(const data_sub_t *sub) {
+    if (!sub || !sub->attached || !sub->topic) return 0u;
+
+    uint32_t delta = sub->topic->pub_seq - sub->last_seq;
+    return delta;
+}
+
+data_status_t data_sub_peek_relative_ptr(data_sub_t *sub, const void **out_ptr, size_t origin, int offset) {
     if (!sub || !sub->attached) return DT_BAD_ARG;
     if (!out_ptr) return DT_BAD_ARG;
 
@@ -135,12 +197,17 @@ data_status_t data_sub_peek_relative_ptr(data_subscriber_t *sub, const void **ou
     return result;
 }
 
-data_status_t data_sub_peek_ptr(data_subscriber_t *sub, const void **out_ptr, int idx) {
+data_status_t data_sub_peek_ptr(data_sub_t *sub, const void **out_ptr, int idx) {
     return data_sub_peek_relative_ptr(sub, out_ptr, 0, idx);
 }
 
-data_status_t data_sub_read_ptr(data_subscriber_t *sub, const void **out_ptr) {
+data_status_t data_sub_read_ptr(data_sub_t *sub, const void **out_ptr) {
     data_status_t status = data_sub_peek_relative_ptr(sub, out_ptr, sub->tail, 0);
+    if (status == DT_DATA_LOSS) {
+        // On relis avec la nouvelle position de la tail
+        // (sync a déjà été fait dans data_sub_peek_relative_ptr)
+        status = data_sub_peek_relative_ptr(sub, out_ptr, sub->tail, 0);
+    }
     if (status != DT_BAD_ARG && status != DT_EMPTY) {
         // Avance la position de l’abonné
         sub->tail = wrap_add(sub->tail, 1, sub->topic->cb.capacity);
@@ -149,7 +216,7 @@ data_status_t data_sub_read_ptr(data_subscriber_t *sub, const void **out_ptr) {
     return status;
 }
 
-data_status_t data_sub_peek_relative(data_subscriber_t *sub, void *out_elem, size_t origin, int offset) {
+data_status_t data_sub_peek_relative(data_sub_t *sub, void *out_elem, size_t origin, int offset) {
     if (!out_elem) return DT_BAD_ARG;
 
     const void *src_ptr = NULL;
@@ -160,11 +227,11 @@ data_status_t data_sub_peek_relative(data_subscriber_t *sub, void *out_elem, siz
     return status;
 }
 
-data_status_t data_sub_peek(data_subscriber_t *sub, void *out_elem, int idx) {
+data_status_t data_sub_peek(data_sub_t *sub, void *out_elem, int idx) {
     return data_sub_peek_relative(sub, out_elem, 0, idx);
 }
 
-data_status_t data_sub_read(data_subscriber_t *sub, void *out_elem) {
+data_status_t data_sub_read(data_sub_t *sub, void *out_elem) {
     if (!out_elem) return DT_BAD_ARG;
 
     const void *src_ptr = NULL;
@@ -173,4 +240,21 @@ data_status_t data_sub_read(data_subscriber_t *sub, void *out_elem) {
         memcpy(out_elem, src_ptr, sub->topic->cb.elem_size);
     }
     return status;
+}
+
+/* --------------------------------------------------------------------------
+ *   API Subscriber : Fonctions avec callback
+ * -------------------------------------------------------------------------- */
+
+void data_sub_wait_for_data(data_sub_t *sub, uint32_t timeout_ms) {
+    if (!sub || !sub->attached) return;
+
+    // Vérifie s'il y a déjà des données à lire
+    if (data_sub_num_to_read(sub) > 0) {
+        return;
+    }
+
+    // Attente avec timeout
+    osStatus_t status = osSemaphoreAcquire(sub->sem_id, timeout_ms);
+    (void)status; // Ignorer le statut pour l'instant
 }

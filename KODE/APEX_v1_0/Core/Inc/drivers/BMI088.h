@@ -187,16 +187,16 @@ BMI088_OffsetData BMI088_OffsetGyroscope(BMI088 *imu);
 
 typedef struct TASK_BMI088_ReadAcc_ARGS {
 	BMI088 *imu;
-	// DATA_PUB *data_pub;
-	uint32_t delay;
 
-	uint8_t *data_buffer;
+	data_topic_t **dt;
+
+	uint32_t delay;
 
 	uint32_t timer_start;
 	uint32_t timer_delay;
 } TASK_BMI088_ReadAcc_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 10, 512);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 10, 1024);
 
 void TASK_BMI088_ReadAcc(void *argument);
 
@@ -204,17 +204,17 @@ void TASK_BMI088_ReadAcc(void *argument);
 
 
 typedef struct TASK_BMI088_ReadGyr_ARGS {
-  BMI088 *imu;
-//   DATA_PUB *data_pub;
-  uint32_t delay;
+	BMI088 *imu;
 
-  uint8_t *data_buffer;
+	data_topic_t **dt;
 
-  uint32_t timer_start;
-  uint32_t timer_delay;
+	uint32_t delay;
+
+	uint32_t timer_start;
+	uint32_t timer_delay;
 } TASK_BMI088_ReadGyr_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 10, 512);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 10, 1024);
 
 void TASK_BMI088_ReadGyr(void *argument);
 
