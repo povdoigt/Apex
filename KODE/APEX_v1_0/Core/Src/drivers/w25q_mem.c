@@ -18,231 +18,303 @@
   */
 
 #include "drivers/w25q_mem.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "cmsis_gcc.h"
 #include "usbd_cdc_if.h"
 
 
-void W25Q_Init(W25Q_Chip			*w25q_chip,
-			   SPI_HandleTypeDef	*hspi,
-			   GPIO_TypeDef			*csPinBank,
-			   uint16_t              csPin,
-			   uint32_t              id) {
+W25Q_STATE W25Q_Init(W25Q_Chip			*w25q_chip,
+					 SPI_HandleTypeDef	*hspi,
+					 GPIO_TypeDef		*csPinBank,
+					 uint16_t			 csPin,
+					 uint32_t			 id) {
 	w25q_chip->hspi = hspi;
 	w25q_chip->csPinBank = csPinBank;
 	w25q_chip->csPin = csPin;
-	w25q_chip->statue = W25Q_OK;
 
 	w25q_chip->ASYNC_busy = false;
 
-	for (uint8_t i = 0; i < 24; i++) {
-		w25q_chip->status_bits[i] = false;
-	}
+	W25Q_STATE state;
 
+	// Read and check ID
 	uint8_t id_buf[3];
-	W25Q_ReadID(w25q_chip, id_buf);
+	state = W25Q_ReadID(w25q_chip, id_buf);
+	if (state != W25Q_OK) return state;
+	if (id_buf[0] != W25Q_MANUFACTURER_ID) return W25Q_CHIP_ERR;
+	if (id != (uint32_t)((id_buf[1] << 8) | id_buf[2])) return W25Q_PARAM_ERR;
 
-	if (w25q_chip->statue == W25Q_OK) {
-		if (id_buf[0] != W25Q_MANUFACTURER_ID) {
-			w25q_chip->statue = W25Q_CHIP_ERR;
-		} else if (id != (uint32_t)((id_buf[1] << 8) | id_buf[2])) {
-			w25q_chip->statue = W25Q_PARAM_ERR;
-		} else {
-			W25Q_ReadStatusReg(w25q_chip);
-    		W25Q_WriteStatuReg1(w25q_chip, 0x00);
-		}
+	// Load configuration
+	uint32_t status_reg = 0; // Initialize status register to 0
+	status_reg |= (1 << W25Q_SR3_ADP_BIT); // Set addr mode to 4-byte
+
+	state = W25Q_WriteStatuReg1(w25q_chip, (uint8_t)(status_reg >>  0));
+	if (state != W25Q_OK) return state;
+	state = W25Q_WriteStatuReg2(w25q_chip, (uint8_t)(status_reg >>  8));
+	if (state != W25Q_OK) return state;
+	state = W25Q_WriteStatuReg3(w25q_chip, (uint8_t)(status_reg >> 16));
+	if (state != W25Q_OK) return state;
+
+	// Verify configuration
+	state = W25Q_ReadStatusReg(w25q_chip);
+	if (state != W25Q_OK) return state;
+
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR3_ADS_BIT)) return W25Q_CHIP_OFF_ON_REQUEST;
+
+	return W25Q_OK;
+}
+
+W25Q_STATE W25Q_WaitForReady(W25Q_Chip *w25q_chip) {
+	W25Q_STATE state;
+	do {
+		state = W25Q_ReadStatusReg(w25q_chip);
+		if (state != W25Q_OK) return state;
+	} while (W25Q_STATUS_REG(w25q_chip, W25Q_SR1_BUSY_BIT));
+
+	return W25Q_OK;
+}
+
+W25Q_STATE W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id) {
+	uint8_t txBuf[4] = { W25Q_READ_JEDEC_ID, 0, 0, 0 };
+	uint8_t rxBuf[4]; // First byte is dummy
+
+	W25Q_STATE state = W25Q_TransmitReceive(w25q_chip, txBuf, rxBuf, 1, 3);
+	if (state != W25Q_OK) return state;
+
+	id[0] = rxBuf[1];
+	id[1] = rxBuf[2];
+	id[2] = rxBuf[3];
+
+	return W25Q_OK;
+}
+
+W25Q_STATE W25Q_Reset(W25Q_Chip *w25q_chip) {
+	uint8_t txBuf[2] = { W25Q_ENABLE_RESET, W25Q_RESET };
+	return W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);
+}
+
+W25Q_STATE W25Q_ReadStatusReg(W25Q_Chip *w25q_chip) {
+
+	uint8_t txBuf[6] = { W25Q_READ_SR1, 0, W25Q_READ_SR2, 0, W25Q_READ_SR3, 0 };
+	uint8_t rxBuf[6]; // byte 0, 2, 4 are dummy
+
+	W25Q_STATE state;
+
+	state = W25Q_TransmitReceive(w25q_chip, txBuf + 0, rxBuf + 0, 1, 1);
+	if (state != W25Q_OK) return state;
+	state = W25Q_TransmitReceive(w25q_chip, txBuf + 2, rxBuf + 2, 1, 1);
+	if (state != W25Q_OK) return state;
+	state = W25Q_TransmitReceive(w25q_chip, txBuf + 4, rxBuf + 4, 1, 1);
+	if (state != W25Q_OK) return state;
+
+	w25q_chip->status_reg =  (uint32_t)(rxBuf[1] <<  0);
+	w25q_chip->status_reg |= (uint32_t)(rxBuf[3] <<  8);
+	w25q_chip->status_reg |= (uint32_t)(rxBuf[5] << 16);
+
+	return W25Q_OK;
+}
+
+W25Q_STATE W25Q_WriteStatuReg1(W25Q_Chip *w25q_chip, uint8_t data) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
 	}
-}
 
-bool W25Q_IsReady(W25Q_Chip *w25q_chip) {
-	W25Q_ReadStatusReg(w25q_chip);
-	return !w25q_chip->status_bits[W25Q_BUSY_BIT];
-}
-
-void W25Q_WaitForReady(W25Q_Chip *w25q_chip) {
-	while (!W25Q_IsReady(w25q_chip)) {}
-}
-
-void W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id) {
-	uint8_t txBuf[1] = { W25Q_READ_JEDEC_ID };
-	uint8_t rxBuf[3];
-
-	W25Q_TransmitReceive2(w25q_chip, txBuf, rxBuf, 1, 3);
-
-	id[0] = rxBuf[0];
-	id[1] = rxBuf[1];
-	id[2] = rxBuf[2];
-}
-
-void W25Q_ReadStatusReg__(W25Q_Chip *w25q_chip) {
-
-	uint8_t txBuf[3] = { W25Q_READ_SR1, W25Q_READ_SR2, W25Q_READ_SR3 };
-	uint8_t rxBuf[3];
-
-	W25Q_TransmitReceive2(w25q_chip, txBuf + 0, rxBuf + 0, 1, 1);
-	W25Q_TransmitReceive2(w25q_chip, txBuf + 1, rxBuf + 1, 1, 1);
-	W25Q_TransmitReceive2(w25q_chip, txBuf + 2, rxBuf + 2, 1, 1);
-
-	for (uint8_t i = 0; i < 8; i++) {
-		w25q_chip->status_bits[i + 0] = (rxBuf[0] >> i) & 0x01;
-		w25q_chip->status_bits[i + 8] = (rxBuf[1] >> i) & 0x01;
-		w25q_chip->status_bits[i + 16] = (rxBuf[2] >> i) & 0x01;
-	}
-}
-
-void W25Q_ReadStatusReg(W25Q_Chip *w25q_chip) {
-
-	uint8_t txBuf[3] = { W25Q_READ_SR1, W25Q_READ_SR2, W25Q_READ_SR3 };
-	uint8_t rxBuf[6];
-
-	W25Q_TransmitReceive(w25q_chip, txBuf + 0, rxBuf + 0, 1, 1);
-	W25Q_TransmitReceive(w25q_chip, txBuf + 1, rxBuf + 2, 1, 1);
-	W25Q_TransmitReceive(w25q_chip, txBuf + 2, rxBuf + 4, 1, 1);
-
-	for (uint8_t i = 0; i < 8; i++) {
-		w25q_chip->status_bits[i + 0] = (rxBuf[1] >> i) & 0x01;
-		w25q_chip->status_bits[i + 8] = (rxBuf[3] >> i) & 0x01;
-		w25q_chip->status_bits[i + 16] = (rxBuf[5] >> i) & 0x01;
-	}
-}
-
-void W25Q_WriteStatuReg1(W25Q_Chip *w25q_chip, uint8_t data) {
 	uint8_t txBuf[2] = { W25Q_WRITE_SR1, data };
-
-	W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);	
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);
+	return state;	
 }
 
-void W25Q_WriteStatuReg2(W25Q_Chip *w25q_chip, uint8_t data) {
-	uint8_t txBuf[2] = { W25Q_WRITE_SR2, data };
-
-	W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);	
-}
-
-void W25Q_WriteStatuReg3(W25Q_Chip *w25q_chip, uint8_t data) {
-	uint8_t txBuf[2] = { W25Q_WRITE_SR3, data };
-
-	W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);
-}
-
-void W25Q_EarseSector(W25Q_Chip *w25q_chip, uint32_t addr) {
-	W25Q_WaitForReady(w25q_chip);
-	if (w25q_chip->status_bits[W25Q_WEL_BIT] == 0) {
-		W25Q_WriteEnable(w25q_chip);
+W25Q_STATE W25Q_WriteStatuReg2(W25Q_Chip *w25q_chip, uint8_t data) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
 	}
 
-	uint8_t txBuf[4] = { W25Q_SECTOR_ERASE,
-						// (uint8_t)(addr >> 24),
+	uint8_t txBuf[2] = { W25Q_WRITE_SR2, data };
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);
+	return state;	
+}
+
+W25Q_STATE W25Q_WriteStatuReg3(W25Q_Chip *w25q_chip, uint8_t data) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
+	}
+
+	uint8_t txBuf[2] = { W25Q_WRITE_SR3, data };
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);
+	return state;
+}
+
+W25Q_STATE W25Q_EraseSector(W25Q_Chip *w25q_chip, uint32_t addr) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
+	}
+
+	uint8_t txBuf[5] = { W25Q_SECTOR_ERASE_4B,
+						(uint8_t)(addr >> 24),
 						(uint8_t)(addr >> 16),
 						(uint8_t)(addr >> 8 ),
 						(uint8_t)(addr >> 0 ) };
-	W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 4, 0);
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 5, 0);
+	return state;
 }
 
-void W25Q_EarseAll(W25Q_Chip *w25q_chip) {
-	W25Q_WaitForReady(w25q_chip);
-	if (w25q_chip->status_bits[W25Q_WEL_BIT] == 0) {
-		W25Q_WriteEnable(w25q_chip);
+W25Q_STATE W25Q_Erase32K(W25Q_Chip *w25q_chip, uint32_t addr) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
+	}
+
+	uint8_t txBuf[5] = { W25Q_32KB_BLOCK_ERASE,
+						(uint8_t)(addr >> 24),
+						(uint8_t)(addr >> 16),
+						(uint8_t)(addr >> 8 ),
+						(uint8_t)(addr >> 0 ) };
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 5, 0);
+	return state;
+}
+
+W25Q_STATE W25Q_Erase64K(W25Q_Chip *w25q_chip, uint32_t addr) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
+	}
+
+	uint8_t txBuf[5] = { W25Q_64KB_BLOCK_ERASE_4B,
+						(uint8_t)(addr >> 24),
+						(uint8_t)(addr >> 16),
+						(uint8_t)(addr >> 8 ),
+						(uint8_t)(addr >> 0 ) };
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 5, 0);
+	return state;
+}
+
+W25Q_STATE W25Q_EraseAll(W25Q_Chip *w25q_chip) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
 	}
 
 	uint8_t txBuf[1] = { W25Q_CHIP_ERASE };
-	W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
+	return state;
 }
 
-void W25Q_WriteEnable(W25Q_Chip *w25q_chip) {
+W25Q_STATE W25Q_WriteEnable(W25Q_Chip *w25q_chip) {
 	uint8_t txBuf[1] = { W25Q_WRITE_ENABLE };
-	W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
+	W25Q_STATE state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
+	return state;
 }
 
-void W25Q_WriteDisable(W25Q_Chip *w25q_chip) {
+W25Q_STATE W25Q_WriteVolatileEnable(W25Q_Chip *w25q_chip) {
+	uint8_t txBuf[1] = { W25Q_ENABLE_VOLATILE_SR };
+	W25Q_STATE state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
+	return state;
+}
+
+W25Q_STATE W25Q_WriteDisable(W25Q_Chip *w25q_chip) {
 	uint8_t txBuf[1] = { W25Q_WRITE_DISABLE };
-	W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
+	W25Q_STATE state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
+	return state;
 }
 
-void W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *data, uint32_t addr, uint16_t data_size) {
-	W25Q_WaitForReady(w25q_chip);
-	if (w25q_chip->status_bits[W25Q_WEL_BIT] == 0) {
-		W25Q_WriteEnable(w25q_chip);
+// Data must have the first 5 bytes reserved for command and address
+// Data size must be <= 256 + 5 bytes = 261 bytes (1 page + command and address)
+W25Q_STATE W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint16_t buf_size) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
 	}
+	buf_size = (buf_size - 5) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE + 5 : buf_size;
+	*(buffer + 0) = W25Q_PAGE_PROGRAM_4B;	// Command
+	*(buffer + 1) = (uint8_t)(addr >> 24);	// Address
+	*(buffer + 2) = (uint8_t)(addr >> 16);	// Address
+	*(buffer + 3) = (uint8_t)(addr >> 8);	// Address
+	*(buffer + 4) = (uint8_t)(addr >> 0);	// Address
 
-	data_size = data_size > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE : data_size;
-	uint16_t tx_size = data_size + 4;
-	// uint8_t *tx_buf = malloc(sizeof(uint8_t) * tx_size);
-	uint8_t tx_buf[256 + 4];
-	tx_buf[0] = W25Q_PAGE_PROGRAM;		// Command
-	// tx_buf[1] = (uint8_t)(addr >> 24);	// Address
-	// tx_buf[2] = (uint8_t)(addr >> 16);	// Address
-	// tx_buf[3] = (uint8_t)(addr >> 8);	// Address
-	// tx_buf[4] = (uint8_t)(addr >> 0);	// Address
-	tx_buf[1] = (uint8_t)(addr >> 16);	// Address
-	tx_buf[2] = (uint8_t)(addr >> 8);	// Address
-	tx_buf[3] = (uint8_t)(addr >> 0);	// Address
+	state = W25Q_TransmitReceive(w25q_chip, buffer, NULL, buf_size, 0);
 
-	// for (uint16_t i = 0; i < data_size; i++) {
-	// 	tx_buf[i + 4] = data[i];
-	// }
-	memcpy(tx_buf + 4, data, data_size);
-
-	W25Q_TransmitReceive(w25q_chip, tx_buf, NULL, tx_size, 0);
-
-	// free(tx_buf);
+	return state;
 }
 
-void W25Q_WriteData(W25Q_Chip *w25q_chip, uint8_t *data, uint32_t addr, uint32_t data_size) {
+// Data must have the first 5 bytes reserved for command and address
+// Data size must be <= flash size + 5 bytes (data + command and address)
+// Data will be modified during the process but the content will remain the same after the function
+W25Q_STATE W25Q_WriteData(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size) {
+	W25Q_STATE state;
+
 	uint32_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000; // MBytes to bytes
-	uint32_t data_size_left = (data_size + addr) > flash_size ? flash_size - addr : data_size;
-	uint32_t current_addr = addr;
-	uint8_t *current_data = data;
+	uint32_t data_size = buf_size - 5; // Exclude command and address size
+	data_size = (data_size + addr) > flash_size ? flash_size - addr : data_size;
+	uint8_t *base = buffer; // Save based pointer
 
-	while (data_size_left > 0) {
-		uint32_t relative_addr = current_addr % W25Q_MEM_PAGE_SIZE;
-		uint16_t data_size_page = (data_size_left + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : data_size_left;
-		W25Q_PageProgram(w25q_chip, current_data, current_addr, data_size_page);
+	while (data_size > 0) {
+		uint32_t relative_addr = addr % W25Q_MEM_PAGE_SIZE;
+		uint16_t data_size_page = (data_size + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : data_size;
+		
+		if (buffer != base) {
+			memcpy(base, buffer, 5);	// Store last 5 bytes of data to reserved space
+			state = W25Q_PageProgram(w25q_chip, buffer, addr, data_size_page + 5);
+			memcpy(buffer, base, 5);	// Restore last 5 bytes of data from reserved space
+		} else {
+			state = W25Q_PageProgram(w25q_chip, buffer, addr, data_size_page + 5);
+		}
+		if (state != W25Q_OK) return state;
 
-		data_size_left -= data_size_page;
-		current_addr += data_size_page;
-		current_data += data_size_page;
+		data_size -= data_size_page;
+		addr += data_size_page;
+		buffer += data_size_page;
 	}
+	return W25Q_OK;
 }
 
-void W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr, uint32_t data_size) {
-	W25Q_WaitForReady(w25q_chip);
+// Data must have the first 5 bytes reserved for command and address
+// Data size must be <= flash size + 5 bytes (data + command and address)
+W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr, uint32_t data_size) {
+	W25Q_STATE state;
+	state =	W25Q_WaitForReady(w25q_chip);
 
-	for (uint16_t i = 0; i < data_size; i++) {
-		data_buf[i] = 0xaa;
-	}
-
-	uint8_t tx_buf[4] = { W25Q_READ_DATA,			// Command
-						//   (uint8_t)(addr >> 24),	// Address
+	uint8_t tx_buf[5] = { W25Q_READ_DATA_4B,		// Command
+						  (uint8_t)(addr >> 24),	// Address
 						  (uint8_t)(addr >> 16),	// Address
 						  (uint8_t)(addr >> 8 ),	// Address
 						  (uint8_t)(addr >> 0 ) };	// Address
 
-	W25Q_TransmitReceive2(w25q_chip, tx_buf, data_buf, 4, data_size);
+	state = W25Q_TransmitReceive(w25q_chip, tx_buf, data_buf, 5, data_size);
+
+	return state;
 }
 
-void W25Q_TransmitReceive2(W25Q_Chip *w25q_chip, uint8_t *tx_buf, uint8_t* rx_buf, uint16_t tx_len, uint16_t rx_len) {
-	uint16_t len = tx_len + rx_len;
-	uint8_t *tx_buf_full = malloc(sizeof(uint8_t) * len);
-	uint8_t *rx_buf_full = malloc(sizeof(uint8_t) * len);
-
-	memcpy(tx_buf_full, tx_buf, tx_len);
-
-	HAL_GPIO_WritePin(w25q_chip->csPinBank, w25q_chip->csPin, GPIO_PIN_RESET);
-	if (rx_buf) {
-		HAL_SPI_TransmitReceive(w25q_chip->hspi, tx_buf_full, rx_buf_full, len, HAL_MAX_DELAY);
-	} else {
-		HAL_SPI_Transmit(w25q_chip->hspi, tx_buf_full, tx_len, HAL_MAX_DELAY);
-	}
-	HAL_GPIO_WritePin(w25q_chip->csPinBank, w25q_chip->csPin, GPIO_PIN_SET);
-
-	memcpy(rx_buf, rx_buf_full + tx_len, rx_len);
-
-	free(tx_buf_full);
-	free(rx_buf_full);
-}
-
-void W25Q_TransmitReceive(W25Q_Chip *w25q_chip, uint8_t *tx_buf, uint8_t* rx_buf, uint16_t tx_len, uint16_t rx_len) {
+W25Q_STATE W25Q_TransmitReceive(W25Q_Chip *w25q_chip, uint8_t *tx_buf, uint8_t* rx_buf, uint16_t tx_len, uint16_t rx_len) {
 	uint16_t len = tx_len + rx_len;
 	HAL_StatusTypeDef status;
 	HAL_GPIO_WritePin(w25q_chip->csPinBank, w25q_chip->csPin, GPIO_PIN_RESET);
@@ -252,6 +324,8 @@ void W25Q_TransmitReceive(W25Q_Chip *w25q_chip, uint8_t *tx_buf, uint8_t* rx_buf
 		status = HAL_SPI_Transmit(w25q_chip->hspi, tx_buf, tx_len, HAL_MAX_DELAY);
 	}
 	HAL_GPIO_WritePin(w25q_chip->csPinBank, w25q_chip->csPin, GPIO_PIN_SET);
+
+	return (status == HAL_OK) ? W25Q_OK : W25Q_SPI_ERR;
 }
 
 
