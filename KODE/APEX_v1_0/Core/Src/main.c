@@ -157,7 +157,6 @@ int main(void)
 	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin, 0x4020);
 
 	uint8_t rx_data[4096 + 512 + 5] = { 0 };
-	uint8_t *rx_data_origine = rx_data + 5;
 	uint8_t tx_data_origine[538] = "Hello, W25Q256! This is a test of the W25Q256 flash memory chip. \
 Let's see if it works properly. We will write this data to the flash memory and then read it back to verify\
 the integrity of the data. If everything goes well, we should see the same data we wrote.\
@@ -178,7 +177,7 @@ Thank you for your attention and happy coding!";
 	state = W25Q_ReadData(&w25q_chip, rx_data, 0x00000000, 4096 + 512 + 5);
 
 	assert_param(memcmp(tx_data + 5, tx_data_origine, 538) == 0);
-	assert_param(memcmp(rx_data_origine + 0x00000f0f, tx_data_origine, 538) == 0);
+	assert_param(memcmp(rx_data + 0x00000f0f + 5, tx_data_origine, 538) == 0);
 
 
 

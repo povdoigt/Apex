@@ -178,7 +178,6 @@ typedef enum {
 	W25Q_CHIP_ERR    			= 3, // Chip error
 	W25Q_SPI_ERR     			= 4, // SPI Bus err
 	W25Q_CHIP_IGNORE 			= 5, // Chip ignore state
-	W25Q_CHIP_OFF_ON_REQUEST	= 6, // Chip off on request
 } W25Q_STATE;
 /** @} */
 
@@ -275,6 +274,7 @@ W25Q_STATE W25Q_ReadStatusReg(W25Q_Chip *w25q_chip);
 W25Q_STATE W25Q_WriteStatuReg1(W25Q_Chip *w25q_chip, uint8_t data);
 W25Q_STATE W25Q_WriteStatuReg2(W25Q_Chip *w25q_chip, uint8_t data);
 W25Q_STATE W25Q_WriteStatuReg3(W25Q_Chip *w25q_chip, uint8_t data);
+W25Q_STATE W25Q_Enable4bMode(W25Q_Chip *w25q_chip);
 W25Q_STATE W25Q_EraseSector(W25Q_Chip *w25q_chip, uint32_t addr);
 W25Q_STATE W25Q_Erase32K(W25Q_Chip *w25q_chip, uint32_t addr);
 W25Q_STATE W25Q_Erase64K(W25Q_Chip *w25q_chip, uint32_t addr);

@@ -61,9 +61,12 @@ W25Q_STATE W25Q_Init(W25Q_Chip			*w25q_chip,
 	state = W25Q_ReadStatusReg(w25q_chip);
 	if (state != W25Q_OK) return state;
 
-	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR3_ADS_BIT)) return W25Q_CHIP_OFF_ON_REQUEST;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR3_ADS_BIT)) {
+		// Try to enable 4-byte mode if not set already
+		state = W25Q_Enable4bMode(w25q_chip);
+	}
 
-	return W25Q_OK;
+	return state;
 }
 
 W25Q_STATE W25Q_WaitForReady(W25Q_Chip *w25q_chip) {
@@ -155,6 +158,20 @@ W25Q_STATE W25Q_WriteStatuReg3(W25Q_Chip *w25q_chip, uint8_t data) {
 
 	uint8_t txBuf[2] = { W25Q_WRITE_SR3, data };
 	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 2, 0);
+	return state;
+}
+
+W25Q_STATE W25Q_Enable4bMode(W25Q_Chip *w25q_chip) {
+	W25Q_STATE state;
+	state = W25Q_WaitForReady(w25q_chip);
+	if (state != W25Q_OK) return state;
+	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
+		state = W25Q_WriteEnable(w25q_chip);
+		if (state != W25Q_OK) return state;
+	}
+
+	uint8_t txBuf[1] = { W25Q_ENABLE_4B_MODE };
+	state = W25Q_TransmitReceive(w25q_chip, txBuf, NULL, 1, 0);
 	return state;
 }
 
@@ -272,7 +289,7 @@ W25Q_STATE W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr
 W25Q_STATE W25Q_WriteData(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size) {
 	W25Q_STATE state;
 
-	uint32_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000; // MBytes to bytes
+	uint32_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000 / 8; // MBites to bytes
 	uint32_t data_size = buf_size - 5; // Exclude command and address size
 	data_size = (data_size + addr) > flash_size ? flash_size - addr : data_size;
 	uint8_t *base = buffer; // Save based pointer
@@ -303,13 +320,13 @@ W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr,
 	W25Q_STATE state;
 	state =	W25Q_WaitForReady(w25q_chip);
 
-	uint8_t tx_buf[5] = { W25Q_READ_DATA_4B,		// Command
-						  (uint8_t)(addr >> 24),	// Address
-						  (uint8_t)(addr >> 16),	// Address
-						  (uint8_t)(addr >> 8 ),	// Address
-						  (uint8_t)(addr >> 0 ) };	// Address
+	*(data_buf + 0) = W25Q_READ_DATA_4B;		// Command
+	*(data_buf + 1) = (uint8_t)(addr >> 24);	// Address
+	*(data_buf + 2) = (uint8_t)(addr >> 16);	// Address
+	*(data_buf + 3) = (uint8_t)(addr >> 8);		// Address
+	*(data_buf + 4) = (uint8_t)(addr >> 0);		// Address
 
-	state = W25Q_TransmitReceive(w25q_chip, tx_buf, data_buf, 5, data_size);
+	state = W25Q_TransmitReceive(w25q_chip, data_buf, data_buf, 5, data_size);
 
 	return state;
 }
