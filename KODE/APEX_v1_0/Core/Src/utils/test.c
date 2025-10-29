@@ -126,7 +126,7 @@ void init_all_components(COMPONENTS* components) {
     RFM96_Init(components->lora, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
                RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
 
-    W25Q_Init(components->flash, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin, W25Q_Q_FULL_DEVICE_ID);
+    W25Q_Init(components->flash, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
 }
 
 

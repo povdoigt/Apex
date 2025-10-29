@@ -154,7 +154,7 @@ int main(void)
 	// 			CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
 	W25Q_STATE state;
-	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin, 0x4020);
+	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
 
 	uint8_t rx_data[4096 + 512 + 5] = { 0 };
 	uint8_t tx_data_origine[538] = "Hello, W25Q256! This is a test of the W25Q256 flash memory chip. \
@@ -169,9 +169,8 @@ Thank you for your attention and happy coding!";
 
 	
 	state = W25Q_ReadData(&w25q_chip, rx_data, 0x00000000, 4096 + 512 + 5);
-	// state = W25Q_EraseSector(&w25q_chip, 0x00000000);
-	state = W25Q_EraseSector(&w25q_chip, 0x00000000);
-	state = W25Q_EraseSector(&w25q_chip, 0x00001000);
+	state = W25Q_SendCmdAddr(&w25q_chip, W25Q_SECTOR_ERASE_4B, 0x00000000);
+	state = W25Q_SendCmdAddr(&w25q_chip, W25Q_SECTOR_ERASE_4B, 0X00001000);
 	state = W25Q_ReadData(&w25q_chip, rx_data, 0x00000000, 4096 + 512 + 5);
 	state = W25Q_WriteData(&w25q_chip, tx_data, 0x00000f0f, 538 + 5);
 	state = W25Q_ReadData(&w25q_chip, rx_data, 0x00000000, 4096 + 512 + 5);
@@ -200,7 +199,7 @@ Thank you for your attention and happy coding!";
 	// };
 	// OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
 
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
   /* Init scheduler */
 //   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */

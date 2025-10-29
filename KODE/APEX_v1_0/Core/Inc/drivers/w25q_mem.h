@@ -16,11 +16,16 @@
 #define W25Q_QSPI_W25Q_MEM_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "stm32f4xx_hal.h"
 
 #include "peripherals/spi.h"
 
 #include "utils/scheduler.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * @addtogroup W25Q_Driver
@@ -56,6 +61,7 @@
 #define W25Q_MANUFACTURER_ID	0xEFU	// W25Q Manufacturer ID
 #define W25Q_Q_FULL_DEVICE_ID	0x4018U // W25Q....IQ/JQ Device ID
 #define W25Q_M_FULL_DEVICE_ID	0x7018U // W25Q....IM/JM Device ID
+#define W25Q_V_FULL_DEVICE_ID	0x4020U // W25Q....IV/JV Device ID
 #define W25Q_HALF_DEVICE_ID		0x17U	// W25Q Half Device ID
 
 /**
@@ -165,127 +171,138 @@
 #define W25Q_EAR_A31_BIT		7	// Address bit 31							(V)
 
 
-/**
- * @enum W25Q_STATE
- * @brief W25Q Return State
- * Lib's functions status returns
- * @{
- */
+/* --- Flags comportementaux des commandes --- */
+#define W25Q_FLAG_VALID        (1u << 0)
+#define W25Q_FLAG_BUSY		   (1u << 1)
+#define W25Q_FLAG_WEL		   (1u << 2)
+#define W25Q_FLAG_DEVICE_BUSY  (1u << 3)
+#define W25Q_FLAG_WAIT_AFTER   (1u << 4)
+
+/* --- Codes de retour --- */
 typedef enum {
-	W25Q_OK          			= 0, // Chip OK - Execution fine
-	W25Q_BUSY        			= 1, // Chip busy
-	W25Q_PARAM_ERR   			= 2, // Function parameters error
-	W25Q_CHIP_ERR    			= 3, // Chip error
-	W25Q_SPI_ERR     			= 4, // SPI Bus err
-	W25Q_CHIP_IGNORE 			= 5, // Chip ignore state
+    W25Q_OK = 0,
+    W25Q_CHIP_ERR,
+    W25Q_SPI_ERR,
+    W25Q_PARAM_ERR,
+    W25Q_BUSY_TIMEOUT,
+	W25Q_SEM_ERR,
 } W25Q_STATE;
-/** @} */
 
-// typedef bool W25Q_STATUS_REG_BITS[24];
-
-/**
- * @struct W25Q_STATUS_REG
- * @brief  W25Q Status Registers
- * @TODO: Mem protected recognition
- *
- * Structure to check chip's status registers
- * @{
- */
+/* --- Structure principale du périphérique --- */
 typedef struct {
-	bool BUSY;  // Erase/Write in progress
-	bool WEL;	// Write enable latch (1 - write allowed)
-	bool QE;	// Quad SPI mode
-	bool SUS; 	// Suspend Status
-	bool ADS; 	// Current addr mode (0-3 byte / 1-4 byte)
-	bool ADP; 	// Power-up addr mode
-	bool SLEEP; // Sleep Status
-} W25Q_STATUS_REG;
-/** @} */
-
-typedef struct W25Q_Chip {
-	SPI_HandleTypeDef		*hspi;				// SPI Handle
-	GPIO_TypeDef 	        *csPinBank;			// Chip Select Pin Bank
-	uint16_t				 csPin;				// Chip Select Pin
-	uint32_t				 status_reg;		// Status register value
-
-	uint8_t			   		 tx_buf[256];		// Transmit buffer
-	uint8_t	   				 rx_buf[256];		// Receive buffer
-
-	bool 				     ASYNC_busy;
-	// Is mandatory to use in async functions that do the following actions:
-	// - Page Program
-	// - Quad Page Program
-	// - Sector Erase
-	// - Block Erase
-	// - Chip Erase
-	// - Write Status Register
-    // - Erase/Program Security Register
+    SPI_HandleTypeDef *hspi;
+    GPIO_TypeDef *cs_bank;
+    uint16_t cs_pin;
+    uint32_t status_reg;
+	StaticSemaphore_t sem;
+	osSemaphoreId_t sem_id;
 } W25Q_Chip;
 
-#define W25Q_STATUS_REG(chip, bit)		((chip)->status_reg & (1 << (bit)) ? 1 : 0)
+/* --- Table d’attributs de commandes --- */
+extern const uint8_t W25Q_CMD_FLAGS[256];
 
-// typedef enum ASYNC_W25Q_State {
-// 	ASYNC_W25Q_WAIT_W25Q,
-// 	ASYNC_W25Q_START,
-// 	ASYNC_W25Q_WAIT,
-// 	ASYNC_W25Q_END,
-// } ASYNC_W25Q_State;
-
-// typedef enum ASYNC_W25Q_WaitAndProceed_State {
-// 	ASYNC_W25Q_WaitAndProceed_WAIT_W25Q,
-// 	ASYNC_W25Q_WaitAndProceed_START,
-// 	ASYNC_W25Q_WaitAndProceed_WAIT_READY,
-// 	ASYNC_W25Q_WaitAndProceed_WAIT_WEL,
-// 	ASYNC_W25Q_WaitAndProceed_TxRx,
-// 	ASYNC_W25Q_WaitAndProceed_END,
-// } ASYNC_W25Q_WaitAndProceed_State;
+#define W25Q_STATUS_REG(chip, bit) ((chip)->status_reg & (1 << (bit)) ? 1 : 0)
 
 
-// /*
-// 	Macro that call the ASYNC_SPI_TxRx_DMA_init function with the W25Q chip's parameters
-// 	It requires:
-// 		- SCHEUDLER struct named "scheduler"
-// 		- TASK struct named "task"
-// 		- ASYNC_W25Q_..._CONTEXT struct named "context" witch is the context of the task
-	
-// 	... to be defined in the current scope.
 
-// 	Parameters:
-// 		- (uint8_t*)txBuf: the buffer to transmit
-// 		- (uint8_t*)rxBuf: the buffer to receive
-// 		- (size_t)txLen: the length of the buffer to transmit
-// 		- (size_t)rxLen: the length of the buffer to receive
-// */
-// #define ASYNC_SPI_TxRx_DMA_init_W25Q(txBuf, rxBuf, txLen, rxLen) \
-// 	ASYNC_SPI_TxRx_DMA_init(task, \
-// 							context->w25q_chip->hspi, \
-// 							context->w25q_chip->csPinBank, context->w25q_chip->csPin, \
-// 							txBuf, rxBuf, txLen, rxLen, self)
 
-W25Q_STATE W25Q_Init(W25Q_Chip			*w25q_chip,
-					 SPI_HandleTypeDef	*hspi_flag,
-					 GPIO_TypeDef		*csPinBank,
-					 uint16_t			 csPin,
-					 uint32_t			 id);
-W25Q_STATE W25Q_WaitForReady(W25Q_Chip *w25q_chip);
+
+/* ============================== Sequential ============================== */
+
+
+
+/* Niveau 0 : SPI */
+static W25Q_STATE W25Q_SPI_TxRx(W25Q_Chip	*chip,
+                        		uint8_t		*tx_buf,
+                        		uint8_t		*rx_buf,
+                        		uint16_t	 tx_len,
+                        		uint16_t	 rx_len);
+
+/* Niveau 1 : Primitives */
+static inline W25Q_STATE W25Q_WaitForReady(W25Q_Chip *chip);
+
+W25Q_STATE W25Q_SendCmd(W25Q_Chip *chip, uint8_t cmd);
+W25Q_STATE W25Q_SendCmdAddr(W25Q_Chip *chip, uint8_t cmd, uint32_t addr);
+W25Q_STATE W25Q_ReadStatus(W25Q_Chip *chip, uint8_t sr_index);
+W25Q_STATE W25Q_WriteStatus(W25Q_Chip *chip, uint8_t sr_index, uint8_t value);
 W25Q_STATE W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id);
-W25Q_STATE W25Q_Reset(W25Q_Chip *w25q_chip);
-W25Q_STATE W25Q_ReadStatusReg(W25Q_Chip *w25q_chip);
-W25Q_STATE W25Q_WriteStatuReg1(W25Q_Chip *w25q_chip, uint8_t data);
-W25Q_STATE W25Q_WriteStatuReg2(W25Q_Chip *w25q_chip, uint8_t data);
-W25Q_STATE W25Q_WriteStatuReg3(W25Q_Chip *w25q_chip, uint8_t data);
-W25Q_STATE W25Q_Enable4bMode(W25Q_Chip *w25q_chip);
-W25Q_STATE W25Q_EraseSector(W25Q_Chip *w25q_chip, uint32_t addr);
-W25Q_STATE W25Q_Erase32K(W25Q_Chip *w25q_chip, uint32_t addr);
-W25Q_STATE W25Q_Erase64K(W25Q_Chip *w25q_chip, uint32_t addr);
-W25Q_STATE W25Q_EraseAll(W25Q_Chip *w25q_chip);
-W25Q_STATE W25Q_WriteEnable(W25Q_Chip *w25q_chip);
-W25Q_STATE W25Q_WriteVolatileEnable(W25Q_Chip *w25q_chip);
-W25Q_STATE W25Q_WriteDisable(W25Q_Chip *w25q_chip);
-W25Q_STATE W25Q_TransmitReceive(W25Q_Chip *w25q_chip, uint8_t *tx_buf, uint8_t *rx_buf, uint16_t tx_len, uint16_t rx_len);
-W25Q_STATE W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint16_t buf_size);
-W25Q_STATE W25Q_WriteData(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
-W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
+
+/* Niveau 2 : Logique périphérique */
+W25Q_STATE W25Q_Init(W25Q_Chip *chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin);
+W25Q_STATE W25Q_WriteData(W25Q_Chip *chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
+W25Q_STATE W25Q_ReadData(W25Q_Chip *chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
+
+
+
+
+/* ============================== FreeRTOS ============================== */
+
+
+
+/* Niveau 0 : SPI FreeRTOS */
+static W25Q_STATE W25Q_SPI_TxRx_RTOS(W25Q_Chip	*chip,
+                         			 uint8_t	*tx_buf,
+                         			 uint8_t	*rx_buf,
+                         			 uint16_t	 tx_len,
+                         			 uint16_t	 rx_len);
+
+/* Niveau 1 : Primitives */
+static inline W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_Chip *chip, bool lock_sem);
+
+W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_Chip *chip, uint8_t cmd, bool lock_sem);
+W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_Chip *chip, uint8_t cmd, uint32_t addr, bool lock_sem);
+W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, bool lock_sem);
+W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, uint8_t value, bool lock_sem);
+W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_Chip *w25q_chip, uint8_t *id, bool lock_sem);
+
+
+static inline W25Q_STATE W25Q_WaitForReady_RTOS_NoLock(W25Q_Chip *chip);
+
+inline W25Q_STATE W25Q_SendCmd_RTOS_NoLock(W25Q_Chip *chip, uint8_t cmd);
+inline W25Q_STATE W25Q_SendCmdAddr_RTOS_NoLock(W25Q_Chip *chip, uint8_t cmd, uint32_t addr);
+inline W25Q_STATE W25Q_ReadStatus_RTOS_NoLock(W25Q_Chip *chip, uint8_t sr_index);
+inline W25Q_STATE W25Q_WriteStatus_RTOS_NoLock(W25Q_Chip *chip, uint8_t sr_index, uint8_t value);
+inline W25Q_STATE W25Q_ReadID_RTOS_NoLock(W25Q_Chip *w25q_chip, uint8_t *id);
+
+
+static inline W25Q_STATE W25Q_WaitForReady_RTOS(W25Q_Chip *chip);
+
+inline W25Q_STATE W25Q_SendCmd_RTOS(W25Q_Chip *chip, uint8_t cmd);
+inline W25Q_STATE W25Q_SendCmdAddr_RTOS(W25Q_Chip *chip, uint8_t cmd, uint32_t addr);
+inline W25Q_STATE W25Q_ReadStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index);
+inline W25Q_STATE W25Q_WriteStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index, uint8_t value);
+inline W25Q_STATE W25Q_ReadID_RTOS(W25Q_Chip *w25q_chip, uint8_t *id);
+
+/* Niveau 2 : Logique périphérique */
+typedef struct TASK_W25Q_Init_RTOS_ARGS {
+	W25Q_Chip *chip;
+	SPI_HandleTypeDef *hspi;
+	GPIO_TypeDef *cs_bank;
+	uint16_t cs_pin;
+	W25Q_STATE *result;
+} TASK_W25Q_Init_RTOS_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_Init_RTOS, 1, 512);
+void TASK_W25Q_Init_RTOS(void *argument);
+
+typedef struct TASK_W25Q_WriteData_RTOS_ARGS {
+	W25Q_Chip *chip;
+	uint8_t *buffer;
+	uint32_t addr;
+	uint32_t buf_size;
+	W25Q_STATE *result;
+} TASK_W25Q_WriteData_RTOS_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_WriteData_RTOS, 10, 1024);
+void TASK_W25Q_WriteData_RTOS(void *argument);
+
+typedef struct TASK_W25Q_ReadData_RTOS_ARGS {
+	W25Q_Chip *chip;
+	uint8_t *buffer;
+	uint32_t addr;
+	uint32_t buf_size;
+	W25Q_STATE *result;
+} TASK_W25Q_ReadData_RTOS_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_ReadData_RTOS, 10, 1024);
+void TASK_W25Q_ReadData_RTOS(void *argument);
 
 
 #ifdef __cplusplus
