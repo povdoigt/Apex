@@ -25,12 +25,16 @@
 #include "cmsis_os2.h"
 #include "crc.h"
 
+#include <stdint.h>
 #include <string.h>
 
 #include "drivers/ADXL375.h"
 #include "drivers/BMI088.h"
 #include "drivers/led.h"
+// header rfm96
+#include "drivers/rfm96w.h"
 
+#include "drivers/rfm96w.h"
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
 #include "peripherals/gpio.h"
@@ -39,6 +43,9 @@
 #include "peripherals/tim.h"
 #include "peripherals/usart.h"
 
+
+#include "stm32f4xx_hal_gpio.h"
+#include "usbd_cdc_if.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
@@ -127,9 +134,27 @@ int main(void)
   MX_TIM3_Init();
   MX_CRC_Init();
   MX_TIM11_Init();
+  // Init rfm96 - Fréquence
+  RFM96_Chip rfm96_chip;
+  RFM96_Init(&rfm96_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
+               RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
+
+  // Initialize LED for tests GPIO
+
   /* USER CODE BEGIN 2 */
 
 	MX_USB_DEVICE_Init();
+
+
+	// TEST TELEM ENVOI RFM96 INIT data to send
+	char data[6] = "Hello\0";
+
+	// TEST TELEM RECEIVE RFM96 INIT
+	// char rx_buffer[256];
+
+
+	// test receive telem
+
 
 	// const osThreadAttr_t TASK_start_Led0R_attributes = {
 	// 	.name = "TASK_start_Led0R",
@@ -145,7 +170,7 @@ int main(void)
 	// osThreadNew(TASK_start_Led0G, NULL, &TASK_start_Led0G_attributes);
 
 
-	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
+/* 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
 	
@@ -162,22 +187,42 @@ int main(void)
 	osThreadAttr_t attr = {
 		.name = TASK_Program_start_name,
 	};
-	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever); */
 
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  MX_FREERTOS_Init();
-
+  // osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  // MX_FREERTOS_Init();
+ 
   /* Start scheduler */
-  osKernelStart();
+  // osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1) {
+ 		// TEST TELEM ENVOI RFM96 LOOP
+		// send data + print + visual feedback LED
+		RFM96_Print(&rfm96_chip, data);
+		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, 0);
+		HAL_Delay(100);
+		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, 1);
+		HAL_Delay(1000);
+
+		// TEST TELEM RECEIVE RFM96 LOOP
+		// int nb_packets = RFM96_ParsePacket(&rfm96_chip);
+		// // Read received data and send it over USB
+		// if (nb_packets != 0) {
+		// 	HAL_GPIO_WritePin(LED0R_GPIO_Port, LED0R_Pin, 0);
+		// 	HAL_Delay(100);
+		// 	HAL_GPIO_WritePin(LED0R_GPIO_Port, LED0R_Pin, 1);
+		// 	HAL_Delay(100);
+		// 	RFM96_Read(&rfm96_chip, (uint8_t *) &rx_buffer, nb_packets);
+		// 	CDC_Transmit_FS((uint8_t *)&rx_buffer, nb_packets);
+		// }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
