@@ -273,6 +273,49 @@ inline W25Q_STATE W25Q_ReadStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index);
 inline W25Q_STATE W25Q_WriteStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index, uint8_t value);
 inline W25Q_STATE W25Q_ReadID_RTOS(W25Q_Chip *w25q_chip, uint8_t *id);
 
+/* Niveau 1 : Primitives en mode TASK (version lock par défaut) */
+typedef struct TASK_W25Q_SendCmd_ARGS {
+	W25Q_Chip *chip;
+	uint8_t cmd;
+	W25Q_STATE *result;
+} TASK_W25Q_SendCmd_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_SendCmd, 10, 256);
+void TASK_W25Q_SendCmd(void *argument);
+
+typedef struct TASK_W25Q_SendCmdAddr_ARGS {
+	W25Q_Chip *chip;
+	uint8_t cmd;
+	uint32_t addr;
+	W25Q_STATE *result;
+} TASK_W25Q_SendCmdAddr_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_SendCmdAddr, 10, 256);
+void TASK_W25Q_SendCmdAddr(void *argument);
+
+typedef struct TASK_W25Q_ReadStatus_ARGS {
+	W25Q_Chip *chip;
+	uint8_t sr_index;
+	W25Q_STATE *result;
+} TASK_W25Q_ReadStatus_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_ReadStatus, 10, 256);
+void TASK_W25Q_ReadStatus(void *argument);
+
+typedef struct TASK_W25Q_WriteStatus_ARGS {
+	W25Q_Chip *chip;
+	uint8_t sr_index;
+	uint8_t value;
+	W25Q_STATE *result;
+} TASK_W25Q_WriteStatus_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_WriteStatus, 10, 256);
+void TASK_W25Q_WriteStatus(void *argument);
+
+typedef struct TASK_W25Q_ReadID_ARGS {
+	W25Q_Chip *chip;
+	uint8_t *id;
+	W25Q_STATE *result;
+} TASK_W25Q_ReadID_ARGS;
+TASK_POOL_CONFIGURE(TASK_W25Q_ReadID, 10, 256);
+void TASK_W25Q_ReadID(void *argument);
+
 /* Niveau 2 : Logique périphérique */
 typedef struct TASK_W25Q_Init_RTOS_ARGS {
 	W25Q_Chip *chip;

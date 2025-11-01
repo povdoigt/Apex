@@ -786,6 +786,50 @@ inline W25Q_STATE W25Q_ReadID_RTOS(W25Q_Chip *w25q_chip, uint8_t *id) { return W
 
 
 
+
+/* -------------------------------------------------------------------------- */
+/*                          Niveau 1 : Command primitives TASK                */
+/* -------------------------------------------------------------------------- */
+
+TASK_POOL_ALLOCATE(TASK_W25Q_SendCmd);
+void TASK_W25Q_SendCmd(void *argument) {
+	TASK_W25Q_SendCmd_ARGS *args = (TASK_W25Q_SendCmd_ARGS*)argument;
+	*(args->result) = W25Q_SendCmd_RTOS(args->chip, args->cmd);
+	osThreadExit_Cstm();
+}
+
+TASK_POOL_ALLOCATE(TASK_W25Q_SendCmdAddr);
+void TASK_W25Q_SendCmdAddr(void *argument) {
+	TASK_W25Q_SendCmdAddr_ARGS *args = (TASK_W25Q_SendCmdAddr_ARGS*)argument;
+	*(args->result) = W25Q_SendCmdAddr_RTOS(args->chip, args->cmd, args->addr);
+	osThreadExit_Cstm();
+}
+
+TASK_POOL_ALLOCATE(TASK_W25Q_ReadStatus);
+void TASK_W25Q_ReadStatus(void *argument) {
+	TASK_W25Q_ReadStatus_ARGS *args = (TASK_W25Q_ReadStatus_ARGS*)argument;
+	*(args->result) = W25Q_ReadStatus_RTOS(args->chip, args->sr_index);
+	osThreadExit_Cstm();
+}
+
+TASK_POOL_ALLOCATE(TASK_W25Q_WriteStatus);
+void TASK_W25Q_WriteStatus(void *argument) {
+	TASK_W25Q_WriteStatus_ARGS *args = (TASK_W25Q_WriteStatus_ARGS*)argument;
+	*(args->result) = W25Q_WriteStatus_RTOS(args->chip, args->sr_index, args->value);
+	osThreadExit_Cstm();
+}
+
+TASK_POOL_ALLOCATE(TASK_W25Q_ReadID);
+void TASK_W25Q_ReadID(void *argument) {
+	TASK_W25Q_ReadID_ARGS *args = (TASK_W25Q_ReadID_ARGS*)argument;
+	*(args->result) = W25Q_ReadID_RTOS(args->chip, args->id);
+	osThreadExit_Cstm();
+}
+
+
+
+
+
 /* -------------------------------------------------------------------------- */
 /*                        Niveau 2 : Fonctions logiques                        */
 /* -------------------------------------------------------------------------- */
