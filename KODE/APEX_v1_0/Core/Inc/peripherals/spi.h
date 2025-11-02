@@ -46,12 +46,12 @@ void MX_SPI2_Init(void);
 /* USER CODE BEGIN Prototypes */
 void Init_spi_semaphores();
 
-HAL_StatusTypeDef TASK_HAL_SPI_Transmit_DMA(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin,
-												   const uint8_t *pData, uint16_t Size);
-HAL_StatusTypeDef TASK_HAL_SPI_Receive_DMA(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin,
-												   uint8_t *pData, uint16_t Size);
-HAL_StatusTypeDef TASK_HAL_SPI_TransmitReceive_DMA(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin,
-												   const uint8_t *pTxData, uint8_t *pRxData, uint16_t Size);
+HAL_StatusTypeDef SPI_Begin_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin);
+HAL_StatusTypeDef SPI_Transmit_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pData, uint16_t Size);
+HAL_StatusTypeDef SPI_TransmitReceive_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pTxData, uint8_t *pRxData, uint16_t Size);
+HAL_StatusTypeDef SPI_Receive_DMA_RTOS(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size);
+HAL_StatusTypeDef SPI_End_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

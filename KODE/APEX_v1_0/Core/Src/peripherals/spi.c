@@ -380,88 +380,50 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
 	__HAL_SPI_CpltCallback(hspi);
 }
 
-HAL_StatusTypeDef TASK_HAL_SPI_Transmit_DMA(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin,
-											const uint8_t *pData, uint16_t Size) {
-	osSemaphoreId_t use_semaphore = spi_use_semaphore_get(hspi);
-	osSemaphoreId_t dma_semaphore = spi_dma_semaphore_get(hspi);
-	if (use_semaphore == NULL || dma_semaphore == NULL) {
-		Error_Handler();
-	}
-
-	// Step 1: We're waiting for the SPI to be free
-	osSemaphoreAcquire(use_semaphore, osWaitForever);
-
-	// Step 2: We're processing the SPI and taking the DMA semaphore
-	osSemaphoreAcquire(dma_semaphore, osWaitForever);
-
+HAL_StatusTypeDef SPI_Begin_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin) {
+	osSemaphoreId_t use_sem = spi_use_semaphore_get(hspi);
+	if (use_sem == NULL) { return HAL_ERROR; }
+	if (osSemaphoreAcquire(use_sem, osWaitForever) != osOK) { return HAL_ERROR; }
 	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_RESET);
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef SPI_Transmit_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pData, uint16_t Size) {
+	osSemaphoreId_t dma_sem = spi_dma_semaphore_get(hspi);
+	if (dma_sem == NULL) { return HAL_ERROR; }
+	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
 	HAL_StatusTypeDef status = HAL_SPI_Transmit_DMA(hspi, pData, Size);
-
-	// Step 3: We're waiting for the DMA to complete
-	osSemaphoreAcquire(dma_semaphore, osWaitForever);
-
-	// Step 4: We're done with the SPI, releasing the use semaphores and setting CS high
-	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_SET);
-	osSemaphoreRelease(use_semaphore);
-	osSemaphoreRelease(dma_semaphore);
-
+	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
+	if (osSemaphoreRelease(dma_sem) != osOK) { return HAL_ERROR; }
 	return status;
 }
 
-HAL_StatusTypeDef TASK_HAL_SPI_Receive_DMA(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin,
-										   uint8_t *pData, uint16_t Size) {
-	osSemaphoreId_t use_semaphore = spi_use_semaphore_get(hspi);
-	osSemaphoreId_t dma_semaphore = spi_dma_semaphore_get(hspi);
-	if (use_semaphore == NULL || dma_semaphore == NULL) {
-		Error_Handler();
-	}
-
-	// Step 1: We're waiting for the SPI to be free
-	osSemaphoreAcquire(use_semaphore, osWaitForever);
-
-	// Step 2: We're processing the SPI and taking the DMA semaphore
-	osSemaphoreAcquire(dma_semaphore, osWaitForever);
-
-	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_RESET);
-	HAL_StatusTypeDef status = HAL_SPI_Receive_DMA(hspi, pData, Size);
-
-	// Step 3: We're waiting for the DMA to complete
-	osSemaphoreAcquire(dma_semaphore, osWaitForever);
-
-	// Step 4: We're done with the SPI, releasing the use semaphores and setting CS high
-	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_SET);
-	osSemaphoreRelease(use_semaphore);
-	osSemaphoreRelease(dma_semaphore);
-
-	return status;
-}
-
-HAL_StatusTypeDef TASK_HAL_SPI_TransmitReceive_DMA(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin,
-												   const uint8_t *pTxData, uint8_t *pRxData, uint16_t Size) {
-	osSemaphoreId_t use_semaphore = spi_use_semaphore_get(hspi);
-	osSemaphoreId_t dma_semaphore = spi_dma_semaphore_get(hspi);
-	if (use_semaphore == NULL || dma_semaphore == NULL) {
-		Error_Handler();
-	}
-
-	// Step 1: We're waiting for the SPI to be free
-	osSemaphoreAcquire(use_semaphore, osWaitForever);
-
-	// Step 2: We're processing the SPI and taking the DMA semaphore
-	osSemaphoreAcquire(dma_semaphore, osWaitForever);
-
-	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_RESET);
+HAL_StatusTypeDef SPI_TransmitReceive_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pTxData, uint8_t *pRxData, uint16_t Size) {
+	osSemaphoreId_t dma_sem = spi_dma_semaphore_get(hspi);
+	if (dma_sem == NULL) { return HAL_ERROR; }
+	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
 	HAL_StatusTypeDef status = HAL_SPI_TransmitReceive_DMA(hspi, pTxData, pRxData, Size);
-
-	// Step 3: We're waiting for the DMA to complete
-	osSemaphoreAcquire(dma_semaphore, osWaitForever);
-
-	// Step 4: We're done with the SPI, releasing the use semaphores and setting CS high
-	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_SET);
-	osSemaphoreRelease(use_semaphore);
-	osSemaphoreRelease(dma_semaphore);
-
+	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
+	if (osSemaphoreRelease(dma_sem) != osOK) { return HAL_ERROR; }
 	return status;
 }
+
+HAL_StatusTypeDef SPI_Receive_DMA_RTOS(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size) {
+	osSemaphoreId_t dma_sem = spi_dma_semaphore_get(hspi);
+	if (dma_sem == NULL) { return HAL_ERROR; }
+	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
+	HAL_StatusTypeDef status = HAL_SPI_Receive_DMA(hspi, pData, Size);
+	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
+	if (osSemaphoreRelease(dma_sem) != osOK) { return HAL_ERROR; }
+	return status;
+}
+
+HAL_StatusTypeDef SPI_End_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin) {
+	osSemaphoreId_t use_sem = spi_use_semaphore_get(hspi);
+	if (use_sem == NULL) { return HAL_ERROR; }
+	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_SET);
+	return osSemaphoreRelease(use_sem) == osOK ? HAL_OK : HAL_ERROR;
+}
+
 
 /* USER CODE END 1 */

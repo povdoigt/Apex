@@ -22,11 +22,15 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
+#include "cmsis_gcc.h"
 #include "cmsis_os.h"
 #include "cmsis_os2.h"
 
 #include "drivers/w25q_mem.h"
 #include "peripherals/spi.h"
+#include "stm32f4xx_hal_def.h"
+#include "stm32f4xx_hal_gpio.h"
+#include "stm32f4xx_hal_spi.h"
 #include "utils/scheduler.h"
 
 
@@ -106,66 +110,18 @@ static inline bool W25Q_IsCmdNeedWaitAfter(uint8_t cmd)		{ return (W25Q_CMD_FLAG
 /*                          Niveau 0 : SPI transaction                        */
 /* -------------------------------------------------------------------------- */
 
-/**
- * @brief Effectue une transaction SPI complète avec le composant W25Q.
- *
- * Cette fonction combine la phase de transmission (commande + adresse)
- * et la phase de réception (lecture de données ou de registres) dans une
- * seule transaction SPI, en gardant le signal CS bas pendant toute la durée.
- *
- * Principe :
- *   - Le protocole SPI du W25Q est séquentiel :
- *       [ Commande ][ Adresse (optionnelle) ][ Données lues ou écrites ]
- *   - Pendant la phase de lecture (MISO actif), le composant n’échantillonne
- *     plus MOSI. Les octets transmis après la commande ne servent qu’à générer
- *     les cycles d’horloge nécessaires au décalage des données.
- *   - Le contenu de ces octets « dummy » n’a donc aucune importance pour le
- *     périphérique : aucune initialisation particulière du buffer TX n’est requise.
- *
- * Contraintes :
- *   - Le buffer TX (tx_buf) doit être dimensionné pour contenir à la fois
- *     la commande, l’adresse et les octets d’horloge de lecture :
- *       → taille minimale = tx_len + rx_len
- *   - Le buffer RX (rx_buf) doit être de la même taille.
- *   - Les rx_len premiers octets reçus correspondent à l’écho de la commande
- *     et de l’adresse, et peuvent être ignorés.
- *   - CS doit rester à l’état bas pendant toute la transaction.
- *
- * Exemples :
- *   - Lecture d’un registre :  tx = [0x05, 0x00], rx = [x, SR1]
- *   - Lecture de données 4B :  tx = [0x13, A3, A2, A1, A0, 0x00, 0x00, ...]
- *                              rx = [x, x, x, x, x, D0, D1, D2, ...]
- *
- * @param chip    Pointeur sur la structure du périphérique W25Q.
- * @param tx_buf  Buffer à transmettre (commande + adresse + octets de lecture).
- * @param rx_buf  Buffer de réception (même taille que tx_buf).
- * @param tx_len  Longueur de la phase commande/adresse (en octets).
- * @param rx_len  Longueur de la phase lecture (en octets).
- * @return        W25Q_OK en cas de succès, W25Q_SPI_ERR en cas d’échec SPI.
- */
-static W25Q_STATE W25Q_SPI_TxRx(W25Q_Chip	*chip,
-                        		uint8_t		*tx_buf,
-                        		uint8_t		*rx_buf,
-                        		uint16_t	 tx_len,
-                        		uint16_t	 rx_len) {
-	HAL_StatusTypeDef status;
 
+static inline void W25Q_SPI_Begin(W25Q_Chip *chip) {
 	HAL_GPIO_WritePin(chip->cs_bank, chip->cs_pin, GPIO_PIN_RESET);
-
-	status = HAL_OK;
-
-	if (tx_len > 0 && tx_buf != NULL) {
-		status = HAL_SPI_Transmit(chip->hspi, tx_buf, tx_len, HAL_MAX_DELAY);
-	}
-
-	if (status == HAL_OK && rx_len > 0 && rx_buf != NULL) {
-		uint8_t *rx_ptr = rx_buf + tx_len;
-		status = HAL_SPI_Receive(chip->hspi, rx_ptr, rx_len, HAL_MAX_DELAY);
-	}
-
+}
+static inline W25Q_STATE W25Q_SPI_Tx(W25Q_Chip *chip, uint8_t *tx_buf, uint16_t tx_len) {
+	return HAL_SPI_Transmit(chip->hspi, tx_buf, tx_len, HAL_MAX_DELAY) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
+}
+static inline W25Q_STATE W25Q_SPI_Rx(W25Q_Chip *chip, uint8_t *rx_buf, uint16_t rx_len) {
+	return HAL_SPI_Receive(chip->hspi, rx_buf, rx_len, HAL_MAX_DELAY) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
+}
+static inline void W25Q_SPI_End(W25Q_Chip *chip) {
 	HAL_GPIO_WritePin(chip->cs_bank, chip->cs_pin, GPIO_PIN_SET);
-
-	return (status == HAL_OK) ? W25Q_OK : W25Q_SPI_ERR;
 }
 
 
@@ -227,16 +183,20 @@ W25Q_STATE W25Q_SendCmd(W25Q_Chip *chip, uint8_t cmd) {
 		if (st != W25Q_OK) return st;
 	}
 
-    if (W25Q_IsCmdRequiresWEL(cmd)) {
+    if (W25Q_IsCmdRequiresWEL(cmd) && cmd != W25Q_WRITE_ENABLE) {
 		// No need to check status again, already done above with WaitForReady
+		// Even if W25Q_WRITE_ENABLE will return false with W25Q_IsCmdRequiresWEL(cmd),
+		// we skip it here to avoid infinite recursion.
 		if (!W25Q_STATUS_REG(chip, W25Q_SR1_WEL_BIT)) {
-			st =W25Q_SendCmd(chip, W25Q_WRITE_ENABLE);
+			st = W25Q_SendCmd(chip, W25Q_WRITE_ENABLE);
 			if (st != W25Q_OK) return st;
 		}
 	}
 
-    st = W25Q_SPI_TxRx(chip, &cmd, NULL, 1, 0);
+	W25Q_SPI_Begin(chip);
+	st = W25Q_SPI_Tx(chip, &cmd, 1);
     if (st != W25Q_OK) return st;
+	W25Q_SPI_End(chip);
 
     if (W25Q_IsCmdNeedWaitAfter(cmd)) {
         st = W25Q_WaitForReady(chip);
@@ -306,7 +266,10 @@ W25Q_STATE W25Q_SendCmdAddr(W25Q_Chip *chip, uint8_t cmd, uint32_t addr) {
         (uint8_t)(addr >>  0)
     };
 
-    st = W25Q_SPI_TxRx(chip, tx, NULL, 5, 0);
+	W25Q_SPI_Begin(chip);
+	st = W25Q_SPI_Tx(chip, tx, sizeof(tx));
+	if (st != W25Q_OK) return st;
+	W25Q_SPI_End(chip);
     if (st != W25Q_OK) return st;
 
     if (W25Q_IsCmdNeedWaitAfter(cmd)) {
@@ -319,29 +282,34 @@ W25Q_STATE W25Q_SendCmdAddr(W25Q_Chip *chip, uint8_t cmd, uint32_t addr) {
 
 W25Q_STATE W25Q_ReadStatus(W25Q_Chip *chip, uint8_t sr_index) {
 	W25Q_STATE st;
-	uint8_t tx_buf[2] = { 0 };
-	uint8_t rx_buf[2] = { 0 };
+	uint8_t cmd;
+	uint8_t status;
 	sr_index--;
 
 	switch (sr_index) {
 	case 0:
-		tx_buf[0] = W25Q_READ_SR1;
+		cmd = W25Q_READ_SR1;
 		break;
 	case 1:
-		tx_buf[0] = W25Q_READ_SR2;
+		cmd = W25Q_READ_SR2;
 		break;
 	case 2:
-		tx_buf[0] = W25Q_READ_SR3;
+		cmd = W25Q_READ_SR3;
 		break;
 	default:
 		return W25Q_PARAM_ERR;
 	}
 
-	st = W25Q_SPI_TxRx(chip, tx_buf, rx_buf, 1, 1);
-	if (st != W25Q_OK) return st;
+	// st = W25Q_SPI_TxRx(chip, &cmd, &status, 1, 1);
+	W25Q_SPI_Begin(chip);
+	st = W25Q_SPI_Tx(chip, &cmd, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End(chip); return st; }
+	st = W25Q_SPI_Rx(chip, &status, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End(chip); return st; }
+	W25Q_SPI_End(chip);
 
-	chip->status_reg &= ~(     0xFF << (sr_index * 8));
-	chip->status_reg |=  (rx_buf[1] << (sr_index * 8));
+	chip->status_reg &= ~(  0xFF << (sr_index * 8));
+	chip->status_reg |=  (status << (sr_index * 8));
 
 	return W25Q_OK;
 }
@@ -367,7 +335,9 @@ W25Q_STATE W25Q_WriteStatus(W25Q_Chip *chip, uint8_t sr_index, uint8_t value) {
 
 	tx_buf[1] = value;
 
-	st = W25Q_SPI_TxRx(chip, tx_buf, NULL, 2, 0);
+	W25Q_SPI_Begin(chip);
+	st = W25Q_SPI_Tx(chip, tx_buf, sizeof(tx_buf));
+	W25Q_SPI_End(chip);
 	if (st != W25Q_OK) return st;
 
 	chip->status_reg &= ~( 0xFF << (sr_index * 8));
@@ -377,15 +347,15 @@ W25Q_STATE W25Q_WriteStatus(W25Q_Chip *chip, uint8_t sr_index, uint8_t value) {
 }
 
 W25Q_STATE W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id) {
-	uint8_t txBuf[4] = { W25Q_READ_JEDEC_ID, 0, 0, 0 };
-	uint8_t rxBuf[4]; // First byte is dummy
+	uint8_t cmd = W25Q_READ_JEDEC_ID;
+	W25Q_STATE st;
 
-	W25Q_STATE st = W25Q_SPI_TxRx(w25q_chip, txBuf, rxBuf, 1, 3);
-	if (st != W25Q_OK) return st;
-
-	id[0] = rxBuf[1];
-	id[1] = rxBuf[2];
-	id[2] = rxBuf[3];
+	W25Q_SPI_Begin(w25q_chip);
+	st = W25Q_SPI_Tx(w25q_chip, &cmd, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
+	st = W25Q_SPI_Rx(w25q_chip, id, 3);
+	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
+	W25Q_SPI_End(w25q_chip);
 
 	return W25Q_OK;
 }
@@ -403,7 +373,11 @@ W25Q_STATE W25Q_Init(W25Q_Chip *w25q_chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef
 	w25q_chip->cs_bank = cs_bank;
 	w25q_chip->cs_pin = cs_pin;
 
-	w25q_chip->sem_id = osSemaphoreNew(1, 1, NULL);
+	w25q_chip->sem_id = osSemaphoreNew(1, 1, &(osSemaphoreAttr_t) {
+		.name = "W25Q_SEM",
+		.cb_mem = &w25q_chip->sem,
+		.cb_size = sizeof(w25q_chip->sem)
+	});
 	if (w25q_chip->sem_id == NULL) return W25Q_SEM_ERR;
 
 	W25Q_STATE st;
@@ -442,12 +416,9 @@ W25Q_STATE W25Q_Init(W25Q_Chip *w25q_chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef
 	return st;
 }
 
-// Data must have the first 5 bytes reserved for command and address
-// Data size must be <= 256 + 5 bytes = 261 bytes (1 page + command and address)
+// Data size must be <= 256 (page size)
 static W25Q_STATE W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint16_t buf_size) {
 	W25Q_STATE st;
-
-	uint32_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000 / 8; // MBites to bytes
 
 	st = W25Q_WaitForReady(w25q_chip);
 	if (st != W25Q_OK) return st;
@@ -455,62 +426,65 @@ static W25Q_STATE W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32
 		st = W25Q_SendCmd(w25q_chip, W25Q_WRITE_ENABLE);
 		if (st != W25Q_OK) return st;
 	}
-	buf_size = (buf_size - 5) > flash_size ? flash_size + 5 : buf_size;
-	*(buffer + 0) = W25Q_PAGE_PROGRAM_4B;	// Command
-	*(buffer + 1) = (uint8_t)(addr >> 24);	// Address
-	*(buffer + 2) = (uint8_t)(addr >> 16);	// Address
-	*(buffer + 3) = (uint8_t)(addr >>  8);	// Address
-	*(buffer + 4) = (uint8_t)(addr >>  0);	// Address
+	buf_size = buf_size > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE : buf_size;
+	uint8_t cmd[5] = {
+		W25Q_PAGE_PROGRAM_4B,	// Command
+		(uint8_t)(addr >> 24),	// Address
+		(uint8_t)(addr >> 16),	// Address
+		(uint8_t)(addr >>  8),	// Address
+		(uint8_t)(addr >>  0)	// Address
+	};
 
-	st = W25Q_SPI_TxRx(w25q_chip, buffer, NULL, buf_size, 0);
+	W25Q_SPI_Begin(w25q_chip);
+	st = W25Q_SPI_Tx(w25q_chip, cmd, sizeof(cmd));
+	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
+	st = W25Q_SPI_Tx(w25q_chip, buffer, buf_size);
+	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
+	W25Q_SPI_End(w25q_chip);
 
+	st = W25Q_WaitForReady(w25q_chip);
 	return st;
 }
 
-// Data must have the first 5 bytes reserved for command and address
-// Data size must be <= flash size + 5 bytes (data + command and address)
-// Data will be modified during the process but the content will remain the same after the function
 W25Q_STATE W25Q_WriteData(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size) {
 	W25Q_STATE st;
 
 	uint32_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000 / 8; // MBites to bytes
-	uint32_t data_size = buf_size - 5; // Exclude command and address size
-	data_size = (data_size + addr) > flash_size ? flash_size - addr : data_size;
-	uint8_t *base = buffer; // Save based pointer
+	buf_size = (buf_size + addr) > flash_size ? flash_size - addr : buf_size;
 
-	while (data_size > 0) {
+	while (buf_size > 0) {
 		uint32_t relative_addr = addr % W25Q_MEM_PAGE_SIZE;
-		uint16_t data_size_page = (data_size + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : data_size;
+		uint16_t data_size_page = (buf_size + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : buf_size;
 		
-		if (buffer != base) {
-			memcpy(base, buffer, 5);	// Store last 5 bytes of data to reserved space
-			st = W25Q_PageProgram(w25q_chip, buffer, addr, data_size_page + 5);
-			memcpy(buffer, base, 5);	// Restore last 5 bytes of data from reserved space
-		} else {
-			st = W25Q_PageProgram(w25q_chip, buffer, addr, data_size_page + 5);
-		}
+		st = W25Q_PageProgram(w25q_chip, buffer, addr, data_size_page);
 		if (st != W25Q_OK) return st;
 
-		data_size -= data_size_page;
+		buf_size -= data_size_page;
 		addr += data_size_page;
 		buffer += data_size_page;
 	}
 	return W25Q_OK;
 }
 
-// Data must have the first 5 bytes reserved for command and address
-// Data size must be <= flash size + 5 bytes (data + command and address)
+// Data size must be <= flash size
 W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr, uint32_t data_size) {
 	W25Q_STATE state;
 	state =	W25Q_WaitForReady(w25q_chip);
 
-	*(data_buf + 0) = W25Q_READ_DATA_4B;		// Command
-	*(data_buf + 1) = (uint8_t)(addr >> 24);	// Address
-	*(data_buf + 2) = (uint8_t)(addr >> 16);	// Address
-	*(data_buf + 3) = (uint8_t)(addr >>  8);	// Address
-	*(data_buf + 4) = (uint8_t)(addr >>  0);	// Address
+	uint8_t cmd[5] = {
+		W25Q_READ_DATA_4B,		// Command
+		(uint8_t)(addr >> 24),	// Address
+		(uint8_t)(addr >> 16),	// Address
+		(uint8_t)(addr >>  8),	// Address
+		(uint8_t)(addr >>  0),	// Address
+	};
 
-	state = W25Q_SPI_TxRx(w25q_chip, data_buf, data_buf, 5, data_size);
+	W25Q_SPI_Begin(w25q_chip);
+	state = W25Q_SPI_Tx(w25q_chip, cmd, sizeof(cmd));
+	if (state != W25Q_OK) { W25Q_SPI_End(w25q_chip); return state; }
+	state = W25Q_SPI_Rx(w25q_chip, data_buf, data_size);
+	if (state != W25Q_OK) { W25Q_SPI_End(w25q_chip); return state; }
+	W25Q_SPI_End(w25q_chip);
 
 	return state;
 }
@@ -527,27 +501,17 @@ W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr,
 /*                          Niveau 0 : SPI transaction                        */
 /* -------------------------------------------------------------------------- */
 
-static W25Q_STATE W25Q_SPI_TxRx_RTOS(W25Q_Chip	*chip,
-                         			 uint8_t	*tx_buf,
-                         			 uint8_t	*rx_buf,
-                         			 uint16_t	 tx_len,
-                         			 uint16_t	 rx_len) {
-	uint8_t *rx_ptr = NULL;
-	if (rx_buf != NULL && rx_len > 0) {
-		rx_ptr = rx_buf + tx_len;
-	}
-
-	HAL_StatusTypeDef status = TASK_HAL_SPI_TransmitThenReceive_DMA(
-		chip->hspi,
-		chip->cs_bank,
-		chip->cs_pin,
-		tx_buf,
-		tx_len,
-		rx_ptr,
-		rx_len
-	);
-
-	return (status == HAL_OK) ? W25Q_OK : W25Q_SPI_ERR;
+static inline W25Q_STATE W25Q_SPI_Begin_RTOS(W25Q_Chip *chip) {
+	return SPI_Begin_DMA_RTOS(chip->hspi, chip->cs_bank, chip->cs_pin) == HAL_OK ? W25Q_OK : W25Q_SEM_ERR; 
+}
+static inline W25Q_STATE W25Q_SPI_Tx_RTOS(W25Q_Chip *chip, uint8_t *tx_buf, uint16_t tx_len) {
+	return SPI_Transmit_DMA_RTOS(chip->hspi, tx_buf, tx_len) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
+}
+static inline W25Q_STATE W25Q_SPI_Rx_RTOS(W25Q_Chip *chip, uint8_t *rx_buf, uint16_t rx_len) {
+	return SPI_Receive_DMA_RTOS(chip->hspi, rx_buf,  rx_len) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
+}
+static inline W25Q_STATE W25Q_SPI_End_RTOS(W25Q_Chip *chip) {
+	return SPI_End_DMA_RTOS(chip->hspi, chip->cs_bank, chip->cs_pin) == HAL_OK ? W25Q_OK : W25Q_SEM_ERR; 
 }
 
 
@@ -586,23 +550,29 @@ W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_Chip *chip, uint8_t cmd, bool lock_sem) {
 
 	if (W25Q_IsCmdRequiresBusyCheck(cmd)) {
 		st = W25Q_WaitForReady_RTOS_NoLock(chip);
-		if (st != W25Q_OK) goto exit_release;
+		if (st != W25Q_OK) { goto exit_release; }
 	}
 
-	if (W25Q_IsCmdRequiresWEL(cmd)) {
+	if (W25Q_IsCmdRequiresWEL(cmd) && cmd != W25Q_WRITE_ENABLE) {
 		// No need to check status again, already done above with WaitForReady
+		// Even if W25Q_WRITE_ENABLE will return false with W25Q_IsCmdRequiresWEL(cmd),
+		// we skip it here to avoid infinite recursion.
 		if (!W25Q_STATUS_REG(chip, W25Q_SR1_WEL_BIT)) {
 			st = W25Q_SendCmd_RTOS_NoLock(chip, W25Q_WRITE_ENABLE);
-			if (st != W25Q_OK) goto exit_release;
+			if (st != W25Q_OK) { goto exit_release; }
 		}
 	}
 
-	st = W25Q_SPI_TxRx_RTOS(chip, &cmd, NULL, 1, 0);
-	if (st != W25Q_OK) goto exit_release;
+	st = W25Q_SPI_Begin_RTOS(chip);
+	if (st != W25Q_OK) { goto exit_release; }
+	st = W25Q_SPI_Tx_RTOS(chip, &cmd, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_release; }
+	st = W25Q_SPI_End_RTOS(chip);
+	if (st != W25Q_OK) { goto exit_release; }
 
 	if (W25Q_IsCmdNeedWaitAfter(cmd)) {
 		st = W25Q_WaitForReady_RTOS_NoLock(chip);
-		if (st != W25Q_OK) goto exit_release;
+		if (st != W25Q_OK) { goto exit_release; }
 	}
 
 exit_release:
@@ -634,14 +604,14 @@ W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_Chip *chip, uint8_t cmd, uint32_t add
 
 	if (W25Q_IsCmdRequiresBusyCheck(cmd)) {
 		st = W25Q_WaitForReady_RTOS_NoLock(chip);
-		if (st != W25Q_OK) goto exit_release;
+		if (st != W25Q_OK) { goto exit_release; }
 	}
 
 	if (W25Q_IsCmdRequiresWEL(cmd)) {
 		// No need to check status again, already done above with WaitForReady
 		if (!W25Q_STATUS_REG(chip, W25Q_SR1_WEL_BIT)) {
 			st =W25Q_SendCmd_RTOS_NoLock(chip, W25Q_WRITE_ENABLE);
-			if (st != W25Q_OK) goto exit_release;
+			if (st != W25Q_OK) { goto exit_release; }
 		}
 	}
 
@@ -653,12 +623,16 @@ W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_Chip *chip, uint8_t cmd, uint32_t add
 		(uint8_t)(addr >>  0)
 	};
 
-	st = W25Q_SPI_TxRx_RTOS(chip, tx, NULL, 5, 0);
-	if (st != W25Q_OK) goto exit_release;
+	st = W25Q_SPI_Begin_RTOS(chip);
+	if (st != W25Q_OK) { goto exit_release; }
+	st = W25Q_SPI_Tx_RTOS(chip, tx, sizeof(tx));
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_release; }
+	st = W25Q_SPI_End_RTOS(chip);
+	if (st != W25Q_OK) { goto exit_release; }
 
 	if (W25Q_IsCmdNeedWaitAfter(cmd)) {
 		st = W25Q_WaitForReady_RTOS_NoLock(chip);
-		if (st != W25Q_OK) goto exit_release;
+		if (st != W25Q_OK) { goto exit_release; }
 	}
 
 exit_release:
@@ -673,19 +647,19 @@ exit_release:
 
 W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, bool lock_sem) {
 	W25Q_STATE st = W25Q_OK;
-	uint8_t tx_buf[2] = { 0 };
-	uint8_t rx_buf[2] = { 0 };
+	uint8_t cmd;
+	uint8_t status;
 	sr_index--;
 
 	switch (sr_index) {
 	case 0:
-		tx_buf[0] = W25Q_READ_SR1;
+		cmd = W25Q_READ_SR1;
 		break;
 	case 1:
-		tx_buf[0] = W25Q_READ_SR2;
+		cmd = W25Q_READ_SR2;
 		break;
 	case 2:
-		tx_buf[0] = W25Q_READ_SR3;
+		cmd = W25Q_READ_SR3;
 		break;
 	default:
 		return W25Q_PARAM_ERR;
@@ -697,12 +671,17 @@ W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, bool loc
 		}
 	}
 
-	st = W25Q_SPI_TxRx_RTOS(chip, tx_buf, rx_buf, 1, 1);
+	st = W25Q_SPI_Begin_RTOS(chip);
+	if (st != W25Q_OK) { goto exit_flag; }
+	st = W25Q_SPI_Tx_RTOS(chip, &cmd, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_flag; }
+	st = W25Q_SPI_Rx_RTOS(chip, &status, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_flag; }
+	st = W25Q_SPI_End_RTOS(chip);
 	if (st != W25Q_OK) { goto exit_flag; }
 
-	chip->status_reg &= ~(     0xFF << (sr_index * 8));
-	chip->status_reg |=  (rx_buf[1] << (sr_index * 8));
-
+	chip->status_reg &= ~(  0xFF << (sr_index * 8));
+	chip->status_reg |=  (status << (sr_index * 8));
 
 exit_flag:
 	if (lock_sem) {
@@ -741,7 +720,11 @@ W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, uint8_t
 		}
 	}
 
-	st = W25Q_SPI_TxRx_RTOS(chip, tx_buf, NULL, 2, 0);
+	st = W25Q_SPI_Begin_RTOS(chip);
+	if (st != W25Q_OK) { goto exit_flag; }
+	st = W25Q_SPI_Tx_RTOS(chip, tx_buf, sizeof(tx_buf));
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_flag; }
+	st = W25Q_SPI_End_RTOS(chip);
 	if (st != W25Q_OK) { goto exit_flag; }
 
 	chip->status_reg &= ~( 0xFF << (sr_index * 8));
@@ -759,8 +742,7 @@ exit_flag:
 
 W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_Chip *w25q_chip, uint8_t *id, bool lock_sem) {
 	W25Q_STATE st = W25Q_OK;
-	uint8_t txBuf[4] = { W25Q_READ_JEDEC_ID, 0, 0, 0 };
-	uint8_t rxBuf[4]; // First byte is dummy
+	uint8_t cmd = W25Q_READ_JEDEC_ID;
 
 	if (lock_sem) {
 		if (osSemaphoreAcquire(w25q_chip->sem_id, osWaitForever) != osOK) {
@@ -768,12 +750,13 @@ W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_Chip *w25q_chip, uint8_t *id, bool lock_se
 		}
 	}
 
-	st = W25Q_SPI_TxRx_RTOS(w25q_chip, txBuf, rxBuf, 1, 3);
+	st = W25Q_SPI_Begin_RTOS(w25q_chip);
 	if (st != W25Q_OK) { goto exit_flag; }
-
-	id[0] = rxBuf[1];
-	id[1] = rxBuf[2];
-	id[2] = rxBuf[3];
+	st = W25Q_SPI_Tx_RTOS(w25q_chip, &cmd, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
+	st = W25Q_SPI_Rx_RTOS(w25q_chip, id, 3);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
+	st = W25Q_SPI_End_RTOS(w25q_chip);
 
 exit_flag:
 	if (lock_sem) {
@@ -784,24 +767,6 @@ exit_flag:
 
 	return st;
 }
-
-
-// static inline W25Q_STATE W25Q_WaitForReady_RTOS_NoLock(W25Q_Chip *chip) { return W25Q_WaitForReady_RTOS_base(chip, false); }
-
-// inline W25Q_STATE W25Q_SendCmd_RTOS_NoLock(W25Q_Chip *chip, uint8_t cmd) { return W25Q_SendCmd_RTOS_base(chip, cmd, false); }
-// inline W25Q_STATE W25Q_SendCmdAddr_RTOS_NoLock(W25Q_Chip *chip, uint8_t cmd, uint32_t addr) { return W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, false); }
-// inline W25Q_STATE W25Q_ReadStatus_RTOS_NoLock(W25Q_Chip *chip, uint8_t sr_index) { return W25Q_ReadStatus_RTOS_base(chip, sr_index, false); }
-// inline W25Q_STATE W25Q_WriteStatus_RTOS_NoLock(W25Q_Chip *chip, uint8_t sr_index, uint8_t value) { return W25Q_WriteStatus_RTOS_base(chip, sr_index, value, false); }
-// inline W25Q_STATE W25Q_ReadID_RTOS_NoLock(W25Q_Chip *w25q_chip, uint8_t *id) { return W25Q_ReadID_RTOS_base(w25q_chip, id, false); }
-
-
-// static inline W25Q_STATE W25Q_WaitForReady_RTOS(W25Q_Chip *chip) { return W25Q_WaitForReady_RTOS_base(chip, true); }
-
-// inline W25Q_STATE W25Q_SendCmd_RTOS(W25Q_Chip *chip, uint8_t cmd) { return W25Q_SendCmd_RTOS_base(chip, cmd, true); }
-// inline W25Q_STATE W25Q_SendCmdAddr_RTOS(W25Q_Chip *chip, uint8_t cmd, uint32_t addr) { return W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, true); }
-// inline W25Q_STATE W25Q_ReadStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index) { return W25Q_ReadStatus_RTOS_base(chip, sr_index, true); }
-// inline W25Q_STATE W25Q_WriteStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index, uint8_t value) { return W25Q_WriteStatus_RTOS_base(chip, sr_index, value, true); }
-// inline W25Q_STATE W25Q_ReadID_RTOS(W25Q_Chip *w25q_chip, uint8_t *id) { return W25Q_ReadID_RTOS_base(w25q_chip, id, true); }
 
 
 
@@ -844,7 +809,11 @@ void TASK_W25Q_Init(void *argument) {
 	args->chip->cs_bank = args->cs_bank;
 	args->chip->cs_pin = args->cs_pin;
 
-	args->chip->sem_id = osSemaphoreNew(1, 1, NULL);
+	args->chip->sem_id = osSemaphoreNew(1, 1, &(osSemaphoreAttr_t) {
+		.name = "W25Q_SEM",
+		.cb_mem = &args->chip->sem,
+		.cb_size = sizeof(args->chip->sem)
+	});
 	if (args->chip->sem_id == NULL) { *(args->result) = W25Q_SEM_ERR; goto exit_flag; }
 
 	// Read and check ID
@@ -895,14 +864,22 @@ static W25Q_STATE W25Q_PageProgram_RTOS(W25Q_Chip *w25q_chip, uint8_t *buffer, u
 		st = W25Q_SendCmd_RTOS_NoLock(w25q_chip, W25Q_WRITE_ENABLE);
 		if (st != W25Q_OK) { goto exit_flag; }
 	}
-	buf_size = (buf_size - 5) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE + 5 : buf_size;
-	*(buffer + 0) = W25Q_PAGE_PROGRAM_4B;	// Command
-	*(buffer + 1) = (uint8_t)(addr >> 24);	// Address
-	*(buffer + 2) = (uint8_t)(addr >> 16);	// Address
-	*(buffer + 3) = (uint8_t)(addr >>  8);	// Address
-	*(buffer + 4) = (uint8_t)(addr >>  0);	// Address
+	buf_size = buf_size > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE : buf_size;
+	uint8_t cmd[5] = {
+		W25Q_PAGE_PROGRAM_4B,	// Command
+		(uint8_t)(addr >> 24),	// Address
+		(uint8_t)(addr >> 16),	// Address
+		(uint8_t)(addr >>  8),	// Address
+		(uint8_t)(addr >>  0)	// Address
+	};
 
-	st = W25Q_SPI_TxRx_RTOS(w25q_chip, buffer, NULL, buf_size, 0);
+	st = W25Q_SPI_Begin_RTOS(w25q_chip);
+	if (st != W25Q_OK) { goto exit_flag; }
+	st = W25Q_SPI_Tx_RTOS(w25q_chip, cmd, sizeof(cmd));
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
+	st = W25Q_SPI_Tx_RTOS(w25q_chip, buffer, buf_size);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
+	st = W25Q_SPI_End_RTOS(w25q_chip);
 	if (st != W25Q_OK) { goto exit_flag; }
 
 	st = W25Q_WaitForReady_RTOS_NoLock(w25q_chip);
@@ -920,24 +897,16 @@ void TASK_W25Q_WriteData(void *argument) {
 	TASK_W25Q_WriteData_ARGS *args = (TASK_W25Q_WriteData_ARGS*)argument;
 
 	uint32_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000 / 8; // MBites to bytes
-	uint32_t data_size = args->buf_size - 5; // Exclude command and address size
-	data_size = (data_size + args->addr) > flash_size ? flash_size - args->addr : data_size;
-	uint8_t *base = args->buffer; // Save based pointer
+	args->buf_size = (args->buf_size + args->addr) > flash_size ? flash_size - args->addr : args->buf_size;
 
-	while (data_size > 0) {
+	while (args->buf_size > 0) {
 		uint32_t relative_addr = args->addr % W25Q_MEM_PAGE_SIZE;
-		uint16_t data_size_page = (data_size + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : data_size;
+		uint16_t data_size_page = (args->buf_size + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : args->buf_size;
 
-		if (args->buffer != base) {
-			memcpy(base, args->buffer, 5);	// Store last 5 bytes of data to reserved space
-			*(args->result) = W25Q_PageProgram_RTOS(args->chip, args->buffer, args->addr, data_size_page + 5);
-			memcpy(args->buffer, base, 5);	// Restore last 5 bytes of data from reserved space
-		} else {
-			*(args->result) = W25Q_PageProgram_RTOS(args->chip, args->buffer, args->addr, data_size_page + 5);
-		}
+		*(args->result) = W25Q_PageProgram_RTOS(args->chip, args->buffer, args->addr, data_size_page);
 		if (*(args->result) != W25Q_OK) { goto exit_flag; }
 
-		data_size -= data_size_page;
+		args->buf_size -= data_size_page;
 		args->addr += data_size_page;
 		args->buffer += data_size_page;
 	}
@@ -967,14 +936,22 @@ void TASK_W25Q_ReadData(void *argument) {
 		if (*(args->result) != W25Q_OK) { goto exit_release; }
 	}
 
-	args->buf_size = (args->buf_size - 5) > flash_size ? flash_size + 5 : args->buf_size;
-	*(args->buffer + 0) = W25Q_READ_DATA_4B;			// Command
-	*(args->buffer + 1) = (uint8_t)(args->addr >> 24);	// Address
-	*(args->buffer + 2) = (uint8_t)(args->addr >> 16);	// Address
-	*(args->buffer + 3) = (uint8_t)(args->addr >>  8);	// Address
-	*(args->buffer + 4) = (uint8_t)(args->addr >>  0);	// Address
+	args->buf_size = args->buf_size > flash_size ? flash_size : args->buf_size;
+	uint8_t cmd[5] = {
+		W25Q_READ_DATA_4B,				// Command
+		(uint8_t)(args->addr >> 24),	// Address
+		(uint8_t)(args->addr >> 16),	// Address
+		(uint8_t)(args->addr >>  8),	// Address
+		(uint8_t)(args->addr >>  0),	// Address
+	};
 
-	*(args->result) = W25Q_SPI_TxRx_RTOS(args->chip, args->buffer, args->buffer, 5, args->buf_size - 5);
+	*(args->result) = W25Q_SPI_Begin_RTOS(args->chip);
+	if (*(args->result) != W25Q_OK) { goto exit_release; }
+	*(args->result) = W25Q_SPI_Tx_RTOS(args->chip, cmd, sizeof(cmd));
+	if (*(args->result) != W25Q_OK) { W25Q_SPI_End_RTOS(args->chip); goto exit_release; }
+	*(args->result) = W25Q_SPI_Rx_RTOS(args->chip, args->buffer, args->buf_size);
+	if (*(args->result) != W25Q_OK) { W25Q_SPI_End_RTOS(args->chip); goto exit_release; }
+	*(args->result) = W25Q_SPI_End_RTOS(args->chip);
 
 exit_release:
 	if (osSemaphoreRelease(args->chip->sem_id) != osOK) {
@@ -1006,10 +983,10 @@ This message is intentionally made longer to test the page programming and readi
 We will also check if the data spans multiple pages and sectors to ensure that the implementation is robust.\
 Thank you for your attention and happy coding!";
 
-	uint8_t tx_data[538 + 5] = { 0 };
-	memcpy(tx_data + 5, tx_data_origine, 538);
+	uint8_t tx_data[538] = { 0 };
+	memcpy(tx_data, tx_data_origine, 538);
 	
-	state = W25Q_ReadData(chip, rx_data, 0x00000000, 4096 + 512 + 5);
+	state = W25Q_ReadData(chip, rx_data, 0x00000000, 4096 + 512);
 	assert_param(state == W25Q_OK);
 
 	state = W25Q_SendCmdAddr(chip, W25Q_SECTOR_ERASE_4B, 0x00000000);
@@ -1018,17 +995,16 @@ Thank you for your attention and happy coding!";
 	state = W25Q_SendCmdAddr(chip, W25Q_SECTOR_ERASE_4B, 0X00001000);
 	assert_param(state == W25Q_OK);
 
-	state = W25Q_ReadData(chip, rx_data, 0x00000000, 4096 + 512 + 5);
+	state = W25Q_ReadData(chip, rx_data, 0x00000000, 4096 + 512);
 	assert_param(state == W25Q_OK);
 
-	state = W25Q_WriteData(chip, tx_data, 0x00000f0f, 538 + 5);
+	state = W25Q_WriteData(chip, tx_data, 0x00000f0f, 538);
 	assert_param(state == W25Q_OK);
 
-	state = W25Q_ReadData(chip, rx_data, 0x00000000, 4096 + 512 + 5);
+	state = W25Q_ReadData(chip, rx_data, 0x00000000, 4096 + 512);
 	assert_param(state == W25Q_OK);
 
-	assert_param(memcmp(tx_data + 5, tx_data_origine, 538) == 0);
-	assert_param(memcmp(rx_data + 0x00000f0f + 5, tx_data_origine, 538) == 0);
+	assert_param(memcmp(rx_data + 0x00000f0f, tx_data_origine, 538) == 0);
 }
 
 
@@ -1038,7 +1014,7 @@ void TASK_W25Q_ReadWriteTest(void *argument) {
 	TASK_W25Q_ReadWriteTest_ARGS *args = (TASK_W25Q_ReadWriteTest_ARGS*)argument;
 
 	W25Q_STATE state[7] = { W25Q_OK };
-	uint8_t rx_data[4096 + 512 + 5] = { 0 };
+	uint8_t rx_data[4096 + 512] = { 0 };
 	uint8_t tx_data_origine[538] = "Hello, W25Q256! This is a test of the W25Q256 flash memory chip. \
 Let's see if it works properly. We will write this data to the flash memory and then read it back to verify\
 the integrity of the data. If everything goes well, we should see the same data we wrote.\
@@ -1046,8 +1022,8 @@ This message is intentionally made longer to test the page programming and readi
 We will also check if the data spans multiple pages and sectors to ensure that the implementation is robust.\
 Thank you for your attention and happy coding!";
 
-	uint8_t tx_data[538 + 5] = { 0 };
-	memcpy(tx_data + 5, tx_data_origine, 538);
+	uint8_t tx_data[538] = { 0 };
+	memcpy(tx_data, tx_data_origine, 538);
 
 	
 	osThreadAttr_t attr = { 0 };
@@ -1096,13 +1072,12 @@ Thank you for your attention and happy coding!";
 	osEventFlagsClear(done_flags[4], 0xFFFFFFFF);
 	osEventFlagsClear(done_flags[5], 0xFFFFFFFF);
 
+
 	
-
-
 	// Initial read
 	read_args.addr = 0x00000000;
 	read_args.buffer = rx_data;
-	read_args.buf_size = 4096 + 512 + 5;
+	read_args.buf_size = 4096 + 512;
 	read_args.result = &state[0];
 	read_args.done_flags = done_flags[0];
 
@@ -1126,10 +1101,6 @@ Thank you for your attention and happy coding!";
 	attr.name = "W25Q_Erase2";
 	OS_THREAD_NEW_CSTM(TASK_W25Q_SendCmdAddr, erase_args, attr, osWaitForever);
 
-	erase_args.addr = 0x11111111;
-	erase_args.result = &state[6];
-	erase_args.done_flags = done_flags[6];
-
 	osEventFlagsWait(done_flags[1], 1, osFlagsWaitAll, osWaitForever);
 	osEventFlagsWait(done_flags[2], 1, osFlagsWaitAll, osWaitForever);
 	assert_param(state[1] == W25Q_OK);
@@ -1148,7 +1119,7 @@ Thank you for your attention and happy coding!";
 	// Write data
 	write_args.addr = 0x00000f0f;
 	write_args.buffer = tx_data;
-	write_args.buf_size = 538 + 5;
+	write_args.buf_size = 538;
 	write_args.result = &state[4];
 	write_args.done_flags = done_flags[4];
 
@@ -1169,8 +1140,8 @@ Thank you for your attention and happy coding!";
 	assert_param(state[5] == W25Q_OK);
 
 	// Verify data
-	assert_param(memcmp(tx_data + 5, tx_data_origine, 538) == 0);
-	assert_param(memcmp(rx_data + 0x00000f0f + 5, tx_data_origine, 538) == 0);
+	assert_param(memcmp(tx_data, tx_data_origine, 538) == 0);
+	assert_param(memcmp(rx_data + 0x00000f0f, tx_data_origine, 538) == 0);
 
 	osThreadExit_Cstm();
 }
