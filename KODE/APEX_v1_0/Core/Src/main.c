@@ -136,88 +136,70 @@ int main(void)
 
 	// MX_USB_DEVICE_Init();
 
-	// const osThreadAttr_t TASK_start_Led0R_attributes = {
-	// 	.name = "TASK_start_Led0R",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (osPriority_t) osPriorityNormal,
-	// };
-	// const osThreadAttr_t TASK_start_Led0G_attributes = {
-	// 	.name = "TASK_start_Led0G",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (o
 
-	// osThreadNew(TASK_start_Led0R, NULL, &TASK_start_Led0R_attributes);
-	// osThreadNew(TASK_start_Led0G, NULL, &TASK_start_Led0G_attributes);
-
-
-	// BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
-	// 			CS_GRYO_GPIO_Port, CS_GRYO_Pin);
+	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
+				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
 	W25Q_STATE state;
 	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
+	assert_param(state == W25Q_OK);
+	// W25Q_ReadWriteTest(&w25q_chip);
 
-	uint8_t rx_data[4096 + 512 + 5] = { 0 };
-	uint8_t tx_data_origine[538] = "Hello, W25Q256! This is a test of the W25Q256 flash memory chip. \
-Let's see if it works properly. We will write this data to the flash memory and then read it back to verify\
-the integrity of the data. If everything goes well, we should see the same data we wrote.\
-This message is intentionally made longer to test the page programming and reading capabilities of the chip.\
-We will also check if the data spans multiple pages and sectors to ensure that the implementation is robust.\
-Thank you for your attention and happy coding!";
-
-	uint8_t tx_data[538 + 5] = { 0 };
-	memcpy(tx_data + 5, tx_data_origine, 538);
-
-	
-	state = W25Q_ReadData(&w25q_chip, rx_data, 0x00000000, 4096 + 512 + 5);
-	state = W25Q_SendCmdAddr(&w25q_chip, W25Q_SECTOR_ERASE_4B, 0x00000000);
-	state = W25Q_SendCmdAddr(&w25q_chip, W25Q_SECTOR_ERASE_4B, 0X00001000);
-	state = W25Q_ReadData(&w25q_chip, rx_data, 0x00000000, 4096 + 512 + 5);
-	state = W25Q_WriteData(&w25q_chip, tx_data, 0x00000f0f, 538 + 5);
-	state = W25Q_ReadData(&w25q_chip, rx_data, 0x00000000, 4096 + 512 + 5);
-
-	assert_param(memcmp(tx_data + 5, tx_data_origine, 538) == 0);
-	assert_param(memcmp(rx_data + 0x00000f0f + 5, tx_data_origine, 538) == 0);
-
-
-
-	__NOP();
 
 
 	
-	// TASK_POOL_CREATE(TASK_Program_start);
-	// TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
-	// TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
-	// TASK_POOL_CREATE(TASK_USB_Transmit);
-	// TASK_POOL_CREATE(TASK_Data_USB_Transmit);
+	TASK_POOL_CREATE(TASK_Program_start);
 
-	// Init_cleanup();
-	// Init_spi_semaphores();
-	// USB_Init();
+	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
+	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+
+	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
+	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
+	TASK_POOL_CREATE(TASK_W25Q_Init);
+	TASK_POOL_CREATE(TASK_W25Q_WriteData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
+
+	TASK_POOL_CREATE(TASK_USB_Transmit);
+	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
+
+	Init_cleanup();
+	Init_spi_semaphores();
+	USB_Init();
 
 	// osThreadAttr_t attr = {
 	// 	.name = TASK_Program_start_name,
 	// };
 	// OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
 
+	osThreadAttr_t attr = {
+		.name = "TASK_W25Q_ReadWriteTest",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	TASK_W25Q_ReadWriteTest_ARGS rwtest_args = {
+		.chip = &w25q_chip,
+	};
+	OS_THREAD_NEW_CSTM(TASK_W25Q_ReadWriteTest, rwtest_args, attr, osWaitForever);
+
 	/* USER CODE END 2 */
 
-  /* Init scheduler */
-//   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-//   MX_FREERTOS_Init();
+	/* Init scheduler */
+	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+	MX_FREERTOS_Init();
 
-  /* Start scheduler */
-//   osKernelStart();
+	/* Start scheduler */
+	osKernelStart();
 
-  /* We should never get here as control is now taken by the scheduler */
+	/* We should never get here as control is now taken by the scheduler */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	while (1) {
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
