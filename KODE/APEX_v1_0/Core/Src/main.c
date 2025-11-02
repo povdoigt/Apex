@@ -22,14 +22,17 @@
 /* USER CODE BEGIN Includes */
 
 #include "main.h"
+#include "cmsis_gcc.h"
 #include "cmsis_os2.h"
 #include "crc.h"
 
+#include <stdint.h>
 #include <string.h>
 
 #include "drivers/ADXL375.h"
 #include "drivers/BMI088.h"
 #include "drivers/led.h"
+#include "drivers/w25q_mem.h"
 
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
@@ -39,6 +42,7 @@
 #include "peripherals/tim.h"
 #include "peripherals/usart.h"
 
+#include "stm32f4xx_hal_conf.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
@@ -81,6 +85,7 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 BMI088 BMI088_imu;
+W25Q_Chip w25q_chip;
 
 data_topic_t *data_topic_acc_ptr;
 data_topic_t *data_topic_gyr_ptr;
@@ -94,64 +99,67 @@ data_topic_t *data_topic_gyr_ptr;
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_I2C3_Init();
-  MX_SPI2_Init();
-  MX_TIM2_Init();
-  MX_TIM4_Init();
-  MX_USART1_UART_Init();
-  MX_ADC1_Init();
-  MX_SPI1_Init();
-  MX_TIM3_Init();
-  MX_CRC_Init();
-  MX_TIM11_Init();
-  /* USER CODE BEGIN 2 */
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_I2C3_Init();
+	MX_SPI2_Init();
+	MX_TIM2_Init();
+	MX_TIM4_Init();
+	MX_USART1_UART_Init();
+	MX_ADC1_Init();
+	MX_SPI1_Init();
+	MX_TIM3_Init();
+	MX_CRC_Init();
+	MX_TIM11_Init();
+	/* USER CODE BEGIN 2 */
 
-	MX_USB_DEVICE_Init();
-
-	// const osThreadAttr_t TASK_start_Led0R_attributes = {
-	// 	.name = "TASK_start_Led0R",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (osPriority_t) osPriorityNormal,
-	// };
-	// const osThreadAttr_t TASK_start_Led0G_attributes = {
-	// 	.name = "TASK_start_Led0G",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (o
-
-	// osThreadNew(TASK_start_Led0R, NULL, &TASK_start_Led0R_attributes);
-	// osThreadNew(TASK_start_Led0G, NULL, &TASK_start_Led0G_attributes);
+	// MX_USB_DEVICE_Init();
 
 
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
+	W25Q_STATE state;
+	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
+	assert_param(state == W25Q_OK);
+	// W25Q_ReadWriteTest(&w25q_chip);
+
+
+
 	
 	TASK_POOL_CREATE(TASK_Program_start);
+
 	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
 	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+
+	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
+	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
+	TASK_POOL_CREATE(TASK_W25Q_Init);
+	TASK_POOL_CREATE(TASK_W25Q_WriteData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
+
 	TASK_POOL_CREATE(TASK_USB_Transmit);
 	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
 
@@ -159,30 +167,39 @@ int main(void)
 	Init_spi_semaphores();
 	USB_Init();
 
+	// osThreadAttr_t attr = {
+	// 	.name = TASK_Program_start_name,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+
 	osThreadAttr_t attr = {
-		.name = TASK_Program_start_name,
+		.name = "TASK_W25Q_ReadWriteTest",
+		.priority = (osPriority_t)osPriorityNormal,
 	};
-	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+	TASK_W25Q_ReadWriteTest_ARGS rwtest_args = {
+		.chip = &w25q_chip,
+	};
+	OS_THREAD_NEW_CSTM(TASK_W25Q_ReadWriteTest, rwtest_args, attr, osWaitForever);
 
-  /* USER CODE END 2 */
+	/* USER CODE END 2 */
 
-  /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  MX_FREERTOS_Init();
+	/* Init scheduler */
+	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+	MX_FREERTOS_Init();
 
-  /* Start scheduler */
-  osKernelStart();
+	/* Start scheduler */
+	osKernelStart();
 
-  /* We should never get here as control is now taken by the scheduler */
+	/* We should never get here as control is now taken by the scheduler */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	while (1) {
-    /* USER CODE END WHILE */
+		/* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
