@@ -97,7 +97,7 @@ void Error_Handler(void);
 
 typedef struct TASK_Program_start_ARGS { } TASK_Program_start_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_Program_start, 1, 512);
+TASK_POOL_CONFIGURE(TASK_Program_start, 1, 1024);
 
 void TASK_Program_start(void *argument);
 

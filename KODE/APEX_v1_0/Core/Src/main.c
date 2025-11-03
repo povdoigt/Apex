@@ -43,6 +43,9 @@
 #include "peripherals/usart.h"
 
 #include "stm32f4xx_hal_conf.h"
+#include "stm32f4xx_hal_gpio.h"
+#include "usbd_cdc_if.h"
+#include "usbd_def.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
@@ -134,16 +137,50 @@ int main(void)
 	MX_TIM11_Init();
 	/* USER CODE BEGIN 2 */
 
-	// MX_USB_DEVICE_Init();
+	MX_USB_DEVICE_Init();
 
 
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
-	W25Q_STATE state;
-	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
-	assert_param(state == W25Q_OK);
-	// W25Q_ReadWriteTest(&w25q_chip);
+	// W25Q_STATE state;
+	// state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
+	// assert_param(state == W25Q_OK);
+
+	// uint8_t usb_watchdog[3] = {USBD_BUSY, USBD_BUSY, USBD_BUSY};
+
+	// do {
+	// 	USB_update_watchdog(usb_watchdog);
+	// } while (!USB_is_connected(usb_watchdog));
+
+	// uint32_t t0 = HAL_GetTick();
+	// while (HAL_GetTick() - t0 < 10000) { // Wait 10 seconds before starting the test
+	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
+	// 	HAL_Delay(100);
+	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
+	// 	HAL_Delay(100);
+	// }
+	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
+
+	// t0 = HAL_GetTick();
+	// bool led_state = true;
+	// uint8_t rx_data[4096];
+	// for (uint32_t i = 0; i < 4096 * 4; i++) {
+	// 	W25Q_ReadData(&w25q_chip, rx_data, i * 4096, 4096);
+	// 	CDC_Transmit_FS(rx_data, 4096);
+	// 	if (HAL_GetTick() - t0 >= 500) {
+	// 		t0 = HAL_GetTick();
+	// 		led_state = !led_state;
+	// 		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
+	// 	} else {
+	// 		HAL_Delay(1);
+	// 	}
+	// }
+	
+	// HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
+
+
 
 
 
@@ -167,19 +204,19 @@ int main(void)
 	Init_spi_semaphores();
 	USB_Init();
 
-	// osThreadAttr_t attr = {
-	// 	.name = TASK_Program_start_name,
-	// };
-	// OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
-
 	osThreadAttr_t attr = {
-		.name = "TASK_W25Q_ReadWriteTest",
-		.priority = (osPriority_t)osPriorityNormal,
+		.name = TASK_Program_start_name,
 	};
-	TASK_W25Q_ReadWriteTest_ARGS rwtest_args = {
-		.chip = &w25q_chip,
-	};
-	OS_THREAD_NEW_CSTM(TASK_W25Q_ReadWriteTest, rwtest_args, attr, osWaitForever);
+	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+
+	// osThreadAttr_t attr = {
+	// 	.name = "TASK_W25Q_ReadWriteTest",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+	// TASK_W25Q_ReadWriteTest_ARGS rwtest_args = {
+	// 	.chip = &w25q_chip,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_W25Q_ReadWriteTest, rwtest_args, attr, osWaitForever);
 
 	/* USER CODE END 2 */
 

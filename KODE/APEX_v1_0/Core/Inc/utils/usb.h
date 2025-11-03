@@ -8,6 +8,10 @@
 
 void USB_Init(void);
 
+void USB_update_watchdog(uint8_t *usb_watchdog_bfr);
+
+bool USB_is_connected(uint8_t *usb_watchdog_bfr);
+
 
 typedef struct TASK_USB_Transmit_ARGS {
     USBD_HandleTypeDef *hUsbDeviceFS;
