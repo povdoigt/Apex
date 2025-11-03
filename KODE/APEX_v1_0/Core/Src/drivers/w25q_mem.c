@@ -373,12 +373,12 @@ W25Q_STATE W25Q_Init(W25Q_Chip *w25q_chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef
 	w25q_chip->cs_bank = cs_bank;
 	w25q_chip->cs_pin = cs_pin;
 
-	w25q_chip->sem_id = osSemaphoreNew(1, 1, &(osSemaphoreAttr_t) {
-		.name = "W25Q_SEM",
-		.cb_mem = &w25q_chip->sem,
-		.cb_size = sizeof(w25q_chip->sem)
-	});
-	if (w25q_chip->sem_id == NULL) return W25Q_SEM_ERR;
+	// w25q_chip->sem_id = osSemaphoreNew(1, 1, &(osSemaphoreAttr_t) {
+	// 	.name = "W25Q_SEM",
+	// 	.cb_mem = &w25q_chip->sem,
+	// 	.cb_size = sizeof(w25q_chip->sem)
+	// });
+	// if (w25q_chip->sem_id == NULL) return W25Q_SEM_ERR;
 
 	W25Q_STATE st;
 
@@ -527,6 +527,7 @@ static inline W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_Chip *chip, bool lock_
 	do {
 		st = W25Q_ReadStatus_RTOS_base(chip, 1, lock_sem);
 		if (st != W25Q_OK) return st;
+		osDelay(1);
 	} while (W25Q_STATUS_REG(chip, W25Q_SR1_BUSY_BIT));
 	return W25Q_OK;
 }

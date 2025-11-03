@@ -1,6 +1,7 @@
 #include "drivers/BMI088.h"
 #include "cmsis_os2.h"
 #include "peripherals/spi.h"
+#include "stm32f4xx_hal_spi.h"
 #include "utils/circular_buffer.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
@@ -415,16 +416,21 @@ void TASK_BMI088_ReadAcc(void *argument) {
 	FLOAT3 accData;
 
 	for (;;) {
-		uint8_t txBuf[8] = {(BMI_ACC_DATA | 0x80), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* Register addr, 1 byte dummy, 6 bytes data */
-		uint8_t rxBuf[8];
+		uint8_t cmd = BMI_ACC_DATA | 0x80; /* Register addr, 1 byte dummy, 6 bytes data */
+		uint8_t rxBuf[6];
 
-		TASK_HAL_SPI_TransmitReceive_DMA(imu->spiHandle, imu->csAccPinBank, imu->csAccPin,
-			                             txBuf, rxBuf, 8);
+		// TASK_HAL_SPI_TransmitReceive_DMA(imu->spiHandle, imu->csAccPinBank, imu->csAccPin,
+		// 	                             txBuf, rxBuf, 8);
+		SPI_Begin_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
+		SPI_Transmit_DMA_RTOS(imu->spiHandle, &cmd, 1);
+		SPI_Receive_DMA_RTOS(imu->spiHandle, rxBuf, 1); // Dummy byte
+		SPI_Receive_DMA_RTOS(imu->spiHandle, rxBuf, 6); // Data bytes
+		SPI_End_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
 
 		/* Form signed 16-bit integers */
-		int16_t accX = (int16_t) ((rxBuf[3] << 8) | rxBuf[2]);
-		int16_t accY = (int16_t) ((rxBuf[5] << 8) | rxBuf[4]);
-		int16_t accZ = (int16_t) ((rxBuf[7] << 8) | rxBuf[6]);
+		int16_t accX = (int16_t) ((rxBuf[1] << 8) | rxBuf[0]);
+		int16_t accY = (int16_t) ((rxBuf[3] << 8) | rxBuf[2]);
+		int16_t accZ = (int16_t) ((rxBuf[5] << 8) | rxBuf[4]);
 
 		/* Convert to m/s^2 and construct FLOAT3 */
 		accData.x = imu->accConversion * accX - imu->acc_mps2_offset.x;
@@ -455,16 +461,21 @@ void TASK_BMI088_ReadGyr(void *argument) {
 	FLOAT3 gyrData;
 
 	for (;;) {
-		uint8_t txBuf[7] = {(BMI_GYR_DATA | 0x80), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* Register addr, 1 byte dummy, 6 bytes data */
-		uint8_t rxBuf[7];
+		uint8_t cmd = BMI_GYR_DATA | 0x80; /* Register addr */
+		uint8_t rxBuf[6];
 
-		TASK_HAL_SPI_TransmitReceive_DMA(imu->spiHandle, imu->csGyrPinBank, imu->csGyrPin,
-			                             txBuf, rxBuf, 7);
+		// TASK_HAL_SPI_TransmitReceive_DMA(imu->spiHandle, imu->csGyrPinBank, imu->csGyrPin,
+		// 	                             txBuf, rxBuf, 7);
+
+		SPI_Begin_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
+		SPI_Transmit_DMA_RTOS(imu->spiHandle, &cmd, 1);
+		SPI_Receive_DMA_RTOS(imu->spiHandle, rxBuf, 6);
+		SPI_End_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
 
 		/* Form signed 16-bit integers */
-		int16_t gyrX = (int16_t) ((rxBuf[2] << 8) | rxBuf[1]);
-		int16_t gyrY = (int16_t) ((rxBuf[4] << 8) | rxBuf[3]);
-		int16_t gyrZ = (int16_t) ((rxBuf[6] << 8) | rxBuf[5]);
+		int16_t gyrX = (int16_t) ((rxBuf[1] << 8) | rxBuf[0]);
+		int16_t gyrY = (int16_t) ((rxBuf[3] << 8) | rxBuf[2]);
+		int16_t gyrZ = (int16_t) ((rxBuf[5] << 8) | rxBuf[4]);
 
 		/* Convert to rad/s and construct FLOAT3 */
 		gyrData.x = imu->gyrConversion * gyrX - imu->gyr_rps_offset.x;

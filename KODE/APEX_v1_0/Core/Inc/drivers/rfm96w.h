@@ -127,7 +127,7 @@
 #define RFM96_PA_RAMP_2MS                           0x01
 #define RFM96_PA_RAMP_1MS                           0x02
 #define RFM96_PA_RAMP_500US                         0x03
-#define RFM96_PA_RAMP_250US                         0x0
+#define RFM96_PA_RAMP_250US                         0x04
 #define RFM96_PA_RAMP_125US                         0x05
 #define RFM96_PA_RAMP_100US                         0x06
 #define RFM96_PA_RAMP_62US                          0x07
