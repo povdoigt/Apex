@@ -126,7 +126,7 @@ void init_all_components(COMPONENTS* components) {
     RFM96_Init(components->lora, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
                RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
 
-    W25Q_Init(components->flash, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin, W25Q_Q_FULL_DEVICE_ID);
+    W25Q_Init(components->flash, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
 }
 
 
@@ -343,20 +343,6 @@ void init_machine(MACHINE* machine, COMPONENTS* components,
 //     }
 // }
 
-
-
-void update_usb_watchdog(uint8_t *usb_watchdog_bfr) {
-    usb_watchdog_bfr[0] = usb_watchdog_bfr[1];
-    usb_watchdog_bfr[1] = usb_watchdog_bfr[2];
-    usb_watchdog_bfr[2] = CDC_Transmit_FS(NULL, 0);
-    HAL_Delay(1);
-}
-
-bool is_connected_to_usb(uint8_t *usb_watchdog_bfr) {
-    return ((usb_watchdog_bfr[0] == USBD_OK) &&
-            (usb_watchdog_bfr[1] == USBD_OK) &&
-            (usb_watchdog_bfr[2] == USBD_OK));
-}
 
 // TASK_POOL_CREATE(ASYNC_update_usb_watchdog);
 

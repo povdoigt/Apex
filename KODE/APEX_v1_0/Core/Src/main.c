@@ -22,6 +22,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "main.h"
+#include "cmsis_gcc.h"
 #include "cmsis_os2.h"
 #include "crc.h"
 
@@ -31,6 +32,7 @@
 #include "drivers/ADXL375.h"
 #include "drivers/BMI088.h"
 #include "drivers/led.h"
+#include "drivers/w25q_mem.h"
 // header rfm96
 #include "drivers/rfm96w.h"
 
@@ -88,6 +90,7 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 BMI088 BMI088_imu;
+W25Q_Chip w25q_chip;
 
 data_topic_t *data_topic_acc_ptr;
 data_topic_t *data_topic_gyr_ptr;
@@ -101,25 +104,25 @@ data_topic_t *data_topic_gyr_ptr;
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -173,10 +176,60 @@ int main(void)
 /* 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
+	// W25Q_STATE state;
+	// state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
+	// assert_param(state == W25Q_OK);
+
+	// uint8_t usb_watchdog[3] = {USBD_BUSY, USBD_BUSY, USBD_BUSY};
+
+	// do {
+	// 	USB_update_watchdog(usb_watchdog);
+	// } while (!USB_is_connected(usb_watchdog));
+
+	// uint32_t t0 = HAL_GetTick();
+	// while (HAL_GetTick() - t0 < 10000) { // Wait 10 seconds before starting the test
+	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
+	// 	HAL_Delay(100);
+	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
+	// 	HAL_Delay(100);
+	// }
+	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
+
+	// t0 = HAL_GetTick();
+	// bool led_state = true;
+	// uint8_t rx_data[4096];
+	// for (uint32_t i = 0; i < 4096 * 4; i++) {
+	// 	W25Q_ReadData(&w25q_chip, rx_data, i * 4096, 4096);
+	// 	CDC_Transmit_FS(rx_data, 4096);
+	// 	if (HAL_GetTick() - t0 >= 500) {
+	// 		t0 = HAL_GetTick();
+	// 		led_state = !led_state;
+	// 		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
+	// 	} else {
+	// 		HAL_Delay(1);
+	// 	}
+	// }
+	
+	// HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
+
+
+
+
+
 	
 	TASK_POOL_CREATE(TASK_Program_start);
+
 	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
 	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+
+	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
+	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
+	TASK_POOL_CREATE(TASK_W25Q_Init);
+	TASK_POOL_CREATE(TASK_W25Q_WriteData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
+
 	TASK_POOL_CREATE(TASK_USB_Transmit);
 	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
 
@@ -189,7 +242,16 @@ int main(void)
 	};
 	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever); */
 
-  /* USER CODE END 2 */
+	// osThreadAttr_t attr = {
+	// 	.name = "TASK_W25Q_ReadWriteTest",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+	// TASK_W25Q_ReadWriteTest_ARGS rwtest_args = {
+	// 	.chip = &w25q_chip,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_W25Q_ReadWriteTest, rwtest_args, attr, osWaitForever);
+
+	/* USER CODE END 2 */
 
   /* Init scheduler */
   // osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
@@ -198,36 +260,16 @@ int main(void)
   /* Start scheduler */
   // osKernelStart();
 
-  /* We should never get here as control is now taken by the scheduler */
+	/* We should never get here as control is now taken by the scheduler */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	while (1) {
- 		// TEST TELEM ENVOI RFM96 LOOP
-		// send data + print + visual feedback LED
-		RFM96_Print(&rfm96_chip, data);
-		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, 0);
-		HAL_Delay(100);
-		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, 1);
-		HAL_Delay(1000);
+		/* USER CODE END WHILE */
 
-		// TEST TELEM RECEIVE RFM96 LOOP
-		// int nb_packets = RFM96_ParsePacket(&rfm96_chip);
-		// // Read received data and send it over USB
-		// if (nb_packets != 0) {
-		// 	HAL_GPIO_WritePin(LED0R_GPIO_Port, LED0R_Pin, 0);
-		// 	HAL_Delay(100);
-		// 	HAL_GPIO_WritePin(LED0R_GPIO_Port, LED0R_Pin, 1);
-		// 	HAL_Delay(100);
-		// 	RFM96_Read(&rfm96_chip, (uint8_t *) &rx_buffer, nb_packets);
-		// 	CDC_Transmit_FS((uint8_t *)&rx_buffer, nb_packets);
-		// }
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
+		/* USER CODE BEGIN 3 */
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**
