@@ -23,6 +23,7 @@
 
 #define TASK_POOL_OBJ_DECLARE(task_name)                                    \
     typedef struct task_name##_POOL_OBJ {                                   \
+        MemPoolBlock_t header;                                              \
         char name[configMAX_TASK_NAME_LEN];                                 \
         task_name##_ARGS args;                                              \
         StaticTask_t control_block;                                         \
@@ -41,18 +42,18 @@
     uint8_t task_name##_POOL[MEMPOOL_ARR_SIZE(task_name##_NUMBER, sizeof(task_name##_POOL_OBJ))];   \
     osMemoryPoolId_t task_name##_POOL_ID = NULL
 
-#define TASK_POOL_CREATE(task_name)                 \
-    osMemoryPoolAttr_t task_name##_POOL_ATTR = {    \
-        .name = #task_name "_POOL",                 \
-        .cb_mem = &task_name##_POOL_CB,             \
-        .cb_size = sizeof(task_name##_POOL_CB),     \
-        .mp_mem = &task_name##_POOL,                \
-        .mp_size = sizeof(task_name##_POOL),        \
-    };                                              \
-    task_name##_POOL_ID = (osMemoryPoolId_t) osMemoryPoolNew(          \
-        task_name##_NUMBER,                         \
-        sizeof(task_name##_POOL_OBJ),               \
-        &task_name##_POOL_ATTR                      \
+#define TASK_POOL_CREATE(task_name)                             \
+    osMemoryPoolAttr_t task_name##_POOL_ATTR = {                \
+        .name = #task_name "_POOL",                             \
+        .cb_mem = &task_name##_POOL_CB,                         \
+        .cb_size = sizeof(task_name##_POOL_CB),                 \
+        .mp_mem = &task_name##_POOL,                            \
+        .mp_size = sizeof(task_name##_POOL),                    \
+    };                                                          \
+    task_name##_POOL_ID = (osMemoryPoolId_t) osMemoryPoolNew(   \
+        task_name##_NUMBER,                                     \
+        sizeof(task_name##_POOL_OBJ),                           \
+        &task_name##_POOL_ATTR                                  \
     )
     
 

@@ -6,6 +6,20 @@ static StaticSemaphore_t usb_semaphore_buffer;
 static osSemaphoreId_t usb_semaphore_id;
 
 
+void USB_update_watchdog(uint8_t *usb_watchdog_bfr) {
+    usb_watchdog_bfr[0] = usb_watchdog_bfr[1];
+    usb_watchdog_bfr[1] = usb_watchdog_bfr[2];
+    usb_watchdog_bfr[2] = CDC_Transmit_FS(NULL, 0);
+    HAL_Delay(1);
+}
+
+bool USB_is_connected(uint8_t *usb_watchdog_bfr) {
+    return ((usb_watchdog_bfr[0] == USBD_OK) &&
+            (usb_watchdog_bfr[1] == USBD_OK) &&
+            (usb_watchdog_bfr[2] == USBD_OK));
+}
+
+
 void USB_Init(void) {
     const osSemaphoreAttr_t usb_semaphore_attr = {
         // .name = "USB_Transmit_Semaphore",

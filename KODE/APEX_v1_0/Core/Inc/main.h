@@ -60,44 +60,44 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define RESET_GPS_Pin GPIO_PIN_0
-#define RESET_GPS_GPIO_Port GPIOC
-#define CS_FLASH_Pin GPIO_PIN_1
-#define CS_FLASH_GPIO_Port GPIOC
-#define LED0G_Pin GPIO_PIN_0
-#define LED0G_GPIO_Port GPIOA
-#define LED0B_Pin GPIO_PIN_1
-#define LED0B_GPIO_Port GPIOA
-#define LED0R_Pin GPIO_PIN_2
-#define LED0R_GPIO_Port GPIOA
-#define CS_ACC1_Pin GPIO_PIN_3
-#define CS_ACC1_GPIO_Port GPIOA
-#define CS_ACC0_Pin GPIO_PIN_4
-#define CS_ACC0_GPIO_Port GPIOA
-#define CS_LORA_Pin GPIO_PIN_4
-#define CS_LORA_GPIO_Port GPIOC
-#define RESET_LORA_Pin GPIO_PIN_5
-#define RESET_LORA_GPIO_Port GPIOC
-#define SENCE_BAT_Pin GPIO_PIN_0
-#define SENCE_BAT_GPIO_Port GPIOB
-#define BUZZER_Pin GPIO_PIN_1
-#define BUZZER_GPIO_Port GPIOB
-#define CS_GRYO_Pin GPIO_PIN_2
-#define CS_GRYO_GPIO_Port GPIOB
-#define LORA_DIO0_Pin GPIO_PIN_15
-#define LORA_DIO0_GPIO_Port GPIOA
-#define LED1G_Pin GPIO_PIN_6
-#define LED1G_GPIO_Port GPIOB
-#define LED1B_Pin GPIO_PIN_7
-#define LED1B_GPIO_Port GPIOB
-#define LED1R_Pin GPIO_PIN_8
-#define LED1R_GPIO_Port GPIOB
+#define RESET_GPS_Pin			GPIO_PIN_0
+#define RESET_GPS_GPIO_Port		GPIOC
+#define CS_FLASH_Pin			GPIO_PIN_1
+#define CS_FLASH_GPIO_Port		GPIOC
+#define LED0G_Pin				GPIO_PIN_0
+#define LED0G_GPIO_Port			GPIOA
+#define LED0B_Pin				GPIO_PIN_1
+#define LED0B_GPIO_Port			GPIOA
+#define LED0R_Pin				GPIO_PIN_2
+#define LED0R_GPIO_Port			GPIOA
+#define CS_ACC1_Pin				GPIO_PIN_3
+#define CS_ACC1_GPIO_Port		GPIOA
+#define CS_ACC0_Pin				GPIO_PIN_4
+#define CS_ACC0_GPIO_Port		GPIOA
+#define CS_LORA_Pin				GPIO_PIN_4
+#define CS_LORA_GPIO_Port		GPIOC
+#define RESET_LORA_Pin			GPIO_PIN_5
+#define RESET_LORA_GPIO_Port	GPIOC
+#define SENCE_BAT_Pin			GPIO_PIN_0
+#define SENCE_BAT_GPIO_Port		GPIOB
+#define BUZZER_Pin				GPIO_PIN_1
+#define BUZZER_GPIO_Port		GPIOB
+#define CS_GRYO_Pin				GPIO_PIN_2
+#define CS_GRYO_GPIO_Port		GPIOB
+#define LORA_DIO0_Pin			GPIO_PIN_15
+#define LORA_DIO0_GPIO_Port		GPIOA
+#define LED1G_Pin				GPIO_PIN_6
+#define LED1G_GPIO_Port			GPIOB
+#define LED1B_Pin				GPIO_PIN_7
+#define LED1B_GPIO_Port			GPIOB
+#define LED1R_Pin				GPIO_PIN_8
+#define LED1R_GPIO_Port			GPIOB
 
 /* USER CODE BEGIN Private defines */
 
 typedef struct TASK_Program_start_ARGS { } TASK_Program_start_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_Program_start, 1, 512);
+TASK_POOL_CONFIGURE(TASK_Program_start, 1, 1024);
 
 void TASK_Program_start(void *argument);
 
