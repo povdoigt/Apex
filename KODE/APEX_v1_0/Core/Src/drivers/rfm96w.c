@@ -314,7 +314,7 @@ void RFM96_WriteRegister(RFM96_Chip *rfm96_chip, uint8_t reg, uint8_t data) {
 	RFM96_TransmitReceive(rfm96_chip, tx_buf, NULL, 2, 0);
 }
 
-
+// TODO : à changer en RFM96_SPI_TxRx
 void RFM96_TransmitReceive(RFM96_Chip *rfm96_chip, uint8_t *tx_buf, uint8_t *rx_buf, uint16_t tx_size, uint16_t rx_size) {
 	HAL_StatusTypeDef statue = HAL_OK;
 
