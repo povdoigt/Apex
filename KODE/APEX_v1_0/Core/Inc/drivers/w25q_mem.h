@@ -203,6 +203,7 @@ typedef struct {
 extern const uint8_t W25Q_CMD_FLAGS[256];
 
 #define W25Q_STATUS_REG(chip, bit) ((chip)->status_reg & (1 << (bit)) ? 1 : 0)
+#define W25Q_FLASH_SIZE_BYTES (1 << 26) // 512 MBits = 64 MBytes
 
 
 
@@ -219,8 +220,8 @@ W25Q_STATE W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id);
 
 /* Niveau 2 : Logique périphérique */
 W25Q_STATE W25Q_Init(W25Q_Chip *chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin);
-W25Q_STATE W25Q_WriteData(W25Q_Chip *chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
-W25Q_STATE W25Q_ReadData(W25Q_Chip *chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
+W25Q_STATE W25Q_WriteData(W25Q_Chip *w25q_chip, const uint8_t *data, uint32_t addr, uint32_t data_size);
+W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data, uint32_t addr, uint32_t data_size);
 
 
 

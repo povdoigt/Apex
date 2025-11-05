@@ -48,8 +48,8 @@ const uint8_t W25Q_CMD_FLAGS[256] = {
     // [W25Q_READ_UID]              	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY,
     // [W25Q_READ_SFDP]             	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY,
     [W25Q_READ_SECURITY_REG]     	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY,
-    [W25Q_PROG_SECURITY_REG]     	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY | W25Q_FLAG_WEL | W25Q_FLAG_DEVICE_BUSY,
-    [W25Q_ERASE_SECURITY_REG]    	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY | W25Q_FLAG_WEL | W25Q_FLAG_DEVICE_BUSY,
+    [W25Q_PROG_SECURITY_REG]     	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY | W25Q_FLAG_WEL | W25Q_FLAG_DEVICE_BUSY | W25Q_FLAG_WAIT_AFTER,
+    [W25Q_ERASE_SECURITY_REG]    	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY | W25Q_FLAG_WEL | W25Q_FLAG_DEVICE_BUSY | W25Q_FLAG_WAIT_AFTER,
 
     /* ----- Read data commands -------------------------------------------- */
     // [W25Q_READ_DATA]             	= W25Q_FLAG_VALID | W25Q_FLAG_BUSY,		// commented due to not used
@@ -105,22 +105,21 @@ static inline bool W25Q_IsCmdNeedWaitAfter(uint8_t cmd)		{ return (W25Q_CMD_FLAG
 
 
 
-
 /* -------------------------------------------------------------------------- */
 /*                          Niveau 0 : SPI transaction                        */
 /* -------------------------------------------------------------------------- */
 
 
-static inline void W25Q_SPI_Begin(W25Q_Chip *chip) {
+static inline void W25Q_SPI_Begin(W25Q_t *chip) {
 	HAL_GPIO_WritePin(chip->cs_bank, chip->cs_pin, GPIO_PIN_RESET);
 }
-static inline W25Q_STATE W25Q_SPI_Tx(W25Q_Chip *chip, uint8_t *tx_buf, uint16_t tx_len) {
+static inline W25Q_STATE W25Q_SPI_Tx(W25Q_t *chip, const uint8_t *tx_buf, uint16_t tx_len) {
 	return HAL_SPI_Transmit(chip->hspi, tx_buf, tx_len, HAL_MAX_DELAY) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
 }
-static inline W25Q_STATE W25Q_SPI_Rx(W25Q_Chip *chip, uint8_t *rx_buf, uint16_t rx_len) {
+static inline W25Q_STATE W25Q_SPI_Rx(W25Q_t *chip, uint8_t *rx_buf, uint16_t rx_len) {
 	return HAL_SPI_Receive(chip->hspi, rx_buf, rx_len, HAL_MAX_DELAY) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
 }
-static inline void W25Q_SPI_End(W25Q_Chip *chip) {
+static inline void W25Q_SPI_End(W25Q_t *chip) {
 	HAL_GPIO_WritePin(chip->cs_bank, chip->cs_pin, GPIO_PIN_SET);
 }
 
@@ -132,7 +131,7 @@ static inline void W25Q_SPI_End(W25Q_Chip *chip) {
 /*                          Niveau 1 : Command primitives                     */
 /* -------------------------------------------------------------------------- */
 
-static inline W25Q_STATE W25Q_WaitForReady(W25Q_Chip *chip) {
+static inline W25Q_STATE W25Q_WaitForReady(W25Q_t *chip) {
 	W25Q_STATE st;
 	do {
 		st = W25Q_ReadStatus(chip, 1);
@@ -171,7 +170,7 @@ static inline W25Q_STATE W25Q_WaitForReady(W25Q_Chip *chip) {
  * @param cmd   Code de la commande SPI à envoyer (ex: 0x06 pour WRITE_ENABLE).
  * @return      W25Q_OK si succès, ou un code d’erreur (W25Q_SPI_ERR, W25Q_PARAM_ERR, etc.).
  */
-W25Q_STATE W25Q_SendCmd(W25Q_Chip *chip, uint8_t cmd) {
+W25Q_STATE W25Q_SendCmd(W25Q_t *chip, uint8_t cmd) {
     W25Q_STATE st;
 
     if (!W25Q_IsCmdValid(cmd)) {
@@ -238,7 +237,7 @@ W25Q_STATE W25Q_SendCmd(W25Q_Chip *chip, uint8_t cmd) {
  * @param addr  Adresse mémoire sur 32 bits (A31→A0).
  * @return      W25Q_OK si succès, ou un code d’erreur (W25Q_SPI_ERR, W25Q_PARAM_ERR, etc.).
  */
-W25Q_STATE W25Q_SendCmdAddr(W25Q_Chip *chip, uint8_t cmd, uint32_t addr) {
+W25Q_STATE W25Q_SendCmdAddr(W25Q_t *chip, uint8_t cmd, uint32_t addr) {
     W25Q_STATE st;
 
     if (!W25Q_IsCmdValid(cmd)) {
@@ -280,7 +279,7 @@ W25Q_STATE W25Q_SendCmdAddr(W25Q_Chip *chip, uint8_t cmd, uint32_t addr) {
     return st;
 }
 
-W25Q_STATE W25Q_ReadStatus(W25Q_Chip *chip, uint8_t sr_index) {
+W25Q_STATE W25Q_ReadStatus(W25Q_t *chip, uint8_t sr_index) {
 	W25Q_STATE st;
 	uint8_t cmd;
 	uint8_t status;
@@ -314,7 +313,7 @@ W25Q_STATE W25Q_ReadStatus(W25Q_Chip *chip, uint8_t sr_index) {
 	return W25Q_OK;
 }
 
-W25Q_STATE W25Q_WriteStatus(W25Q_Chip *chip, uint8_t sr_index, uint8_t value) {
+W25Q_STATE W25Q_WriteStatus(W25Q_t *chip, uint8_t sr_index, uint8_t value) {
 	W25Q_STATE st;
 	uint8_t tx_buf[2] = { 0 };
 	sr_index--;
@@ -346,16 +345,16 @@ W25Q_STATE W25Q_WriteStatus(W25Q_Chip *chip, uint8_t sr_index, uint8_t value) {
 	return W25Q_OK;
 }
 
-W25Q_STATE W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id) {
+W25Q_STATE W25Q_ReadID(W25Q_t *chip, uint8_t *id) {
 	uint8_t cmd = W25Q_READ_JEDEC_ID;
 	W25Q_STATE st;
 
-	W25Q_SPI_Begin(w25q_chip);
-	st = W25Q_SPI_Tx(w25q_chip, &cmd, 1);
-	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
-	st = W25Q_SPI_Rx(w25q_chip, id, 3);
-	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
-	W25Q_SPI_End(w25q_chip);
+	W25Q_SPI_Begin(chip);
+	st = W25Q_SPI_Tx(chip, &cmd, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End(chip); return st; }
+	st = W25Q_SPI_Rx(chip, id, 3);
+	if (st != W25Q_OK) { W25Q_SPI_End(chip); return st; }
+	W25Q_SPI_End(chip);
 
 	return W25Q_OK;
 }
@@ -368,23 +367,23 @@ W25Q_STATE W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id) {
 /*                        Niveau 2 : Fonctions logiques                        */
 /* -------------------------------------------------------------------------- */
 
-W25Q_STATE W25Q_Init(W25Q_Chip *w25q_chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin) {
-	w25q_chip->hspi = hspi;
-	w25q_chip->cs_bank = cs_bank;
-	w25q_chip->cs_pin = cs_pin;
+W25Q_STATE W25Q_Init(W25Q_t *chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin) {
+	chip->hspi = hspi;
+	chip->cs_bank = cs_bank;
+	chip->cs_pin = cs_pin;
 
-	// w25q_chip->sem_id = osSemaphoreNew(1, 1, &(osSemaphoreAttr_t) {
+	// chip->sem_id = osSemaphoreNew(1, 1, &(osSemaphoreAttr_t) {
 	// 	.name = "W25Q_SEM",
-	// 	.cb_mem = &w25q_chip->sem,
-	// 	.cb_size = sizeof(w25q_chip->sem)
+	// 	.cb_mem = &chip->sem,
+	// 	.cb_size = sizeof(chip->sem)
 	// });
-	// if (w25q_chip->sem_id == NULL) return W25Q_SEM_ERR;
+	// if (chip->sem_id == NULL) return W25Q_SEM_ERR;
 
 	W25Q_STATE st;
 
 	// Read and check ID
 	uint8_t id_buf[3];
-	st = W25Q_ReadID(w25q_chip, id_buf);
+	st = W25Q_ReadID(chip, id_buf);
 	if (st != W25Q_OK) return st;
 	if (id_buf[0] != W25Q_MANUFACTURER_ID) return W25Q_CHIP_ERR;
 	if (W25Q_V_FULL_DEVICE_ID != (uint32_t)((id_buf[1] << 8) | id_buf[2])) return W25Q_PARAM_ERR;
@@ -393,40 +392,40 @@ W25Q_STATE W25Q_Init(W25Q_Chip *w25q_chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef
 	uint32_t status_reg = 0; // Initialize status register to 0
 	status_reg |= (1 << W25Q_SR3_ADP_BIT); // Set addr mode to 4-byte
 
-	st = W25Q_WriteStatus(w25q_chip, 1, (uint8_t)(status_reg >>  0));
+	st = W25Q_WriteStatus(chip, 1, (uint8_t)(status_reg >>  0));
 	if (st != W25Q_OK) return st;
-	st = W25Q_WriteStatus(w25q_chip, 2, (uint8_t)(status_reg >>  8));
+	st = W25Q_WriteStatus(chip, 2, (uint8_t)(status_reg >>  8));
 	if (st != W25Q_OK) return st;
-	st = W25Q_WriteStatus(w25q_chip, 3, (uint8_t)(status_reg >> 16));
+	st = W25Q_WriteStatus(chip, 3, (uint8_t)(status_reg >> 16));
 	if (st != W25Q_OK) return st;
 
 	// Verify configuration
-	st = W25Q_ReadStatus(w25q_chip, 1);
+	st = W25Q_ReadStatus(chip, 1);
 	if (st != W25Q_OK) return st;
-	st = W25Q_ReadStatus(w25q_chip, 2);
+	st = W25Q_ReadStatus(chip, 2);
 	if (st != W25Q_OK) return st;
-	st = W25Q_ReadStatus(w25q_chip, 3);
+	st = W25Q_ReadStatus(chip, 3);
 	if (st != W25Q_OK) return st;
 
-	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR3_ADS_BIT)) {
+	if (!W25Q_STATUS_REG(chip, W25Q_SR3_ADS_BIT)) {
 		// Try to enable 4-byte mode if not set already
-		st = W25Q_SendCmd(w25q_chip, W25Q_ENABLE_4B_MODE);
+		st = W25Q_SendCmd(chip, W25Q_ENABLE_4B_MODE);
 	}
 
 	return st;
 }
 
 // Data size must be <= 256 (page size)
-static W25Q_STATE W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint16_t buf_size) {
+static W25Q_STATE W25Q_PageProgram(W25Q_t *chip, const uint8_t *data, uint32_t addr, uint16_t data_size) {
 	W25Q_STATE st;
 
-	st = W25Q_WaitForReady(w25q_chip);
+	st = W25Q_WaitForReady(chip);
 	if (st != W25Q_OK) return st;
-	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
-		st = W25Q_SendCmd(w25q_chip, W25Q_WRITE_ENABLE);
+	if (!W25Q_STATUS_REG(chip, W25Q_SR1_WEL_BIT)) {
+		st = W25Q_SendCmd(chip, W25Q_WRITE_ENABLE);
 		if (st != W25Q_OK) return st;
 	}
-	buf_size = buf_size > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE : buf_size;
+	data_size = data_size > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE : data_size;
 	uint8_t cmd[5] = {
 		W25Q_PAGE_PROGRAM_4B,	// Command
 		(uint8_t)(addr >> 24),	// Address
@@ -435,41 +434,44 @@ static W25Q_STATE W25Q_PageProgram(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32
 		(uint8_t)(addr >>  0)	// Address
 	};
 
-	W25Q_SPI_Begin(w25q_chip);
-	st = W25Q_SPI_Tx(w25q_chip, cmd, sizeof(cmd));
-	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
-	st = W25Q_SPI_Tx(w25q_chip, buffer, buf_size);
-	if (st != W25Q_OK) { W25Q_SPI_End(w25q_chip); return st; }
-	W25Q_SPI_End(w25q_chip);
+	W25Q_SPI_Begin(chip);
+	st = W25Q_SPI_Tx(chip, cmd, sizeof(cmd));
+	if (st != W25Q_OK) { W25Q_SPI_End(chip); return st; }
+	st = W25Q_SPI_Tx(chip, data, data_size);
+	if (st != W25Q_OK) { W25Q_SPI_End(chip); return st; }
+	W25Q_SPI_End(chip);
 
-	st = W25Q_WaitForReady(w25q_chip);
+	st = W25Q_WaitForReady(chip);
 	return st;
 }
 
-W25Q_STATE W25Q_WriteData(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size) {
+W25Q_STATE W25Q_WriteData(W25Q_t *chip, const uint8_t *data, uint32_t addr, uint32_t data_size) {
 	W25Q_STATE st;
 
-	uint32_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000 / 8; // MBites to bytes
-	buf_size = (buf_size + addr) > flash_size ? flash_size - addr : buf_size;
+	addr = addr > W25Q_FLASH_SIZE_BYTES ? W25Q_FLASH_SIZE_BYTES : addr;
+	data_size = (uint64_t)(data_size + addr) > (uint64_t)W25Q_FLASH_SIZE_BYTES ? (W25Q_FLASH_SIZE_BYTES - addr) : data_size;
 
-	while (buf_size > 0) {
+	while (data_size > 0) {
 		uint32_t relative_addr = addr % W25Q_MEM_PAGE_SIZE;
-		uint16_t data_size_page = (buf_size + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : buf_size;
+		uint16_t data_size_page = (data_size + relative_addr) > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE - relative_addr : data_size;
 		
-		st = W25Q_PageProgram(w25q_chip, buffer, addr, data_size_page);
+		st = W25Q_PageProgram(chip, data, addr, data_size_page);
 		if (st != W25Q_OK) return st;
 
-		buf_size -= data_size_page;
+		data_size -= data_size_page;
 		addr += data_size_page;
-		buffer += data_size_page;
+		data += data_size_page;
 	}
 	return W25Q_OK;
 }
 
 // Data size must be <= flash size
-W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr, uint32_t data_size) {
+W25Q_STATE W25Q_ReadData(W25Q_t *chip, uint8_t *data_buf, uint32_t addr, uint32_t data_size) {
 	W25Q_STATE state;
-	state =	W25Q_WaitForReady(w25q_chip);
+	state =	W25Q_WaitForReady(chip);
+
+	addr = addr > W25Q_FLASH_SIZE_BYTES ? W25Q_FLASH_SIZE_BYTES : addr;
+	data_size = (uint64_t)(data_size + addr) > (uint64_t)W25Q_FLASH_SIZE_BYTES ? (W25Q_FLASH_SIZE_BYTES - addr) : data_size;
 
 	uint8_t cmd[5] = {
 		W25Q_READ_DATA_4B,		// Command
@@ -479,12 +481,12 @@ W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr,
 		(uint8_t)(addr >>  0),	// Address
 	};
 
-	W25Q_SPI_Begin(w25q_chip);
-	state = W25Q_SPI_Tx(w25q_chip, cmd, sizeof(cmd));
-	if (state != W25Q_OK) { W25Q_SPI_End(w25q_chip); return state; }
-	state = W25Q_SPI_Rx(w25q_chip, data_buf, data_size);
-	if (state != W25Q_OK) { W25Q_SPI_End(w25q_chip); return state; }
-	W25Q_SPI_End(w25q_chip);
+	W25Q_SPI_Begin(chip);
+	state = W25Q_SPI_Tx(chip, cmd, sizeof(cmd));
+	if (state != W25Q_OK) { W25Q_SPI_End(chip); return state; }
+	state = W25Q_SPI_Rx(chip, data_buf, data_size);
+	if (state != W25Q_OK) { W25Q_SPI_End(chip); return state; }
+	W25Q_SPI_End(chip);
 
 	return state;
 }
@@ -501,16 +503,16 @@ W25Q_STATE W25Q_ReadData(W25Q_Chip *w25q_chip, uint8_t *data_buf, uint32_t addr,
 /*                          Niveau 0 : SPI transaction                        */
 /* -------------------------------------------------------------------------- */
 
-static inline W25Q_STATE W25Q_SPI_Begin_RTOS(W25Q_Chip *chip) {
+static inline W25Q_STATE W25Q_SPI_Begin_RTOS(W25Q_t *chip) {
 	return SPI_Begin_DMA_RTOS(chip->hspi, chip->cs_bank, chip->cs_pin) == HAL_OK ? W25Q_OK : W25Q_SEM_ERR; 
 }
-static inline W25Q_STATE W25Q_SPI_Tx_RTOS(W25Q_Chip *chip, uint8_t *tx_buf, uint16_t tx_len) {
+static inline W25Q_STATE W25Q_SPI_Tx_RTOS(W25Q_t *chip, uint8_t *tx_buf, uint16_t tx_len) {
 	return SPI_Transmit_DMA_RTOS(chip->hspi, tx_buf, tx_len) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
 }
-static inline W25Q_STATE W25Q_SPI_Rx_RTOS(W25Q_Chip *chip, uint8_t *rx_buf, uint16_t rx_len) {
+static inline W25Q_STATE W25Q_SPI_Rx_RTOS(W25Q_t *chip, uint8_t *rx_buf, uint16_t rx_len) {
 	return SPI_Receive_DMA_RTOS(chip->hspi, rx_buf,  rx_len) == HAL_OK ? W25Q_OK : W25Q_SPI_ERR;
 }
-static inline W25Q_STATE W25Q_SPI_End_RTOS(W25Q_Chip *chip) {
+static inline W25Q_STATE W25Q_SPI_End_RTOS(W25Q_t *chip) {
 	return SPI_End_DMA_RTOS(chip->hspi, chip->cs_bank, chip->cs_pin) == HAL_OK ? W25Q_OK : W25Q_SEM_ERR; 
 }
 
@@ -522,7 +524,7 @@ static inline W25Q_STATE W25Q_SPI_End_RTOS(W25Q_Chip *chip) {
 /*                          Niveau 1 : Command primitives                     */
 /* -------------------------------------------------------------------------- */
 
-static inline W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_Chip *chip, bool lock_sem) {
+static inline W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_t *chip, bool lock_sem) {
 	W25Q_STATE st;
 	do {
 		st = W25Q_ReadStatus_RTOS_base(chip, 1, lock_sem);
@@ -532,7 +534,7 @@ static inline W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_Chip *chip, bool lock_
 	return W25Q_OK;
 }
 
-W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_Chip *chip, uint8_t cmd, bool lock_sem) {
+W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_t *chip, uint8_t cmd, bool lock_sem) {
 	W25Q_STATE st;
 	bool need_release = false;
 
@@ -586,7 +588,7 @@ exit_release:
 	return st;
 }
 
-W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_Chip *chip, uint8_t cmd, uint32_t addr, bool lock_sem) {
+W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_t *chip, uint8_t cmd, uint32_t addr, bool lock_sem) {
 	W25Q_STATE st;
 	bool need_release = false;
 
@@ -646,7 +648,7 @@ exit_release:
 	return st;
 }
 
-W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, bool lock_sem) {
+W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, bool lock_sem) {
 	W25Q_STATE st = W25Q_OK;
 	uint8_t cmd;
 	uint8_t status;
@@ -694,7 +696,7 @@ exit_flag:
 	return st;
 }
 
-W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, uint8_t value, bool lock_sem) {
+W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, uint8_t value, bool lock_sem) {
 	W25Q_STATE st = W25Q_OK;
 	uint8_t tx_buf[2] = { 0 };
 	sr_index--;
@@ -741,27 +743,27 @@ exit_flag:
 	return st;
 }
 
-W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_Chip *w25q_chip, uint8_t *id, bool lock_sem) {
+W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_t *chip, uint8_t *id, bool lock_sem) {
 	W25Q_STATE st = W25Q_OK;
 	uint8_t cmd = W25Q_READ_JEDEC_ID;
 
 	if (lock_sem) {
-		if (osSemaphoreAcquire(w25q_chip->sem_id, osWaitForever) != osOK) {
+		if (osSemaphoreAcquire(chip->sem_id, osWaitForever) != osOK) {
 			return W25Q_SEM_ERR;
 		}
 	}
 
-	st = W25Q_SPI_Begin_RTOS(w25q_chip);
+	st = W25Q_SPI_Begin_RTOS(chip);
 	if (st != W25Q_OK) { goto exit_flag; }
-	st = W25Q_SPI_Tx_RTOS(w25q_chip, &cmd, 1);
-	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
-	st = W25Q_SPI_Rx_RTOS(w25q_chip, id, 3);
-	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
-	st = W25Q_SPI_End_RTOS(w25q_chip);
+	st = W25Q_SPI_Tx_RTOS(chip, &cmd, 1);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_flag; }
+	st = W25Q_SPI_Rx_RTOS(chip, id, 3);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_flag; }
+	st = W25Q_SPI_End_RTOS(chip);
 
 exit_flag:
 	if (lock_sem) {
-		if (osSemaphoreRelease(w25q_chip->sem_id) != osOK) {
+		if (osSemaphoreRelease(chip->sem_id) != osOK) {
 			return W25Q_SEM_ERR;
 		}
 	}
@@ -854,15 +856,15 @@ exit_flag:
 	osThreadExit_Cstm();
 }
 
-static W25Q_STATE W25Q_PageProgram_RTOS(W25Q_Chip *w25q_chip, uint8_t *buffer, uint32_t addr, uint16_t buf_size) {
+static W25Q_STATE W25Q_PageProgram_RTOS(W25Q_t *chip, uint8_t *buffer, uint32_t addr, uint16_t buf_size) {
 	W25Q_STATE st;
-	if (osSemaphoreAcquire(w25q_chip->sem_id, osWaitForever) != osOK) {
+	if (osSemaphoreAcquire(chip->sem_id, osWaitForever) != osOK) {
 		return W25Q_SEM_ERR;
 	}
-	st = W25Q_WaitForReady_RTOS_NoLock(w25q_chip);
+	st = W25Q_WaitForReady_RTOS_NoLock(chip);
 	if (st != W25Q_OK) { goto exit_flag; }
-	if (!W25Q_STATUS_REG(w25q_chip, W25Q_SR1_WEL_BIT)) {
-		st = W25Q_SendCmd_RTOS_NoLock(w25q_chip, W25Q_WRITE_ENABLE);
+	if (!W25Q_STATUS_REG(chip, W25Q_SR1_WEL_BIT)) {
+		st = W25Q_SendCmd_RTOS_NoLock(chip, W25Q_WRITE_ENABLE);
 		if (st != W25Q_OK) { goto exit_flag; }
 	}
 	buf_size = buf_size > W25Q_MEM_PAGE_SIZE ? W25Q_MEM_PAGE_SIZE : buf_size;
@@ -874,19 +876,19 @@ static W25Q_STATE W25Q_PageProgram_RTOS(W25Q_Chip *w25q_chip, uint8_t *buffer, u
 		(uint8_t)(addr >>  0)	// Address
 	};
 
-	st = W25Q_SPI_Begin_RTOS(w25q_chip);
+	st = W25Q_SPI_Begin_RTOS(chip);
 	if (st != W25Q_OK) { goto exit_flag; }
-	st = W25Q_SPI_Tx_RTOS(w25q_chip, cmd, sizeof(cmd));
-	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
-	st = W25Q_SPI_Tx_RTOS(w25q_chip, buffer, buf_size);
-	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(w25q_chip); goto exit_flag; }
-	st = W25Q_SPI_End_RTOS(w25q_chip);
+	st = W25Q_SPI_Tx_RTOS(chip, cmd, sizeof(cmd));
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_flag; }
+	st = W25Q_SPI_Tx_RTOS(chip, buffer, buf_size);
+	if (st != W25Q_OK) { W25Q_SPI_End_RTOS(chip); goto exit_flag; }
+	st = W25Q_SPI_End_RTOS(chip);
 	if (st != W25Q_OK) { goto exit_flag; }
 
-	st = W25Q_WaitForReady_RTOS_NoLock(w25q_chip);
+	st = W25Q_WaitForReady_RTOS_NoLock(chip);
 
 exit_flag:
-	if (osSemaphoreRelease(w25q_chip->sem_id) != osOK) {
+	if (osSemaphoreRelease(chip->sem_id) != osOK) {
 		return W25Q_SEM_ERR;
 	}
 
@@ -973,7 +975,7 @@ exit_flag:
 /*                              Fonction de test                              */
 /* -------------------------------------------------------------------------- */
 
-void W25Q_ReadWriteTest(W25Q_Chip *chip) {
+void W25Q_ReadWriteTest(W25Q_t *chip) {
 	W25Q_STATE state = W25Q_OK;
 
 	uint8_t rx_data[4096 + 512 + 5] = { 0 };
@@ -1153,10 +1155,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_ReadStatusReg);
 
-// void ASYNC_W25Q_ReadStatusReg_init(TASK *self, W25Q_Chip *w25q_chip) {
+// void ASYNC_W25Q_ReadStatusReg_init(TASK *self, W25Q_t *chip) {
 // 	ASYNC_W25Q_ReadStatusReg_CONTEXT *context = (ASYNC_W25Q_ReadStatusReg_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 
 // 	context->state = ASYNC_W25Q_START;
 // 	// can skip the waiting state if the chip is busy because this
@@ -1192,9 +1194,9 @@ Thank you for your attention and happy coding!";
 // 		break;}
 // 	case ASYNC_W25Q_END: {
 // 		for (uint8_t i = 0; i < 8; i++) {
-// 			context->w25q_chip->status_bits[i +  0] = (context->rx_buf[0] >> i) & 0x01; // SR1
-// 			context->w25q_chip->status_bits[i +  8] = (context->rx_buf[1] >> i) & 0x01; // SR2
-// 			context->w25q_chip->status_bits[i + 16] = (context->rx_buf[2] >> i) & 0x01; // SR3
+// 			context->chip->status_bits[i +  0] = (context->rx_buf[0] >> i) & 0x01; // SR1
+// 			context->chip->status_bits[i +  8] = (context->rx_buf[1] >> i) & 0x01; // SR2
+// 			context->chip->status_bits[i + 16] = (context->rx_buf[2] >> i) & 0x01; // SR3
 // 		}
 // 		return TASK_RETURN_STOP;
 // 		break;}
@@ -1205,9 +1207,9 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_WriteEnable);
 
-// void ASYNC_W25Q_WriteEnable_init(TASK *self, W25Q_Chip *w25q_chip) {
+// void ASYNC_W25Q_WriteEnable_init(TASK *self, W25Q_t *chip) {
 // 	ASYNC_W25Q_WriteEnable_CONTEXT *context = (ASYNC_W25Q_WriteEnable_CONTEXT*)self->context;
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // }
 
 // TASK_RETURN ASYNC_W25Q_WriteEnable(SCHEDULER *scheduler, TASK *self) {
@@ -1225,10 +1227,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_WaitForReady);
 
-// void ASYNC_W25Q_WaitForReady_init(TASK *self, W25Q_Chip *w25q_chip) {
+// void ASYNC_W25Q_WaitForReady_init(TASK *self, W25Q_t *chip) {
 // 	ASYNC_W25Q_WaitForReady_CONTEXT *context = (ASYNC_W25Q_WaitForReady_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // 	context->state = ASYNC_W25Q_START;
 // 	// can skip the waiting state if the chip is busy because this
 // 	// task is not going to change the internal state of the chip
@@ -1242,13 +1244,13 @@ Thank you for your attention and happy coding!";
 // 	case ASYNC_W25Q_START: {
 // 		context->read_reg_status_done = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_ReadStatusReg, false);
-// 		ASYNC_W25Q_ReadStatusReg_init(task, context->w25q_chip);
+// 		ASYNC_W25Q_ReadStatusReg_init(task, context->chip);
 // 		task->is_done = &(context->read_reg_status_done);
 // 		context->state = ASYNC_W25Q_WAIT;
 // 		break;}
 // 	case ASYNC_W25Q_WAIT: {
 // 		if (context->read_reg_status_done) {
-// 			if (context->w25q_chip->status_bits[W25Q_BUSY_BIT] == 0) {
+// 			if (context->chip->status_bits[W25Q_BUSY_BIT] == 0) {
 // 				context->state = ASYNC_W25Q_END;
 // 			} else {
 // 				context->state = ASYNC_W25Q_START;
@@ -1265,10 +1267,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_EraseSector);
 
-// void ASYNC_W25Q_EraseSector_init(TASK *self, W25Q_Chip *w25q_chip, uint32_t addr) {
+// void ASYNC_W25Q_EraseSector_init(TASK *self, W25Q_t *chip, uint32_t addr) {
 // 	ASYNC_W25Q_EraseSector_CONTEXT *context = (ASYNC_W25Q_EraseSector_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // 	context->addr = addr;
 
 // 	context->tx_buf[0] = W25Q_SECTOR_ERASE;
@@ -1285,24 +1287,24 @@ Thank you for your attention and happy coding!";
 
 // 	switch (context->state) {
 // 	case ASYNC_W25Q_WaitAndProceed_WAIT_W25Q: {
-// 		if (!(context->w25q_chip->ASYNC_busy)) {
-// 			context->w25q_chip->ASYNC_busy = true;
+// 		if (!(context->chip->ASYNC_busy)) {
+// 			context->chip->ASYNC_busy = true;
 // 			context->state = ASYNC_W25Q_WaitAndProceed_START;
 // 		}
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_WaitForReady, false);
-// 		ASYNC_W25Q_WaitForReady_init(task, context->w25q_chip);
+// 		ASYNC_W25Q_WaitForReady_init(task, context->chip);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WaitAndProceed_WAIT_READY;
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_WAIT_READY: {
 // 		if (context->is_ready) {
-// 			if (context->w25q_chip->status_bits[W25Q_WEL_BIT] == 0) {
+// 			if (context->chip->status_bits[W25Q_WEL_BIT] == 0) {
 // 				context->is_ready = false;
 // 				TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_WriteEnable, false);
-// 				ASYNC_W25Q_WriteEnable_init(task, context->w25q_chip);
+// 				ASYNC_W25Q_WriteEnable_init(task, context->chip);
 // 				task->is_done = &(context->is_ready);
 // 				context->state = ASYNC_W25Q_WaitAndProceed_WAIT_WEL;
 // 			} else {
@@ -1324,7 +1326,7 @@ Thank you for your attention and happy coding!";
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_END: {
 // 		if (context->is_ready) {
-// 			context->w25q_chip->ASYNC_busy = false;
+// 			context->chip->ASYNC_busy = false;
 // 			return TASK_RETURN_STOP;
 // 		}
 // 		break;}
@@ -1335,10 +1337,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_EraseAll);
 
-// void ASYNC_W25Q_EraseAll_init(TASK *self, W25Q_Chip *w25q_chip) {
+// void ASYNC_W25Q_EraseAll_init(TASK *self, W25Q_t *chip) {
 // 	ASYNC_W25Q_EraseAll_CONTEXT *context = (ASYNC_W25Q_EraseAll_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 
 // 	context->tx_buf[0] = W25Q_CHIP_ERASE;
 
@@ -1350,24 +1352,24 @@ Thank you for your attention and happy coding!";
 
 // 	switch (context->state) {
 // 	case ASYNC_W25Q_WaitAndProceed_WAIT_W25Q: {
-// 		if (!(context->w25q_chip->ASYNC_busy)) {
-// 			context->w25q_chip->ASYNC_busy = true;
+// 		if (!(context->chip->ASYNC_busy)) {
+// 			context->chip->ASYNC_busy = true;
 // 			context->state = ASYNC_W25Q_WaitAndProceed_START;
 // 		}
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_WaitForReady, false);
-// 		ASYNC_W25Q_WaitForReady_init(task, context->w25q_chip);
+// 		ASYNC_W25Q_WaitForReady_init(task, context->chip);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WaitAndProceed_WAIT_READY;
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_WAIT_READY: {
 // 		if (context->is_ready) {
-// 			if (context->w25q_chip->status_bits[W25Q_WEL_BIT] == 0) {
+// 			if (context->chip->status_bits[W25Q_WEL_BIT] == 0) {
 // 				context->is_ready = false;
 // 				TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_WriteEnable, false);
-// 				ASYNC_W25Q_WriteEnable_init(task, context->w25q_chip);
+// 				ASYNC_W25Q_WriteEnable_init(task, context->chip);
 // 				task->is_done = &(context->is_ready);
 // 				context->state = ASYNC_W25Q_WaitAndProceed_WAIT_WEL;
 // 			} else {
@@ -1389,7 +1391,7 @@ Thank you for your attention and happy coding!";
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_END: {
 // 		if (context->is_ready) {
-// 			context->w25q_chip->ASYNC_busy = false;
+// 			context->chip->ASYNC_busy = false;
 // 			return TASK_RETURN_STOP;
 // 		}
 // 		break;}
@@ -1401,13 +1403,13 @@ Thank you for your attention and happy coding!";
 // TASK_POOL_CREATE(ASYNC_W25Q_ReadData_Smol);
 
 // void ASYNC_W25Q_ReadData_Smol_init(TASK					*self,
-// 								   W25Q_Chip			*w25q_chip,
+// 								   W25Q_t			*chip,
 // 								   uint8_t	            *data,
 // 								   uint16_t 		     data_size,
 // 								   uint32_t				 addr) {
 // 	ASYNC_W25Q_ReadData_Smol_CONTEXT *context = (ASYNC_W25Q_ReadData_Smol_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 
 // 	context->data = data;
 // 	context->data_size = data_size;
@@ -1431,15 +1433,15 @@ Thank you for your attention and happy coding!";
 
 // 	switch (context->state) {
 // 	case ASYNC_W25Q_WAIT_W25Q: {
-// 		if (!(context->w25q_chip->ASYNC_busy)) {
-// 			context->w25q_chip->ASYNC_busy = true;
+// 		if (!(context->chip->ASYNC_busy)) {
+// 			context->chip->ASYNC_busy = true;
 // 			context->state = ASYNC_W25Q_WaitAndProceed_START;
 // 		}
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_WaitForReady, false);
-// 		ASYNC_W25Q_WaitForReady_init(task, context->w25q_chip);
+// 		ASYNC_W25Q_WaitForReady_init(task, context->chip);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WaitAndProceed_WAIT_READY;
 // 		break;}
@@ -1458,7 +1460,7 @@ Thank you for your attention and happy coding!";
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_END: {
 // 		if (context->is_ready) {
-// 			context->w25q_chip->ASYNC_busy = false;
+// 			context->chip->ASYNC_busy = false;
 // 			return TASK_RETURN_STOP;
 // 		}
 // 		break;}
@@ -1470,13 +1472,13 @@ Thank you for your attention and happy coding!";
 // TASK_POOL_CREATE(ASYNC_W25Q_ReadData);
 
 // void ASYNC_W25Q_ReadData_init(TASK				*self,
-// 							  W25Q_Chip			*w25q_chip,
+// 							  W25Q_t			*chip,
 // 							  uint8_t	 		*data,
 // 							  uint16_t 			 data_size,
 // 							  uint32_t			 addr) {
 // 	ASYNC_W25Q_ReadData_CONTEXT *context = (ASYNC_W25Q_ReadData_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // 	context->data = data;
 // 	context->data_size = data_size;
 // 	context->based_addr = addr;
@@ -1505,7 +1507,7 @@ Thank you for your attention and happy coding!";
 // 		context->last_data_size -= size_to_copy;
 
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_ReadData_Smol, false);
-// 		ASYNC_W25Q_ReadData_Smol_init(task, context->w25q_chip, data_block, size_to_copy, addr);
+// 		ASYNC_W25Q_ReadData_Smol_init(task, context->chip, data_block, size_to_copy, addr);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WAIT;
 // 		break;}
@@ -1529,13 +1531,13 @@ Thank you for your attention and happy coding!";
 // TASK_POOL_CREATE(ASYNC_W25Q_PageProgram);
 
 // void ASYNC_W25Q_PageProgram_init(TASK				*self,
-// 							     W25Q_Chip  		*w25q_chip,
+// 							     W25Q_t  		*chip,
 // 								 uint8_t   			*data,
 // 								 uint16_t 		 	 data_size,
 // 							     uint32_t    		 addr) {
 // 	ASYNC_W25Q_PageProgram_CONTEXT *context = (ASYNC_W25Q_PageProgram_CONTEXT*)self->context;
 	
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 
 // 	size_t flash_size = W25Q_MEM_FLASH_SIZE * 1000000; // MBytes to bytes
 
@@ -1567,24 +1569,24 @@ Thank you for your attention and happy coding!";
 // 			GMS_free(&GMS_memory, context->tx_buf);
 // 			return TASK_RETURN_STOP;
 // 		}
-// 		if (!context->w25q_chip->ASYNC_busy) {
+// 		if (!context->chip->ASYNC_busy) {
 // 			context->state = ASYNC_W25Q_WaitAndProceed_START;
-// 			context->w25q_chip->ASYNC_busy = true;
+// 			context->chip->ASYNC_busy = true;
 // 		}
 // 		break; }
 // 	case ASYNC_W25Q_WaitAndProceed_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_WaitForReady, false);
-// 		ASYNC_W25Q_WaitForReady_init(task, context->w25q_chip);
+// 		ASYNC_W25Q_WaitForReady_init(task, context->chip);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WaitAndProceed_WAIT_READY;
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_WAIT_READY: {
 // 		if (context->is_ready) {
-// 			if (context->w25q_chip->status_bits[W25Q_WEL_BIT] == 0) {
+// 			if (context->chip->status_bits[W25Q_WEL_BIT] == 0) {
 // 				context->is_ready = false;
 // 				TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_WriteEnable, false);
-// 				ASYNC_W25Q_WriteEnable_init(task, context->w25q_chip);
+// 				ASYNC_W25Q_WriteEnable_init(task, context->chip);
 // 				task->is_done = &(context->is_ready);
 // 				context->state = ASYNC_W25Q_WaitAndProceed_WAIT_WEL;
 // 			} else {
@@ -1606,7 +1608,7 @@ Thank you for your attention and happy coding!";
 // 		break;}
 // 	case ASYNC_W25Q_WaitAndProceed_END: {
 // 		if (context->is_ready) {
-// 			context->w25q_chip->ASYNC_busy = false;
+// 			context->chip->ASYNC_busy = false;
 // 			GMS_free(&GMS_memory, context->tx_buf);
 // 			return TASK_RETURN_STOP;
 // 		}
@@ -1619,13 +1621,13 @@ Thank you for your attention and happy coding!";
 // TASK_POOL_CREATE(ASYNC_W25Q_WriteData);
 
 // void ASYNC_W25Q_WriteData_init(TASK					*self,
-// 							   W25Q_Chip 			*w25q_chip,
+// 							   W25Q_t 			*chip,
 // 							   uint8_t	 			*data,
 // 							   size_t	 		 	 data_size,
 // 							   uint32_t			 	 addr) {
 // 	ASYNC_W25Q_WriteData_CONTEXT *context = (ASYNC_W25Q_WriteData_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // 	context->data = data;
 // 	context->data_size = data_size;
 // 	context->based_addr = addr;
@@ -1654,7 +1656,7 @@ Thank you for your attention and happy coding!";
 // 		context->last_data_size -= size_to_copy;
 
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_PageProgram, false);
-// 		ASYNC_W25Q_PageProgram_init(task, context->w25q_chip, data_block, size_to_copy, addr);
+// 		ASYNC_W25Q_PageProgram_init(task, context->chip, data_block, size_to_copy, addr);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WAIT;
 // 		break; }
@@ -1677,10 +1679,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_ScanIfSectorErased);
 
-// void ASYNC_W25Q_ScanIfSectorErased_init(TASK *self, W25Q_Chip *w25q_chip, uint32_t addr, bool *is_erased) {
+// void ASYNC_W25Q_ScanIfSectorErased_init(TASK *self, W25Q_t *chip, uint32_t addr, bool *is_erased) {
 // 	ASYNC_W25Q_ScanIfSectorErased_CONTEXT *context = (ASYNC_W25Q_ScanIfSectorErased_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // 	context->addr = addr / 4096 * 4096; // align to sector start
 
 // 	context->is_erased = is_erased;
@@ -1697,7 +1699,7 @@ Thank you for your attention and happy coding!";
 // 	case ASYNC_W25Q_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_ReadData, false);
-// 		ASYNC_W25Q_ReadData_init(task, context->w25q_chip, context->data, 4096, context->addr);
+// 		ASYNC_W25Q_ReadData_init(task, context->chip, context->data, 4096, context->addr);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WAIT;
 // 		break; }
@@ -1722,10 +1724,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_ScanIfBlockErased);
 
-// void ASYNC_W25Q_ScanIfBlockErased_init(TASK *self, W25Q_Chip *w25q_chip, uint32_t addr, bool *sectors, bool *is_erased) {
+// void ASYNC_W25Q_ScanIfBlockErased_init(TASK *self, W25Q_t *chip, uint32_t addr, bool *sectors, bool *is_erased) {
 // 	ASYNC_W25Q_ScanIfBlockErased_CONTEXT *context = (ASYNC_W25Q_ScanIfBlockErased_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // 	context->addr = addr / (4096 * 16) * (4096 * 16); // align to block start
 // 	context->i = 0;
 
@@ -1745,7 +1747,7 @@ Thank you for your attention and happy coding!";
 // 	case ASYNC_W25Q_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_ScanIfSectorErased, false);
-// 		ASYNC_W25Q_ScanIfSectorErased_init(task, context->w25q_chip, context->addr, context->sectors + context->i);
+// 		ASYNC_W25Q_ScanIfSectorErased_init(task, context->chip, context->addr, context->sectors + context->i);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WAIT;
 // 		break; }
@@ -1771,10 +1773,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_ScanIfChipErased);
 
-// void ASYNC_W25Q_ScanIfChipErased_init(TASK *self, W25Q_Chip *w25q_chip, bool *blocks, bool *is_erased) {
+// void ASYNC_W25Q_ScanIfChipErased_init(TASK *self, W25Q_t *chip, bool *blocks, bool *is_erased) {
 // 	ASYNC_W25Q_ScanIfChipErased_CONTEXT *context = (ASYNC_W25Q_ScanIfChipErased_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 
 // 	context->is_erased = is_erased;
 // 	*context->is_erased = true;
@@ -1795,7 +1797,7 @@ Thank you for your attention and happy coding!";
 // 	case ASYNC_W25Q_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_ScanIfBlockErased, false);
-// 		ASYNC_W25Q_ScanIfBlockErased_init(task, context->w25q_chip, context->addr, context->sectors, context->blocks + context->i);
+// 		ASYNC_W25Q_ScanIfBlockErased_init(task, context->chip, context->addr, context->sectors, context->blocks + context->i);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WAIT;
 // 		break; }
@@ -1826,10 +1828,10 @@ Thank you for your attention and happy coding!";
 
 // TASK_POOL_CREATE(ASYNC_W25Q_USB_ScanMemory);
 
-// void ASYNC_W25Q_USB_ScanMemory_init(TASK *self, W25Q_Chip *w25q_chip) {
+// void ASYNC_W25Q_USB_ScanMemory_init(TASK *self, W25Q_t *chip) {
 // 	ASYNC_W25Q_USB_ScanMemory_CONTEXT *context = (ASYNC_W25Q_USB_ScanMemory_CONTEXT*)self->context;
 
-// 	context->w25q_chip = w25q_chip;
+// 	context->chip = chip;
 // 	context->is_erased = false;
 
 // 	context->addr = 0; // start from the beginning
@@ -1845,7 +1847,7 @@ Thank you for your attention and happy coding!";
 // 	case ASYNC_W25Q_START: {
 // 		context->is_ready = false;
 // 		TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_W25Q_ReadData, false);
-// 		ASYNC_W25Q_ReadData_init(task, context->w25q_chip, context->data, 4096, context->addr);
+// 		ASYNC_W25Q_ReadData_init(task, context->chip, context->data, 4096, context->addr);
 // 		task->is_done = &(context->is_ready);
 // 		context->state = ASYNC_W25Q_WAIT;
 // 		break; }
