@@ -89,6 +89,7 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+ADXL375 adxl;
 BMI088 BMI088_imu;
 W25Q_Chip w25q_chip;
 
@@ -176,31 +177,49 @@ int main(void)
 /* 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
-	// W25Q_STATE state;
-	// state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
-	// assert_param(state == W25Q_OK);
+	W25Q_STATE state;
+	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
+	assert_param(state == W25Q_OK);
 
-	// uint8_t usb_watchdog[3] = {USBD_BUSY, USBD_BUSY, USBD_BUSY};
+	bool led_state = true;
+	// HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
 
-	// do {
-	// 	USB_update_watchdog(usb_watchdog);
-	// } while (!USB_is_connected(usb_watchdog));
+	// W25Q_SendCmd(&w25q_chip, W25Q_CHIP_ERASE);
 
-	// uint32_t t0 = HAL_GetTick();
-	// while (HAL_GetTick() - t0 < 10000) { // Wait 10 seconds before starting the test
-	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
-	// 	HAL_Delay(100);
-	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
-	// 	HAL_Delay(100);
-	// }
-	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
 
+	uint32_t t0 = HAL_GetTick();
+	uint8_t usb_watchdog[3] = {USBD_BUSY, USBD_BUSY, USBD_BUSY};
+	do {
+		USB_update_watchdog(usb_watchdog);
+		if (HAL_GetTick() - t0 >= 100) {
+			t0 = HAL_GetTick();
+			led_state = !led_state;
+			HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
+		} else {
+			HAL_Delay(1);
+		}
+	} while (!USB_is_connected(usb_watchdog));
+
+	DATA_ALL_TIMESTAMP_2 data = {
+		.dummy_start = 0xAA55,
+		.dummy_end = 0xADDE
+	};
+
+	// uint32_t addr = 0;
+	// uint32_t addr0 = 0;
+	uint8_t rx_data[4096];
 	// t0 = HAL_GetTick();
-	// bool led_state = true;
-	// uint8_t rx_data[4096];
-	// for (uint32_t i = 0; i < 4096 * 4; i++) {
-	// 	W25Q_ReadData(&w25q_chip, rx_data, i * 4096, 4096);
-	// 	CDC_Transmit_FS(rx_data, 4096);
+	// while (1) {
+	// 	data.timestamp++;
+	// 	state = W25Q_WriteData(&w25q_chip, (uint8_t*)&data, addr, sizeof(DATA_ALL_TIMESTAMP_2));
+	// 	addr += sizeof(DATA_ALL_TIMESTAMP_2);
+	// 	if (addr >= W25Q_FLASH_SIZE_BYTES) break;
+
+	// 	if (addr - addr0 >= 0x100000) {
+	// 		addr0 = addr;
+	// 		sprintf((char*)rx_data, "Wrote %u obj to W25Q flash (%u Mo)\r\n", addr / sizeof(DATA_ALL_TIMESTAMP_2), addr / 0x100000);
+	// 		CDC_Transmit_FS(rx_data, strlen((char*)rx_data));
+	// 	}
 	// 	if (HAL_GetTick() - t0 >= 500) {
 	// 		t0 = HAL_GetTick();
 	// 		led_state = !led_state;
@@ -209,38 +228,54 @@ int main(void)
 	// 		HAL_Delay(1);
 	// 	}
 	// }
+
+	t0 = HAL_GetTick();
+	led_state = true;
+	for (uint32_t i = 0; i < 4096 * 4; i++) {
+		W25Q_ReadData(&w25q_chip, rx_data, i * 4096, 4096);
+		CDC_Transmit_FS(rx_data, 4096);
+		if (HAL_GetTick() - t0 >= 500) {
+			t0 = HAL_GetTick();
+			led_state = !led_state;
+			HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
+		} else {
+			HAL_Delay(1);
+		}
+	}
+
+
 	
-	// HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, GPIO_PIN_RESET);
-	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
 
 
 
 
 
 	
-	TASK_POOL_CREATE(TASK_Program_start);
+	// TASK_POOL_CREATE(TASK_Program_start);
 
-	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
-	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+	// TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
+	// TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
 
-	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
-	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
-	TASK_POOL_CREATE(TASK_W25Q_Init);
-	TASK_POOL_CREATE(TASK_W25Q_WriteData);
-	TASK_POOL_CREATE(TASK_W25Q_ReadData);
-	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
+	// TASK_POOL_CREATE(TASK_W25Q_SendCmd);
+	// TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
+	// TASK_POOL_CREATE(TASK_W25Q_Init);
+	// TASK_POOL_CREATE(TASK_W25Q_WriteData);
+	// TASK_POOL_CREATE(TASK_W25Q_ReadData);
+	// TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
 
-	TASK_POOL_CREATE(TASK_USB_Transmit);
-	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
+	// TASK_POOL_CREATE(TASK_USB_Transmit);
+	// TASK_POOL_CREATE(TASK_Data_USB_Transmit);
 
-	Init_cleanup();
-	Init_spi_semaphores();
-	USB_Init();
+	// Init_cleanup();
+	// Init_spi_semaphores();
+	// USB_Init();
 
-	osThreadAttr_t attr = {
-		.name = TASK_Program_start_name,
-	};
-	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever); */
+	// osThreadAttr_t attr = {
+	// 	.name = TASK_Program_start_name,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
 
 	// osThreadAttr_t attr = {
 	// 	.name = "TASK_W25Q_ReadWriteTest",
@@ -253,12 +288,12 @@ int main(void)
 
 	/* USER CODE END 2 */
 
-  /* Init scheduler */
-  // osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  // MX_FREERTOS_Init();
- 
-  /* Start scheduler */
-  // osKernelStart();
+	// /* Init scheduler */
+	// osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+	// MX_FREERTOS_Init();
+
+	// /* Start scheduler */
+	// osKernelStart();
 
 	/* We should never get here as control is now taken by the scheduler */
 

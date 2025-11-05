@@ -1,3 +1,12 @@
+/*********************** BMI088 Driver — APEX monofichier *************************
+ * Niveaux d'API: 
+ *  - Niveau 0 : SPI (sync + RTOS)
+ *  - Niveau 1 : Primitives registres (acc/gyr) + burst data
+ *  - Niveau 2 : Logique capteur (init, set cfg, read, self-test, offset, readAll)
+ *  - Section RTOS : wrappers non-bloquants & sémaphore
+ *  - Section Tasks : (optionnel) producteurs de données
+ **********************************************************************************/
+
 #ifndef BMI088_IMU_H
 #define BMI088_IMU_H
 
@@ -9,6 +18,22 @@
 #include "utils/data_topic.h"
 #include "utils/types.h"
 #include "utils/scheduler.h"
+
+/* ============================ Header public (minimal) =========================== */
+
+/* --- Codes de retour cohérents (à la W25Q) --- */
+typedef enum {
+    BMI_OK = 0,
+    BMI_SPI_ERR,
+    BMI_PARAM_ERR,
+    BMI_TIMEOUT,
+    BMI_SEM_ERR,
+    BMI_CHIP_ID_ERR
+} BMI_STATE;
+
+/* --- Unités de sortie (modifiable ici) --- */
+#define BMI_ACCEL_UNIT_MS2   1   /* 1: m/s^2 ; 0: g */
+#define BMI_GYRO_UNIT_DPS    1   /* 1: deg/s ; 0: rad/s */
 
 /* Register defines */
 #define BMI_ACC_CHIP_ID 		0x00

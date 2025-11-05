@@ -197,12 +197,13 @@ typedef struct {
     uint32_t status_reg;
 	StaticSemaphore_t sem;
 	osSemaphoreId_t sem_id;
-} W25Q_Chip;
+} W25Q_t;
 
 /* --- Table d’attributs de commandes --- */
 extern const uint8_t W25Q_CMD_FLAGS[256];
 
 #define W25Q_STATUS_REG(chip, bit) ((chip)->status_reg & (1 << (bit)) ? 1 : 0)
+#define W25Q_FLASH_SIZE_BYTES (1 << 26) // 512 MBits = 64 MBytes
 
 
 
@@ -211,16 +212,16 @@ extern const uint8_t W25Q_CMD_FLAGS[256];
 /* ============================== Sequential ============================== */
 
 /* Niveau 1 : Primitives */
-W25Q_STATE W25Q_SendCmd(W25Q_Chip *chip, uint8_t cmd);
-W25Q_STATE W25Q_SendCmdAddr(W25Q_Chip *chip, uint8_t cmd, uint32_t addr);
-W25Q_STATE W25Q_ReadStatus(W25Q_Chip *chip, uint8_t sr_index);
-W25Q_STATE W25Q_WriteStatus(W25Q_Chip *chip, uint8_t sr_index, uint8_t value);
-W25Q_STATE W25Q_ReadID(W25Q_Chip *w25q_chip, uint8_t *id);
+W25Q_STATE W25Q_SendCmd(W25Q_t *chip, uint8_t cmd);
+W25Q_STATE W25Q_SendCmdAddr(W25Q_t *chip, uint8_t cmd, uint32_t addr);
+W25Q_STATE W25Q_ReadStatus(W25Q_t *chip, uint8_t sr_index);
+W25Q_STATE W25Q_WriteStatus(W25Q_t *chip, uint8_t sr_index, uint8_t value);
+W25Q_STATE W25Q_ReadID(W25Q_t *chip, uint8_t *id);
 
 /* Niveau 2 : Logique périphérique */
-W25Q_STATE W25Q_Init(W25Q_Chip *chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin);
-W25Q_STATE W25Q_WriteData(W25Q_Chip *chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
-W25Q_STATE W25Q_ReadData(W25Q_Chip *chip, uint8_t *buffer, uint32_t addr, uint32_t buf_size);
+W25Q_STATE W25Q_Init(W25Q_t *chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin);
+W25Q_STATE W25Q_WriteData(W25Q_t *chip, const uint8_t *data, uint32_t addr, uint32_t data_size);
+W25Q_STATE W25Q_ReadData(W25Q_t *chip, uint8_t *data, uint32_t addr, uint32_t data_size);
 
 
 
@@ -228,20 +229,20 @@ W25Q_STATE W25Q_ReadData(W25Q_Chip *chip, uint8_t *buffer, uint32_t addr, uint32
 /* ============================== FreeRTOS ============================== */
 
 /* Niveau 1 : Primitives */
-W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_Chip *chip, uint8_t cmd, bool lock_sem);
-W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_Chip *chip, uint8_t cmd, uint32_t addr, bool lock_sem);
-W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, bool lock_sem);
-W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_Chip *chip, uint8_t sr_index, uint8_t value, bool lock_sem);
-W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_Chip *w25q_chip, uint8_t *id, bool lock_sem);
+W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_t *chip, uint8_t cmd, bool lock_sem);
+W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_t *chip, uint8_t cmd, uint32_t addr, bool lock_sem);
+W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, bool lock_sem);
+W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, uint8_t value, bool lock_sem);
+W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_t *chip, uint8_t *id, bool lock_sem);
 
 
-// static inline W25Q_STATE W25Q_WaitForReady_RTOS_NoLock(W25Q_Chip *chip);
+// static inline W25Q_STATE W25Q_WaitForReady_RTOS_NoLock(W25Q_t *chip);
 
-// inline W25Q_STATE W25Q_SendCmd_RTOS_NoLock(W25Q_Chip *chip, uint8_t cmd);
-// inline W25Q_STATE W25Q_SendCmdAddr_RTOS_NoLock(W25Q_Chip *chip, uint8_t cmd, uint32_t addr);
-// inline W25Q_STATE W25Q_ReadStatus_RTOS_NoLock(W25Q_Chip *chip, uint8_t sr_index);
-// inline W25Q_STATE W25Q_WriteStatus_RTOS_NoLock(W25Q_Chip *chip, uint8_t sr_index, uint8_t value);
-// inline W25Q_STATE W25Q_ReadID_RTOS_NoLock(W25Q_Chip *w25q_chip, uint8_t *id);
+// inline W25Q_STATE W25Q_SendCmd_RTOS_NoLock(W25Q_t *chip, uint8_t cmd);
+// inline W25Q_STATE W25Q_SendCmdAddr_RTOS_NoLock(W25Q_t *chip, uint8_t cmd, uint32_t addr);
+// inline W25Q_STATE W25Q_ReadStatus_RTOS_NoLock(W25Q_t *chip, uint8_t sr_index);
+// inline W25Q_STATE W25Q_WriteStatus_RTOS_NoLock(W25Q_t *chip, uint8_t sr_index, uint8_t value);
+// inline W25Q_STATE W25Q_ReadID_RTOS_NoLock(W25Q_t *W25Q_t, uint8_t *id);
 
 
 #define W25Q_WaitForReady_RTOS_NoLock(chip)					W25Q_WaitForReady_RTOS_base(chip, false);
@@ -253,13 +254,13 @@ W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_Chip *w25q_chip, uint8_t *id, bool lock_se
 #define W25Q_ReadID_RTOS_NoLock(wchip, id)					W25Q_ReadID_RTOS_base(wchip, id, false);
 
 
-// static inline W25Q_STATE W25Q_WaitForReady_RTOS(W25Q_Chip *chip);
+// static inline W25Q_STATE W25Q_WaitForReady_RTOS(W25Q_t *chip);
 
-// inline W25Q_STATE W25Q_SendCmd_RTOS(W25Q_Chip *chip, uint8_t cmd);
-// inline W25Q_STATE W25Q_SendCmdAddr_RTOS(W25Q_Chip *chip, uint8_t cmd, uint32_t addr);
-// inline W25Q_STATE W25Q_ReadStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index);
-// inline W25Q_STATE W25Q_WriteStatus_RTOS(W25Q_Chip *chip, uint8_t sr_index, uint8_t value);
-// inline W25Q_STATE W25Q_ReadID_RTOS(W25Q_Chip *w25q_chip, uint8_t *id);
+// inline W25Q_STATE W25Q_SendCmd_RTOS(W25Q_t *chip, uint8_t cmd);
+// inline W25Q_STATE W25Q_SendCmdAddr_RTOS(W25Q_t *chip, uint8_t cmd, uint32_t addr);
+// inline W25Q_STATE W25Q_ReadStatus_RTOS(W25Q_t *chip, uint8_t sr_index);
+// inline W25Q_STATE W25Q_WriteStatus_RTOS(W25Q_t *chip, uint8_t sr_index, uint8_t value);
+// inline W25Q_STATE W25Q_ReadID_RTOS(W25Q_t *W25Q_t, uint8_t *id);
 
 #define W25Q_WaitForReady_RTOS(chip)					W25Q_WaitForReady_RTOS_base(chip, true);
 #define W25Q_SendCmd_RTOS(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, true);
@@ -270,7 +271,7 @@ W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_Chip *w25q_chip, uint8_t *id, bool lock_se
 
 /* Niveau 1 : Primitives en mode TASK (version lock par défaut) */
 typedef struct TASK_W25Q_SendCmd_ARGS {
-	W25Q_Chip *chip;
+	W25Q_t *chip;
 	uint8_t cmd;
 	W25Q_STATE *result;
 	osEventFlagsId_t done_flags;
@@ -279,7 +280,7 @@ TASK_POOL_CONFIGURE(TASK_W25Q_SendCmd, 5, 384);
 void TASK_W25Q_SendCmd(void *argument);
 
 typedef struct TASK_W25Q_SendCmdAddr_ARGS {
-	W25Q_Chip *chip;
+	W25Q_t *chip;
 	uint8_t cmd;
 	uint32_t addr;
 	W25Q_STATE *result;
@@ -290,7 +291,7 @@ void TASK_W25Q_SendCmdAddr(void *argument);
 
 /* Niveau 2 : Logique périphérique */
 typedef struct TASK_W25Q_Init_ARGS {
-	W25Q_Chip *chip;
+	W25Q_t *chip;
 	SPI_HandleTypeDef *hspi;
 	GPIO_TypeDef *cs_bank;
 	uint16_t cs_pin;
@@ -301,7 +302,7 @@ TASK_POOL_CONFIGURE(TASK_W25Q_Init, 1, 512);
 void TASK_W25Q_Init(void *argument);
 
 typedef struct TASK_W25Q_WriteData_ARGS {
-	W25Q_Chip *chip;
+	W25Q_t *chip;
 	uint8_t *buffer;
 	uint32_t addr;
 	uint32_t buf_size;
@@ -312,7 +313,7 @@ TASK_POOL_CONFIGURE(TASK_W25Q_WriteData, 5, 512);
 void TASK_W25Q_WriteData(void *argument);
 
 typedef struct TASK_W25Q_ReadData_ARGS {
-	W25Q_Chip *chip;
+	W25Q_t *chip;
 	uint8_t *buffer;
 	uint32_t addr;
 	uint32_t buf_size;
@@ -329,14 +330,14 @@ void TASK_W25Q_ReadData(void *argument);
 
 // ============================================== Fonction de test ==============================================
 
-void W25Q_ReadWriteTest(W25Q_Chip *w25q_chip);
+void W25Q_ReadWriteTest(W25Q_t *W25Q_t);
 
 
 
 
 // A enlevé plus tard pour gagner de la place
 typedef struct TASK_W25Q_ReadWriteTest_ARGS {
-	W25Q_Chip *chip;
+	W25Q_t *chip;
 } TASK_W25Q_ReadWriteTest_ARGS;
 TASK_POOL_CONFIGURE(TASK_W25Q_ReadWriteTest, 1, 8192);
 void TASK_W25Q_ReadWriteTest(void *argument);
