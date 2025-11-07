@@ -1,4 +1,4 @@
-#include "drivers/rfm96w.h"
+#include "drivers/RFM96/rfm96w_lora.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -314,7 +314,7 @@ void RFM96_LORA_WriteRegister(RFM96_LORA_Chip *RFM96_LORA_chip, uint8_t reg, uin
 	RFM96_LORA_TransmitReceive(RFM96_LORA_chip, tx_buf, NULL, 2, 0);
 }
 
-
+// TODO : à changer en RFM96_LORA_SPI_TxRx
 void RFM96_LORA_TransmitReceive(RFM96_LORA_Chip *RFM96_LORA_chip, uint8_t *tx_buf, uint8_t *rx_buf, uint16_t tx_size, uint16_t rx_size) {
 	HAL_StatusTypeDef statue = HAL_OK;
 

@@ -134,7 +134,7 @@ int main(void) {
 	LED_RGB led_rgb_0;
 	LED_RGB led_rgb_1;
 	LSM303AGR lsm303agr;
-	RFM96_Chip rfm96w;
+	RFM96_LORA_Chip rfm96w;
 	W25Q_Chip w25q_mem;
 
 	COMPONENTS components;
@@ -306,7 +306,7 @@ int main(void) {
 		case MACHINE_STATE_2_CHECK_TELEM: {
 			sprintf(buff, "Ping APEX %i\n", i);
 			i++;
-			RFM96_Print(&rfm96w, buff);
+			RFM96_LORA_Print(&rfm96w, buff);
 			HAL_Delay(200);
 			uint32_t time0 = HAL_GetTick();
 			if (HAL_GetTick() >= next_time) {
@@ -355,7 +355,7 @@ int main(void) {
 
 			sprintf(buff, "%s, %s,%s,%s,%s", acc_tot, lon, lat, alt, time);
 
-			RFM96_Print(&rfm96w, buff);
+			RFM96_LORA_Print(&rfm96w, buff);
 
 			HAL_Delay(100);
 			state = MACHINE_STATE_2_WRIT_FLASH;
@@ -377,14 +377,14 @@ int main(void) {
 
 		// TEST ENVOIE DATA
 		// char buff[256] = "Coucou, je m'appelle Malo !";
-		// RFM96_Print(&rfm96w, buff);
+		// RFM96_LORA_Print(&rfm96w, buff);
 		// HAL_Delay(100);
 
 		// TEST RECEPTION DATA
 		// char buff[256] = { 0 };
-		// int len = RFM96_ParsePacket(&rfm96w);
+		// int len = RFM96_LORA_ParsePacket(&rfm96w);
 		// if (len > 0) {
-		// 	RFM96_Read(&rfm96w, (uint8_t*)buff, len);
+		// 	RFM96_LORA_Read(&rfm96w, (uint8_t*)buff, len);
 		// 	CDC_Transmit_FS((uint8_t*)buff, len);
 		// 	HAL_Delay(1);
 		// }

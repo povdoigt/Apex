@@ -27,16 +27,13 @@
 #include "crc.h"
 
 #include <stdint.h>
-#include <string.h>
 
 #include "drivers/ADXL375.h"
 #include "drivers/BMI088.h"
 #include "drivers/led.h"
 #include "drivers/w25q_mem.h"
 // header rfm96
-#include "drivers/rfm96w.h"
-
-#include "drivers/rfm96w.h"
+// #include "drivers/RFM96/rfm96w_lora.h"
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
 #include "peripherals/gpio.h"
@@ -47,7 +44,7 @@
 
 
 #include "stm32f4xx_hal_gpio.h"
-#include "usbd_cdc_if.h"
+// #include "usbd_cdc_if.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
@@ -138,8 +135,8 @@ int main(void)
   MX_CRC_Init();
   MX_TIM11_Init();
   // Init rfm96 - Fréquence
-  RFM96_Chip rfm96_chip;
-  RFM96_Init(&rfm96_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
+  RFM96_LORA_Chip RFM96_LORA_chip;
+  RFM96_LORA_Init(&RFM96_LORA_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
                RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
 
   // Initialize LED for tests GPIO

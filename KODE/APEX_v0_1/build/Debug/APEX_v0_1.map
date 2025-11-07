@@ -1333,23 +1333,23 @@ Discarded input sections
  .text          0x00000000        0x0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
  .data          0x00000000        0x0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
  .bss           0x00000000        0x0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_GetFrequency
+ .text.RFM96_LORA_GetFrequency
                 0x00000000       0xb0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_BeginPacket
+ .text.RFM96_LORA_BeginPacket
                 0x00000000       0x48 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_EndPacket
+ .text.RFM96_LORA_EndPacket
                 0x00000000       0x56 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_Write
+ .text.RFM96_LORA_Write
                 0x00000000      0x11a CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_WriteString
+ .text.RFM96_LORA_WriteString
                 0x00000000       0x52 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_Print
+ .text.RFM96_LORA_Print
                 0x00000000       0x2c CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_ParsePacket
+ .text.RFM96_LORA_ParsePacket
                 0x00000000       0xb0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_Read
+ .text.RFM96_LORA_Read
                 0x00000000       0x44 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
- .text.RFM96_WriteRegisters
+ .text.RFM96_LORA_WriteRegisters
                 0x00000000       0x76 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
  .debug_macro   0x00000000      0xab4 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
  .debug_macro   0x00000000      0x2ba CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
@@ -9649,68 +9649,68 @@ LOAD C:/ST/STM32CubeCLT_1.15.1/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .text.ASYNC_LSM303AGR_ReadMag
                 0x08003d68      0x148 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/LSM303AGR.c.obj
                 0x08003d68                ASYNC_LSM303AGR_ReadMag
- .text.RFM96_Init
+ .text.RFM96_LORA_Init
                 0x08003eb0       0xb0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08003eb0                RFM96_Init
- .text.RFM96_Reset
+                0x08003eb0                RFM96_LORA_Init
+ .text.RFM96_LORA_Reset
                 0x08003f60       0x3c CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08003f60                RFM96_Reset
- .text.RFM96_GetVersion
+                0x08003f60                RFM96_LORA_Reset
+ .text.RFM96_LORA_GetVersion
                 0x08003f9c       0x2a CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08003f9c                RFM96_GetVersion
- .text.RFM96_LoRaSleep
+                0x08003f9c                RFM96_LORA_GetVersion
+ .text.RFM96_LORA_LoRaSleep
                 0x08003fc6       0x28 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08003fc6                RFM96_LoRaSleep
- .text.RFM96_LoRaStandBy
+                0x08003fc6                RFM96_LORA_LoRaSleep
+ .text.RFM96_LORA_LoRaStandBy
                 0x08003fee       0x28 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08003fee                RFM96_LoRaStandBy
+                0x08003fee                RFM96_LORA_LoRaStandBy
  *fill*         0x08004016        0x2 
- .text.RFM96_SetFrequency
+ .text.RFM96_LORA_SetFrequency
                 0x08004018       0x98 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004018                RFM96_SetFrequency
- .text.RFM96_SetTxPower
+                0x08004018                RFM96_LORA_SetFrequency
+ .text.RFM96_LORA_SetTxPower
                 0x080040b0       0x7c CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x080040b0                RFM96_SetTxPower
- .text.RFM96_SetOCP
+                0x080040b0                RFM96_LORA_SetTxPower
+ .text.RFM96_LORA_SetOCP
                 0x0800412c       0x68 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x0800412c                RFM96_SetOCP
- .text.RFM96_ReadRegisters
+                0x0800412c                RFM96_LORA_SetOCP
+ .text.RFM96_LORA_ReadRegisters
                 0x08004194       0x32 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004194                RFM96_ReadRegisters
- .text.RFM96_ReadRegister
+                0x08004194                RFM96_LORA_ReadRegisters
+ .text.RFM96_LORA_ReadRegister
                 0x080041c6       0x24 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x080041c6                RFM96_ReadRegister
- .text.RFM96_WriteRegister
+                0x080041c6                RFM96_LORA_ReadRegister
+ .text.RFM96_LORA_WriteRegister
                 0x080041ea       0x38 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x080041ea                RFM96_WriteRegister
- .text.RFM96_TransmitReceive
+                0x080041ea                RFM96_LORA_WriteRegister
+ .text.RFM96_LORA_TransmitReceive
                 0x08004222       0x80 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004222                RFM96_TransmitReceive
- .text.ASYNC_RFM96_BeginPacket_init
+                0x08004222                RFM96_LORA_TransmitReceive
+ .text.ASYNC_RFM96_LORA_BeginPacket_init
                 0x080042a2       0x28 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x080042a2                ASYNC_RFM96_BeginPacket_init
+                0x080042a2                ASYNC_RFM96_LORA_BeginPacket_init
  *fill*         0x080042ca        0x2 
- .text.ASYNC_RFM96_BeginPacket
+ .text.ASYNC_RFM96_LORA_BeginPacket
                 0x080042cc      0x278 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x080042cc                ASYNC_RFM96_BeginPacket
- .text.ASYNC_RFM96_EndPacket_init
+                0x080042cc                ASYNC_RFM96_LORA_BeginPacket
+ .text.ASYNC_RFM96_LORA_EndPacket_init
                 0x08004544       0x28 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004544                ASYNC_RFM96_EndPacket_init
- .text.ASYNC_RFM96_EndPacket
+                0x08004544                ASYNC_RFM96_LORA_EndPacket_init
+ .text.ASYNC_RFM96_LORA_EndPacket
                 0x0800456c      0x1b8 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x0800456c                ASYNC_RFM96_EndPacket
- .text.ASYNC_RFM96_WriteFIFO_init
+                0x0800456c                ASYNC_RFM96_LORA_EndPacket
+ .text.ASYNC_RFM96_LORA_WriteFIFO_init
                 0x08004724       0x5c CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004724                ASYNC_RFM96_WriteFIFO_init
- .text.ASYNC_RFM96_WriteFIFO
+                0x08004724                ASYNC_RFM96_LORA_WriteFIFO_init
+ .text.ASYNC_RFM96_LORA_WriteFIFO
                 0x08004780      0x294 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004780                ASYNC_RFM96_WriteFIFO
- .text.ASYNC_RFM96_SendPacket_init
+                0x08004780                ASYNC_RFM96_LORA_WriteFIFO
+ .text.ASYNC_RFM96_LORA_SendPacket_init
                 0x08004a14       0x40 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004a14                ASYNC_RFM96_SendPacket_init
- .text.ASYNC_RFM96_SendPacket
+                0x08004a14                ASYNC_RFM96_LORA_SendPacket_init
+ .text.ASYNC_RFM96_LORA_SendPacket
                 0x08004a54      0x11c CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x08004a54                ASYNC_RFM96_SendPacket
+                0x08004a54                ASYNC_RFM96_LORA_SendPacket
  .text.W25Q_Init
                 0x08004b70       0xa0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/w25q_mem.c.obj
                 0x08004b70                W25Q_Init
@@ -10045,9 +10045,9 @@ LOAD C:/ST/STM32CubeCLT_1.15.1/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .text.ASYNC_test_LSM303AGR
                 0x08009ba4      0x280 CMakeFiles/APEX_v0_1.dir/Core/Src/utils/test.c.obj
                 0x08009ba4                ASYNC_test_LSM303AGR
- .text.ASYNC_test_RFM96_init
+ .text.ASYNC_test_RFM96_LORA_init
                 0x08009e24       0xd8 CMakeFiles/APEX_v0_1.dir/Core/Src/utils/test.c.obj
-                0x08009e24                ASYNC_test_RFM96_init
+                0x08009e24                ASYNC_test_RFM96_LORA_init
  .text.ASYNC_test_RFM96
                 0x08009efc       0xf0 CMakeFiles/APEX_v0_1.dir/Core/Src/utils/test.c.obj
                 0x08009efc                ASYNC_test_RFM96
@@ -11365,18 +11365,18 @@ LOAD C:/ST/STM32CubeCLT_1.15.1/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .bss.ASYNC_LSM303AGR_ReadSensor_POOL
                 0x200009f8       0x88 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/LSM303AGR.c.obj
                 0x200009f8                ASYNC_LSM303AGR_ReadSensor_POOL
- .bss.ASYNC_RFM96_BeginPacket_POOL
+ .bss.ASYNC_RFM96_LORA_BeginPacket_POOL
                 0x20000a80       0xb0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x20000a80                ASYNC_RFM96_BeginPacket_POOL
- .bss.ASYNC_RFM96_EndPacket_POOL
+                0x20000a80                ASYNC_RFM96_LORA_BeginPacket_POOL
+ .bss.ASYNC_RFM96_LORA_EndPacket_POOL
                 0x20000b30       0xb0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x20000b30                ASYNC_RFM96_EndPacket_POOL
- .bss.ASYNC_RFM96_WriteFIFO_POOL
+                0x20000b30                ASYNC_RFM96_LORA_EndPacket_POOL
+ .bss.ASYNC_RFM96_LORA_WriteFIFO_POOL
                 0x20000be0      0xad8 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x20000be0                ASYNC_RFM96_WriteFIFO_POOL
- .bss.ASYNC_RFM96_SendPacket_POOL
+                0x20000be0                ASYNC_RFM96_LORA_WriteFIFO_POOL
+ .bss.ASYNC_RFM96_LORA_SendPacket_POOL
                 0x200016b8       0xb0 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/rfm96w.c.obj
-                0x200016b8                ASYNC_RFM96_SendPacket_POOL
+                0x200016b8                ASYNC_RFM96_LORA_SendPacket_POOL
  .bss.ASYNC_W25Q_ReadStatusReg_POOL
                 0x20001768      0x100 CMakeFiles/APEX_v0_1.dir/Core/Src/drivers/w25q_mem.c.obj
                 0x20001768                ASYNC_W25Q_ReadStatusReg_POOL
@@ -11514,9 +11514,9 @@ LOAD C:/ST/STM32CubeCLT_1.15.1/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .bss.ASYNC_test_LSM303AGR_POOL
                 0x2000888c       0xd8 CMakeFiles/APEX_v0_1.dir/Core/Src/utils/test.c.obj
                 0x2000888c                ASYNC_test_LSM303AGR_POOL
- .bss.ASYNC_test_RFM96_POOL
+ .bss.ASYNC_test_RFM96_LORA_POOL
                 0x20008964      0x574 CMakeFiles/APEX_v0_1.dir/Core/Src/utils/test.c.obj
-                0x20008964                ASYNC_test_RFM96_POOL
+                0x20008964                ASYNC_test_RFM96_LORA_POOL
  .bss.ASYNC_test_GPS_POOL
                 0x20008ed8       0x60 CMakeFiles/APEX_v0_1.dir/Core/Src/utils/test.c.obj
                 0x20008ed8                ASYNC_test_GPS_POOL

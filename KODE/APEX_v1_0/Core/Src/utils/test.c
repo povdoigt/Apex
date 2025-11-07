@@ -22,12 +22,12 @@ void init_obj_pools() {
 
     // TASK_POOL_init(ASYNC_LSM303AGR_ReadSensor);
 
-    // TASK_POOL_init(ASYNC_RFM96_BeginPacket);
-    // TASK_POOL_init(ASYNC_RFM96_EndPacket);
-    // TASK_POOL_init(ASYNC_RFM96_WriteFIFO);
-    // TASK_POOL_init(ASYNC_RFM96_SetRxMode);
-    // TASK_POOL_init(ASYNC_RFM96_SendPacket);
-    // TASK_POOL_init(ASYNC_RFM96_ParsePacket);
+    // TASK_POOL_init(ASYNC_RFM96_LORA_BeginPacket);
+    // TASK_POOL_init(ASYNC_RFM96_LORA_EndPacket);
+    // TASK_POOL_init(ASYNC_RFM96_LORA_WriteFIFO);
+    // TASK_POOL_init(ASYNC_RFM96_LORA_SetRxMode);
+    // TASK_POOL_init(ASYNC_RFM96_LORA_SendPacket);
+    // TASK_POOL_init(ASYNC_RFM96_LORA_ParsePacket);
 
 
     // TASK_POOL_init(ASYNC_W25Q_ReadStatusReg);
@@ -64,8 +64,8 @@ void init_obj_pools() {
     // TASK_POOL_init(ASYNC_save_IMU);
     // TASK_POOL_init(ASYNC_filtred_IMU);
     // TASK_POOL_init(ASYNC_test_LSM303AGR);
-    // TASK_POOL_init(ASYNC_test_RFM96_Tx);
-    // TASK_POOL_init(ASYNC_test_RFM96_Rx);
+    // TASK_POOL_init(ASYNC_test_RFM96_LORA_Tx);
+    // TASK_POOL_init(ASYNC_test_RFM96_LORA_Rx);
     // TASK_POOL_init(ASYNC_test_GPS);
     // TASK_POOL_init(ASYNC_test_MESURE_ALL_DATA);
     // TASK_POOL_init(ASYNC_test_SAVE_ALL_DATA);
@@ -87,7 +87,7 @@ void init_components(COMPONENTS             *components,
                      LED_RGB                *led_rgb_0,
                      LED_RGB                *led_rgb_1,
                      LSM303AGR              *lsm,
-                     RFM96_Chip             *lora_chip,
+                     RFM96_LORA_Chip             *lora_chip,
                      W25Q_Chip              *flash_chip
 ) {
     components->adxl = adxl;
@@ -123,7 +123,7 @@ void init_all_components(COMPONENTS* components) {
 
     LSM303AGR_Init(components->lsm, &hi2c3);
 
-    RFM96_Init(components->lora, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
+    RFM96_LORA_Init(components->lora, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
                RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
 
     W25Q_Init(components->flash, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
@@ -264,17 +264,17 @@ void init_machine(MACHINE* machine, COMPONENTS* components,
 //         ASYNC_test_LSM303AGR_init(task, machine->components->lsm);
 
 //         break; }
-//     case TEST_RFM96_Tx: {
+//     case TEST_RFM96_LORA_Tx: {
 //         machine->state = DEFAULT_STATE;
 
-//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_test_RFM96_Tx, false);
-//         ASYNC_test_RFM96_Tx_init(task, machine->components->lora);
+//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_test_RFM96_LORA_Tx, false);
+//         ASYNC_test_RFM96_LORA_Tx_init(task, machine->components->lora);
 //         break; }
-//     case TEST_RFM96_Rx: {
+//     case TEST_RFM96_LORA_Rx: {
 //         machine->state = DEFAULT_STATE;
 
-//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_test_RFM96_Rx, false);
-//         ASYNC_test_RFM96_Rx_init(task, machine->components->lora);
+//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_test_RFM96_LORA_Rx, false);
+//         ASYNC_test_RFM96_LORA_Rx_init(task, machine->components->lora);
 //         break; }
 //     case TEST_GPS: {
 //         machine->state = DEFAULT_STATE;
@@ -1099,12 +1099,12 @@ void init_machine(MACHINE* machine, COMPONENTS* components,
 
 
 
-// TASK_POOL_CREATE(ASYNC_test_RFM96_Tx);
+// TASK_POOL_CREATE(ASYNC_test_RFM96_LORA_Tx);
 
-// void ASYNC_test_RFM96_Tx_init(TASK *self, RFM96_Chip *rfm96_chip) {
-//     ASYNC_test_RFM96_Tx_CONTEXT *context = (ASYNC_test_RFM96_Tx_CONTEXT*)self->context;
+// void ASYNC_test_RFM96_LORA_Tx_init(TASK *self, RFM96_LORA_Chip *RFM96_LORA_chip) {
+//     ASYNC_test_RFM96_LORA_Tx_CONTEXT *context = (ASYNC_test_RFM96_LORA_Tx_CONTEXT*)self->context;
 
-//     context->rfm96_chip = rfm96_chip;
+//     context->RFM96_LORA_chip = RFM96_LORA_chip;
 
 //     context->is_ready = false;
 
@@ -1113,98 +1113,98 @@ void init_machine(MACHINE* machine, COMPONENTS* components,
 //     memcpy(context->tx_buf, buff, strlen(buff) + 1);
 //     context->tx_size = strlen(buff) + 1;
 
-//     context->state = ASYNC_test_RFM96_Tx_SEND_PACKET;
+//     context->state = ASYNC_test_RFM96_LORA_Tx_SEND_PACKET;
 // }
 
-// TASK_RETURN ASYNC_test_RFM96_Tx(SCHEDULER *scheduler, TASK *self) {
-//     ASYNC_test_RFM96_Tx_CONTEXT *context = (ASYNC_test_RFM96_Tx_CONTEXT*)self->context;
+// TASK_RETURN ASYNC_test_RFM96_LORA_Tx(SCHEDULER *scheduler, TASK *self) {
+//     ASYNC_test_RFM96_LORA_Tx_CONTEXT *context = (ASYNC_test_RFM96_LORA_Tx_CONTEXT*)self->context;
 //     UNUSED(scheduler);
 
 //     switch (context->state) {
-//     case ASYNC_test_RFM96_Tx_WAIT_READY: {
+//     case ASYNC_test_RFM96_LORA_Tx_WAIT_READY: {
 //         if (context->is_ready) {
 //             context->state = context->next_state;
 //         }
 //         break; }
-//     case ASYNC_test_RFM96_Tx_SEND_PACKET: {
+//     case ASYNC_test_RFM96_LORA_Tx_SEND_PACKET: {
 //         context->is_ready = false;
 
-//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_SendPacket, false);
-//         ASYNC_RFM96_SendPacket_init(task, context->rfm96_chip, context->tx_buf, strlen(context->tx_buf) + 1);
+//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_LORA_SendPacket, false);
+//         ASYNC_RFM96_LORA_SendPacket_init(task, context->RFM96_LORA_chip, context->tx_buf, strlen(context->tx_buf) + 1);
 //         task->is_done = &(context->is_ready);
 
-//         context->next_state = ASYNC_test_RFM96_Tx_DELAY;
-//         context->state = ASYNC_test_RFM96_Tx_WAIT_READY;
+//         context->next_state = ASYNC_test_RFM96_LORA_Tx_DELAY;
+//         context->state = ASYNC_test_RFM96_LORA_Tx_WAIT_READY;
 //         break; }
-//     case ASYNC_test_RFM96_Tx_DELAY: {
+//     case ASYNC_test_RFM96_LORA_Tx_DELAY: {
 //         context->is_ready = false;
 
 //         TASK *task = SCHEDULER_add_task(scheduler, ASYNC_Delay_ms, false, (OBJ_POOL*)ASYNC_Delay_POOL);
 //         ASYNC_Delay_ms_init(task, 1000); // 1 second delay
 //         task->is_done = &(context->is_ready);
 
-//         context->next_state = ASYNC_test_RFM96_Tx_SEND_PACKET;
-//         context->state = ASYNC_test_RFM96_Tx_WAIT_READY;
+//         context->next_state = ASYNC_test_RFM96_LORA_Tx_SEND_PACKET;
+//         context->state = ASYNC_test_RFM96_LORA_Tx_WAIT_READY;
 //         break; }
 //     }
 //     return TASK_RETURN_IDLE;
 // }
 
 
-// TASK_POOL_CREATE(ASYNC_test_RFM96_Rx);
+// TASK_POOL_CREATE(ASYNC_test_RFM96_LORA_Rx);
 
-// void ASYNC_test_RFM96_Rx_init(TASK *self, RFM96_Chip *rfm96_chip) {
-//     ASYNC_test_RFM96_Rx_CONTEXT *context = (ASYNC_test_RFM96_Rx_CONTEXT*)self->context;
+// void ASYNC_test_RFM96_LORA_Rx_init(TASK *self, RFM96_LORA_Chip *RFM96_LORA_chip) {
+//     ASYNC_test_RFM96_LORA_Rx_CONTEXT *context = (ASYNC_test_RFM96_LORA_Rx_CONTEXT*)self->context;
 
-//     context->rfm96_chip = rfm96_chip;
+//     context->RFM96_LORA_chip = RFM96_LORA_chip;
 
 //     context->is_ready = false;
 
 //     memset(context->rx_buf, 0, 256);
 
-//     context->state = ASYNC_test_RFM96_Rx_RECEIVE_PACKET;
+//     context->state = ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET;
 // }
 
-// TASK_RETURN ASYNC_test_RFM96_Rx(SCHEDULER *scheduler, TASK *self) {
-//     ASYNC_test_RFM96_Rx_CONTEXT *context = (ASYNC_test_RFM96_Rx_CONTEXT*)self->context;
+// TASK_RETURN ASYNC_test_RFM96_LORA_Rx(SCHEDULER *scheduler, TASK *self) {
+//     ASYNC_test_RFM96_LORA_Rx_CONTEXT *context = (ASYNC_test_RFM96_LORA_Rx_CONTEXT*)self->context;
 //     UNUSED(scheduler);
 
 //     switch (context->state) {
-//     case ASYNC_test_RFM96_Rx_WAIT_READY: {
+//     case ASYNC_test_RFM96_LORA_Rx_WAIT_READY: {
 //         if (context->is_ready) {
 //             context->state = context->next_state;
 //         }
 //         break; }
-//     case ASYNC_test_RFM96_Rx_SET_RX_MODE: {
+//     case ASYNC_test_RFM96_LORA_Rx_SET_RX_MODE: {
 //         context->is_ready = false;
 
-//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_SetRxMode, false);
-//         ASYNC_RFM96_SetRxMode_init(task, context->rfm96_chip);
+//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_LORA_SetRxMode, false);
+//         ASYNC_RFM96_LORA_SetRxMode_init(task, context->RFM96_LORA_chip);
 //         task->is_done = &(context->is_ready);
 
-//         context->next_state = ASYNC_test_RFM96_Rx_RECEIVE_PACKET;
-//         context->state = ASYNC_test_RFM96_Rx_WAIT_READY;
+//         context->next_state = ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET;
+//         context->state = ASYNC_test_RFM96_LORA_Rx_WAIT_READY;
 //         break;
 //     }
-//     case ASYNC_test_RFM96_Rx_RECEIVE_PACKET: {
+//     case ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET: {
 //         context->is_ready = false;
 
-//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_ParsePacket, false);
-//         ASYNC_RFM96_ParsePacket_init(task, context->rfm96_chip, context->rx_buf, &(context->rx_size));
+//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_LORA_ParsePacket, false);
+//         ASYNC_RFM96_LORA_ParsePacket_init(task, context->RFM96_LORA_chip, context->rx_buf, &(context->rx_size));
 //         task->is_done = &(context->is_ready);
 
-//         context->next_state = ASYNC_test_RFM96_Rx_RECEIVE_PACKET_DONE;
-//         context->state = ASYNC_test_RFM96_Rx_WAIT_READY;
+//         context->next_state = ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET_DONE;
+//         context->state = ASYNC_test_RFM96_LORA_Rx_WAIT_READY;
 //         break; }
-//     case ASYNC_test_RFM96_Rx_RECEIVE_PACKET_DONE: {
+//     case ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET_DONE: {
 //         if (context->rx_size > 0) {
 //             CDC_Transmit_FS((uint8_t*)context->rx_buf, context->rx_size);
 //             HAL_Delay(1);
 //             context->rx_size = 0; // Reset size for next reception
 //             memset(context->rx_buf, 0, 256); // Clear buffer for next reception
-//             context->state = ASYNC_test_RFM96_Rx_SET_RX_MODE;
+//             context->state = ASYNC_test_RFM96_LORA_Rx_SET_RX_MODE;
 //         } else {
-//             context->state = ASYNC_test_RFM96_Rx_RECEIVE_PACKET;
+//             context->state = ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET;
 //         }
 //         break; }
 //     }
@@ -1601,10 +1601,10 @@ void init_machine(MACHINE* machine, COMPONENTS* components,
 
 // TASK_POOL_CREATE(ASYNC_telem_gps);
 
-// void ASYNC_telem_gps_init(TASK *self, DATA_ALL_TIMESTAMP *last_data, RFM96_Chip *rfm96_chip) {
+// void ASYNC_telem_gps_init(TASK *self, DATA_ALL_TIMESTAMP *last_data, RFM96_LORA_Chip *RFM96_LORA_chip) {
 //     ASYNC_telem_gps_CONTEXT *context = (ASYNC_telem_gps_CONTEXT*)self->context;
 
-//     context->rfm96_chip = rfm96_chip;
+//     context->RFM96_LORA_chip = RFM96_LORA_chip;
 //     context->last_data = last_data;
 //     context->is_done = true;
 // }
@@ -1624,8 +1624,8 @@ void init_machine(MACHINE* machine, COMPONENTS* components,
 //         sprintf(context->telem, "La: %s, Lo: %s, Alt: %s\n",
 //                 lat, lon, alt);
         
-//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_SendPacket, false);
-//         ASYNC_RFM96_SendPacket_init(task, context->rfm96_chip, context->telem, strlen(context->telem) + 1);
+//         TASK *task = SCHEDULER_add_task_macro(scheduler, ASYNC_RFM96_LORA_SendPacket, false);
+//         ASYNC_RFM96_LORA_SendPacket_init(task, context->RFM96_LORA_chip, context->telem, strlen(context->telem) + 1);
 //         task->is_done = &(context->is_done);
 //     }
 //     return TASK_RETURN_IDLE;

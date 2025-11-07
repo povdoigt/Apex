@@ -27,7 +27,7 @@ typedef struct COMPONENTS {
     LED_RGB                 *led_rgb_0;
     LED_RGB                 *led_rgb_1;
     LSM303AGR               *lsm;
-    RFM96_Chip              *lora;
+    RFM96_LORA_Chip              *lora;
     W25Q_Chip               *flash;
 } COMPONENTS;
 
@@ -82,8 +82,8 @@ typedef enum MACHINE_STATE {
     TEST_SAVE_IMU,
     TEST_FILTERED_IMU,
     TEST_LSM303AGR,
-    TEST_RFM96_Tx,
-    TEST_RFM96_Rx,
+    TEST_RFM96_LORA_Tx,
+    TEST_RFM96_LORA_Rx,
     TEST_GPS,
     W25Q_WAIT_ERASE,
     W25Q_writing_test,
@@ -139,7 +139,7 @@ void init_components(COMPONENTS             *components,
                      LED_RGB                *led_rgb_0,
                      LED_RGB                *led_rgb_1,
                      LSM303AGR              *lsm,
-                     RFM96_Chip             *lora_chip,
+                     RFM96_LORA_Chip             *lora_chip,
                      W25Q_Chip              *flash_chip
 );
 
@@ -437,66 +437,66 @@ bool is_connected_to_usb(uint8_t *usb_watchdog_bfr);
 // // ============================================
 
 
-// #define ASYNC_test_RFM96_Tx_NUMBER 1
+// #define ASYNC_test_RFM96_LORA_Tx_NUMBER 1
 
-// typedef enum ASYNC_test_RFM96_Tx_STATE {
-//     ASYNC_test_RFM96_Tx_WAIT_READY,
-//     ASYNC_test_RFM96_Tx_SEND_PACKET,
-//     ASYNC_test_RFM96_Tx_DELAY
-// } ASYNC_test_RFM96_Tx_STATE;
+// typedef enum ASYNC_test_RFM96_LORA_Tx_STATE {
+//     ASYNC_test_RFM96_LORA_Tx_WAIT_READY,
+//     ASYNC_test_RFM96_LORA_Tx_SEND_PACKET,
+//     ASYNC_test_RFM96_LORA_Tx_DELAY
+// } ASYNC_test_RFM96_LORA_Tx_STATE;
 
-// typedef struct ASYNC_test_RFM96_Tx_CONTEXT {
-//     RFM96_Chip *rfm96_chip;
+// typedef struct ASYNC_test_RFM96_LORA_Tx_CONTEXT {
+//     RFM96_LORA_Chip *RFM96_LORA_chip;
 
 //     uint8_t tx_buf[256];
 //     uint16_t tx_size;
 
 //     bool is_ready;
 
-//     ASYNC_test_RFM96_Tx_STATE state;
-//     ASYNC_test_RFM96_Tx_STATE next_state;
+//     ASYNC_test_RFM96_LORA_Tx_STATE state;
+//     ASYNC_test_RFM96_LORA_Tx_STATE next_state;
 
 //     uint32_t delay_ms;
-// } ASYNC_test_RFM96_Tx_CONTEXT;
+// } ASYNC_test_RFM96_LORA_Tx_CONTEXT;
 
 
-// extern TASK_POOL_CREATE(ASYNC_test_RFM96_Tx);
+// extern TASK_POOL_CREATE(ASYNC_test_RFM96_LORA_Tx);
 
-// void ASYNC_test_RFM96_Tx_init(TASK *self, RFM96_Chip *rfm96_chip);
-// TASK_RETURN ASYNC_test_RFM96_Tx(SCHEDULER *scheduler, TASK *self);
+// void ASYNC_test_RFM96_LORA_Tx_init(TASK *self, RFM96_LORA_Chip *RFM96_LORA_chip);
+// TASK_RETURN ASYNC_test_RFM96_LORA_Tx(SCHEDULER *scheduler, TASK *self);
 
 
 // // ============================================
 
 
-// #define ASYNC_test_RFM96_Rx_NUMBER 1
+// #define ASYNC_test_RFM96_LORA_Rx_NUMBER 1
 
-// typedef enum ASYNC_test_RFM96_Rx_STATE {
-//     ASYNC_test_RFM96_Rx_WAIT_READY,
-//     ASYNC_test_RFM96_Rx_SET_RX_MODE,
-//     ASYNC_test_RFM96_Rx_RECEIVE_PACKET,
-//     ASYNC_test_RFM96_Rx_RECEIVE_PACKET_DONE,
-// } ASYNC_test_RFM96_Rx_STATE;
+// typedef enum ASYNC_test_RFM96_LORA_Rx_STATE {
+//     ASYNC_test_RFM96_LORA_Rx_WAIT_READY,
+//     ASYNC_test_RFM96_LORA_Rx_SET_RX_MODE,
+//     ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET,
+//     ASYNC_test_RFM96_LORA_Rx_RECEIVE_PACKET_DONE,
+// } ASYNC_test_RFM96_LORA_Rx_STATE;
 
-// typedef struct ASYNC_test_RFM96_Rx_CONTEXT {
-//     RFM96_Chip *rfm96_chip;
+// typedef struct ASYNC_test_RFM96_LORA_Rx_CONTEXT {
+//     RFM96_LORA_Chip *RFM96_LORA_chip;
 
 //     uint8_t rx_buf[256];
 //     uint8_t rx_size;
 
 //     bool is_ready;
 
-//     ASYNC_test_RFM96_Rx_STATE state;
-//     ASYNC_test_RFM96_Rx_STATE next_state;
+//     ASYNC_test_RFM96_LORA_Rx_STATE state;
+//     ASYNC_test_RFM96_LORA_Rx_STATE next_state;
 
 //     uint32_t delay_ms;
-// } ASYNC_test_RFM96_Rx_CONTEXT;
+// } ASYNC_test_RFM96_LORA_Rx_CONTEXT;
 
 
-// extern TASK_POOL_CREATE(ASYNC_test_RFM96_Rx);
+// extern TASK_POOL_CREATE(ASYNC_test_RFM96_LORA_Rx);
 
-// void ASYNC_test_RFM96_Rx_init(TASK *self, RFM96_Chip *rfm96_chip);
-// TASK_RETURN ASYNC_test_RFM96_Rx(SCHEDULER *scheduler, TASK *self);
+// void ASYNC_test_RFM96_LORA_Rx_init(TASK *self, RFM96_LORA_Chip *RFM96_LORA_chip);
+// TASK_RETURN ASYNC_test_RFM96_LORA_Rx(SCHEDULER *scheduler, TASK *self);
 
 
 // // ============================================
@@ -688,14 +688,14 @@ bool is_connected_to_usb(uint8_t *usb_watchdog_bfr);
 
 // typedef struct ASYNC_telem_gps_CONTEXT {
 //     bool is_done;
-//     RFM96_Chip *rfm96_chip;
+//     RFM96_LORA_Chip *RFM96_LORA_chip;
 //     uint8_t telem[256];
 //     DATA_ALL_TIMESTAMP *last_data;
 // } ASYNC_telem_gps_CONTEXT;
 
 // extern TASK_POOL_CREATE(ASYNC_telem_gps);
 
-// void ASYNC_telem_gps_init(TASK *self, DATA_ALL_TIMESTAMP *last_data, RFM96_Chip *rfm96_chip);
+// void ASYNC_telem_gps_init(TASK *self, DATA_ALL_TIMESTAMP *last_data, RFM96_LORA_Chip *RFM96_LORA_chip);
 // TASK_RETURN ASYNC_telem_gps(SCHEDULER *scheduler, TASK *self);
 
 // ============================================
