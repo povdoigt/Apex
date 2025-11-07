@@ -1,23 +1,11 @@
 #include "drivers/BMI088.h"
-#include "cmsis_os2.h"
-#include "peripherals/spi.h"
-#include "stm32f4xx_hal_spi.h"
-#include "utils/circular_buffer.h"
-#include "utils/data_topic.h"
-#include "utils/scheduler.h"
-#include "utils/tools.h"
-#include "utils/types.h"
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-#include <math.h>
 
 /*
  *
  * INITIALISATION
  *
  */
-uint8_t BMI088_Init(BMI088 *imu,
+uint8_t BMI088_Init(bmi088_t *imu,
 				    SPI_HandleTypeDef *spiHandle,
 				    GPIO_TypeDef *csAccPinBank, uint16_t csAccPin,
 				    GPIO_TypeDef *csGyrPinBank, uint16_t csGyrPin) {
