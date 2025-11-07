@@ -38,8 +38,8 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/gps.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/led.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/LSM303AGR.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/RFM96/rfm96w_lora.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/RFM96/rfm96w_fsk.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/RFM96/rfm96w_lora.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/RFM96/rfm96w_fsk.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/w25q_mem.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/adc.c

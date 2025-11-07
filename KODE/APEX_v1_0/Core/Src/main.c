@@ -33,7 +33,7 @@
 #include "drivers/led.h"
 #include "drivers/w25q_mem.h"
 // header rfm96
-// #include "drivers/RFM96/rfm96w_lora.h"
+#include "drivers/RFM96/rfm96w_lora.h"
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
 #include "peripherals/gpio.h"
@@ -121,23 +121,23 @@ int main(void)
 
 	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_I2C3_Init();
-  MX_SPI2_Init();
-  MX_TIM2_Init();
-  MX_TIM4_Init();
-  MX_USART1_UART_Init();
-  MX_ADC1_Init();
-  MX_SPI1_Init();
-  MX_TIM3_Init();
-  MX_CRC_Init();
-  MX_TIM11_Init();
-  // Init rfm96 - Fréquence
-  RFM96_LORA_Chip RFM96_LORA_chip;
-  RFM96_LORA_Init(&RFM96_LORA_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
-               RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_I2C3_Init();
+	MX_SPI2_Init();
+	MX_TIM2_Init();
+	MX_TIM4_Init();
+	MX_USART1_UART_Init();
+	MX_ADC1_Init();
+	MX_SPI1_Init();
+	MX_TIM3_Init();
+	MX_CRC_Init();
+	MX_TIM11_Init();
+	// Init rfm96 - Fréquence
+	RFM96_LORA_Chip RFM96_LORA_chip;
+	RFM96_LORA_Init(&RFM96_LORA_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
+				RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
 
   // Initialize LED for tests GPIO
 

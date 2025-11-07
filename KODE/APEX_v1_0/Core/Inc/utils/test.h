@@ -10,7 +10,7 @@
 #include "drivers/gps.h"
 #include "drivers/led.h"
 #include "drivers/LSM303AGR.h"
-#include "drivers/rfm96w.h"
+#include "drivers/RFM96/rfm96w_lora.h"
 #include "drivers/w25q_mem.h"
 
 #include "utils/data_topic.h"
