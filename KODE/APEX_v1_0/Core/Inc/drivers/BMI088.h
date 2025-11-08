@@ -12,6 +12,8 @@
 
 
 #include <stdbool.h>
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
 #include "peripherals/spi.h"
 
 #include "utils/data_topic.h"
@@ -723,7 +725,8 @@ typedef enum {
     BMI_INVALID_ARG,
     BMI_BUSY,
     BMI_TIMEOUT,
-    BMI_UNKNOWN_ERR
+    BMI_UNKNOWN_ERR,
+    BMI_SEM_ERR
 } BMI_STATE;
 
 typedef struct bmi088_t {
@@ -744,16 +747,20 @@ typedef struct bmi088_t {
     float                gyr_conv;
 
     bmi_config_t         config;
+
+    StaticSemaphore_t    sem;
+    osSemaphoreId_t      sem_id;
 } bmi088_t;
 
 /* -------------------------------------------------------------------------- */
 /*                       Niveau 1 : Primitives capteur                        */
 /* -------------------------------------------------------------------------- */
 
-BMI_STATE BMI088_ReadID(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id);
 BMI_STATE BMI088_ReadRegister(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *value);
 BMI_STATE BMI088_WriteRegister(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t value);
-BMI_STATE BMI088_ReadMultiple(bmi088_t *imu, bool is_gyr, uint8_t start_reg, uint8_t *data, uint16_t len);
+BMI_STATE BMI088_ReadMultiple(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *data, uint16_t len);
+BMI_STATE BMI088_ReadID(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id);
+BMI_STATE BMI088_SoftReset(bmi088_t *imu, bool is_gyr);
 
 /* -------------------------------------------------------------------------- */
 /*                      Niveau 2 : Logique périphérique                       */
@@ -786,6 +793,79 @@ BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyro);
  * @brief Lecture de la température interne (en °C).
  */
 BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c);
+
+
+
+/* -------------------------------------------------------------------------- */
+/*                       Niveau 1 : Primitives capteur RTOS                   */
+/* -------------------------------------------------------------------------- */
+
+BMI_STATE BMI088_ReadRegister_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *value, bool lock_sem);
+BMI_STATE BMI088_WriteRegister_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t value, bool lock_sem);
+BMI_STATE BMI088_ReadMultiple_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *data, uint16_t len, bool lock_sem);
+BMI_STATE BMI088_ReadID_RTOS_base(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id, bool lock_sem);
+BMI_STATE BMI088_SoftReset_RTOS_base(bmi088_t *imu, bool is_gyr, bool lock_sem);
+
+#define BMI088_ReadRegister_RTOS_NoLock(imu, is_gyr, reg, value)        BMI088_ReadRegister_RTOS_base(imu, is_gyr, reg, value, false)
+#define BMI088_WriteRegister_RTOS_NoLock(imu, is_gyr, reg, value)       BMI088_WriteRegister_RTOS_base(imu, is_gyr, reg, value, false)
+#define BMI088_ReadMultiple_RTOS_NoLock(imu, is_gyr, reg, data, len)    BMI088_ReadMultiple_RTOS_base(imu, is_gyr, reg, data, len, false)
+#define BMI088_ReadID_RTOS_NoLock(imu, acc_id, gyr_id)                  BMI088_ReadID_RTOS_base(imu, acc_id, gyr_id, false)
+#define BMI088_SoftReset_RTOS_NoLock(imu, is_gyr)                       BMI088_SoftReset_RTOS_base(imu, is_gyr, false)
+
+#define BMI088_ReadRegister_RTOS(imu, is_gyr, reg, value)               BMI088_ReadRegister_RTOS_base(imu, is_gyr, reg, value, true)
+#define BMI088_WriteRegister_RTOS(imu, is_gyr, reg, value)              BMI088_WriteRegister_RTOS_base(imu, is_gyr, reg, value, true)
+#define BMI088_ReadMultiple_RTOS(imu, is_gyr, reg, data, len)           BMI088_ReadMultiple_RTOS_base(imu, is_gyr, reg, data, len, true)
+#define BMI088_ReadID_RTOS(imu, acc_id, gyr_id)                         BMI088_ReadID_RTOS_base(imu, acc_id, gyr_id, true)
+#define BMI088_SoftReset_RTOS(imu, is_gyr)                              BMI088_SoftReset_RTOS(imu, is_gyr, true)
+
+
+
+/* -------------------------------------------------------------------------- */
+/*                      Niveau 2 : Logique périphérique RTOS                  */
+/* -------------------------------------------------------------------------- */
+
+typedef struct TASK_BMI088_Init_ARGS {
+    bmi088_t                *imu;
+    SPI_HandleTypeDef       *hspi;
+    GPIO_TypeDef            *cs_acc_bank;
+    uint16_t                 cs_acc_pin;
+    GPIO_TypeDef            *cs_gyr_bank;
+    uint16_t                 cs_gyr_pin;
+    const bmi_config_t      *cfg;
+    BMI_STATE               *return_state;
+	osEventFlagsId_t         done_flags;
+} TASK_BMI088_Init_ARGS;
+TASK_POOL_CONFIGURE(TASK_BMI088_Init, 1, 512);
+void TASK_BMI088_Init(void *arguments);
+
+BMI_STATE BMI088_ApplyConfig_RTOS(bmi088_t *imu, const bmi_config_t *cfg);
+
+typedef struct TASK_BMI088_ReadAcc_ARGS {
+    bmi088_t        *imu;
+    float3_t      	*accel;
+    BMI_STATE       *return_state;
+    osEventFlagsId_t done_flags;
+} TASK_BMI088_ReadAcc_ARGS;
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 10, 256);
+void TASK_BMI088_ReadAcc(void *arguments);
+
+typedef struct TASK_BMI088_ReadGyr_ARGS {
+    bmi088_t        *imu;
+    float3_t      	*gyr;
+    BMI_STATE       *return_state;
+    osEventFlagsId_t done_flags;
+} TASK_BMI088_ReadGyr_ARGS;
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 10, 256);
+void TASK_BMI088_ReadGyr(void *arguments);
+
+typedef struct TASK_BMI088_ReadTemp_ARGS {
+    bmi088_t        *imu;
+    float         	*temp_c;
+    BMI_STATE       *return_state;
+    osEventFlagsId_t done_flags;
+} TASK_BMI088_ReadTemp_ARGS;
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadTemp, 10, 256);
+void TASK_BMI088_ReadTemp(void *arguments);
 
 
 #ifdef __cplusplus
