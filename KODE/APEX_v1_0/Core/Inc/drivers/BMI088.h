@@ -10,8 +10,7 @@
 #ifndef BMI088_IMU_H
 #define BMI088_IMU_H
 
-#include "FreeRTOSConfig.h"
-#include "stm32f4xx_hal.h"
+
 #include <stdbool.h>
 #include "peripherals/spi.h"
 
@@ -28,6 +27,8 @@ extern "C" {
 /* --- Unités de sortie (modifiable ici) --- */
 #define BMI_ACCEL_UNIT_MS2   1   /* 1: m/s^2 ; 0: g */
 #define BMI_GYRO_UNIT_DPS    1   /* 1: deg/s ; 0: rad/s */
+
+#define BMI_READ_MASK         0b10000000
 
 /* ========================================================================== */
 /*                BMI088 — Accelerometer + Temperature Registers               */
@@ -174,6 +175,7 @@ extern "C" {
 /* 0x00 — ACC_CHIP_ID : Device ID (RO, reset = 0x1E)                          */
 /* -------------------------------------------------------------------------- */
 /* Pas de champs configurables ni de flags documentés (valeur constante). */   /* :contentReference[oaicite:2]{index=2} */
+#define BMI_ACC_CHIP_ID_VALUE  0x1EU
 
 /* -------------------------------------------------------------------------- */
 /* 0x02 — ACC_ERR_REG : Error flags (RO, reset = 0x00)                         */
@@ -225,6 +227,8 @@ typedef enum {
 /* 0x22–0x23 — TEMP_MSB/LSB : 11-bit temperature data (RO, reset = 0x00)      */
 /* -------------------------------------------------------------------------- */
 /* Résolution 0.125°C/LSB ; formule de conversion fournie en DS §5.3.7.      */ /* :contentReference[oaicite:9]{index=9} */
+#define BMI_TEMP_LSB_MASK  0b11100000  /**< bits [7:5] of LSB are valid */
+
 
 /* -------------------------------------------------------------------------- */
 /* 0x24–0x25 — FIFO_LENGTH_0/1 : 14-bit FIFO byte counter (RO, reset = 0x00)  */
@@ -232,12 +236,12 @@ typedef enum {
 /* Empty FIFO = 0x8000 ; MAJ sur frame complète lue/écrite.                   */ /* :contentReference[oaicite:10]{index=10} */
 
 /* -------------------------------------------------------------------------- */
-/* 0x26 — FIFO_DATA : FIFO burst read (RO, reset = 0x00)                       */
+/* 0x26 — FIFO_DATA : FIFO burst read (RO, reset = 0x00)                      */
 /* -------------------------------------------------------------------------- */
 /* Lecture en burst ; frames répétées si partiellement lues.                  */ /* :contentReference[oaicite:11]{index=11} */
 
 /* -------------------------------------------------------------------------- */
-/* 0x40 — ACC_CONF : Bandwidth & ODR (RW, reset = 0xA8)                        */
+/* 0x40 — ACC_CONF : Bandwidth & ODR (RW, reset = 0xA8)                       */
 /* -------------------------------------------------------------------------- */
 /* [7:4] acc_bwp — filtre/bande passante (OSR / normal).                      */ /* :contentReference[oaicite:12]{index=12} */
 typedef enum {
@@ -261,20 +265,21 @@ typedef enum {
 #define BMI_ACC_CONF_ODR_MASK (0b00001111)
 
 /* -------------------------------------------------------------------------- */
-/* 0x41 — ACC_RANGE : ±g range (RW, reset = 0x01)                              */
+/* 0x41 — ACC_RANGE : ±g range (RW, reset = 0x01)                             */
 /* -------------------------------------------------------------------------- */
+/* [1:0] acc_range — Full-scale range sélectionné.                           */ /* :contentReference[oaicite:14]{index=14} */
 typedef enum {
-    BMI_ACC_RANGE_RANGE_3G   = 0b00000000, /**< ±3 g  */
-    BMI_ACC_RANGE_RANGE_6G   = 0b00000001, /**< ±6 g  */
-    BMI_ACC_RANGE_RANGE_12G  = 0b00000010, /**< ±12 g */
-    BMI_ACC_RANGE_RANGE_24G  = 0b00000011  /**< ±24 g */
-} bmi_acc_range_range_t;
-#define BMI_ACC_RANGE_RANGE_MASK (0b00000011)  /* bits [1:0] */               /* :contentReference[oaicite:14]{index=14} */
+    BMI_ACC_RANGE_3G   = 0b00000000, /**< ±3 g  */
+    BMI_ACC_RANGE_6G   = 0b00000001, /**< ±6 g  */
+    BMI_ACC_RANGE_12G  = 0b00000010, /**< ±12 g */
+    BMI_ACC_RANGE_24G  = 0b00000011  /**< ±24 g */
+} bmi_acc_range_t;
+#define BMI_ACC_RANGE_MASK (0b00000011) /* bits [1:0] */                          
 
 /* -------------------------------------------------------------------------- */
-/* 0x45 — FIFO_DOWNS : Down-sampling (RW/RO mix, reset = 0x80)                 */
+/* 0x45 — FIFO_DOWNS : Down-sampling (RW/RO mix, reset = 0x80)                */
 /* -------------------------------------------------------------------------- */
-/* [7] must_be_1 — “This bit must always be ‘1’.”                              */ /* :contentReference[oaicite:15]{index=15} */
+/* [7] must_be_1 — “This bit must always be ‘1’.”                             */ /* :contentReference[oaicite:15]{index=15} */
 typedef enum {
     BMI_ACC_FIFO_DOWNS_MUST_BE_1 = 0b10000000
 } bmi_acc_fifo_downs_must1_t;
@@ -477,6 +482,7 @@ typedef enum {
 /* 0x00 — GYR_CHIP_ID : Device ID (RO, reset = 0x0F)                          */
 /* -------------------------------------------------------------------------- */
 /* Valeur constante d’identification du gyroscope BMI088. */ /* :contentReference[oaicite:0]{index=0} */
+#define BMI_GYR_CHIP_ID_VALUE  0x0FU
 
 /* -------------------------------------------------------------------------- */
 /* 0x09–0x0C — GYR_INT_STATUS_0..3 : Interrupt / status flags (RO, reset = 0) */
@@ -494,13 +500,13 @@ typedef enum {
 /* -------------------------------------------------------------------------- */
 /* [2:0] gyr_range_sel — selection du plein échelle. */ /* :contentReference[oaicite:3]{index=3} */
 typedef enum {
-    BMI_GYR_RANGE_RANGE_2000 = 0b00000000, /**< ±2000 °/s */
-    BMI_GYR_RANGE_RANGE_1000 = 0b00000001, /**< ±1000 °/s */
-    BMI_GYR_RANGE_RANGE_500  = 0b00000010, /**< ±500 °/s  */
-    BMI_GYR_RANGE_RANGE_250  = 0b00000011, /**< ±250 °/s  */
-    BMI_GYR_RANGE_RANGE_125  = 0b00000100  /**< ±125 °/s  */
-} bmi_gyr_range_range_t;
-#define BMI_GYR_RANGE_RANGE_MASK (0b00000111)
+    BMI_GYR_RANGE_2000 = 0b00000000, /**< ±2000 °/s */
+    BMI_GYR_RANGE_1000 = 0b00000001, /**< ±1000 °/s */
+    BMI_GYR_RANGE_500  = 0b00000010, /**< ±500 °/s  */
+    BMI_GYR_RANGE_250  = 0b00000011, /**< ±250 °/s  */
+    BMI_GYR_RANGE_125  = 0b00000100  /**< ±125 °/s  */
+} bmi_gyr_range_t;
+#define BMI_GYR_RANGE_MASK (0b00000111)
 
 /* -------------------------------------------------------------------------- */
 /* 0x10 — GYR_BANDWIDTH : Bandwidth / ODR (RW, reset = 0x07)                  */
@@ -699,16 +705,11 @@ typedef struct {
     bmi_acc_conf_odr_t      acc_odr;     /**< Output Data Rate */
     bmi_acc_pwr_conf_t      acc_pwr;     /**< Power configuration */
     bmi_acc_pwr_ctrl_t      acc_ctrl;    /**< Power control enable/disable */
-    bool                    acc_enable;  /**< Accelerometer software flag */
 
     /* Gyroscope */
     bmi_gyr_range_range_t   gyr_range;   /**< ±°/s full-scale range */
     bmi_gyr_bandwidth_bw_t  gyr_bw;      /**< Bandwidth / filter setting */
     bmi_gyr_lpm1_mode_t     gyr_mode;    /**< Power mode selection */
-    bool                    gyr_enable;  /**< Gyroscope enable flag */
-
-    /* Temperature */
-    bool                    temp_enable; /**< Internal sensor always ON */
 
     // Additional configuration fields can be added here as needed
     // e.g., interrupt settings, FIFO configuration, etc.
@@ -734,12 +735,15 @@ typedef struct bmi088_t {
 	GPIO_TypeDef		*cs_acc_bank;
 	uint16_t			 cs_acc_pin;
 	float3_t			 acc_offset;
+    float                acc_conv;
 
 	/* Gyroscope */
 	GPIO_TypeDef		*cs_gyr_bank;
 	uint16_t 		  	 cs_gyr_pin;
 	float3_t			 gyr_offset;
+    float                gyr_conv;
 
+    bmi_config_t         config;
 } bmi088_t;
 
 /* -------------------------------------------------------------------------- */
@@ -760,7 +764,8 @@ BMI_STATE BMI088_ReadMultiple(bmi088_t *imu, bool is_gyr, uint8_t start_reg, uin
  */
 BMI_STATE BMI088_Init(bmi088_t *imu, SPI_HandleTypeDef *hspi,
                       GPIO_TypeDef *cs_acc_bank, uint16_t cs_acc_pin,
-                      GPIO_TypeDef *cs_gyr_bank, uint16_t cs_gyr_pin);
+                      GPIO_TypeDef *cs_gyr_bank, uint16_t cs_gyr_pin,
+                      const bmi_config_t *cfg);
 
 /**
  * @brief Applique une configuration complète (acc + gyr).

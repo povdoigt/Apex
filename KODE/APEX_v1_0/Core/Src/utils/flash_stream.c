@@ -1,8 +1,9 @@
 #include "utils/flash_stream.h"
+#include "drivers/w25q_mem.h"
 #include <stdlib.h>
 
 
-void flash_stream_init(FLASH_STREAM* stream, W25Q_Chip* flash_chip, size_t data_size) {
+void flash_stream_init(FLASH_STREAM* stream, W25Q_t* flash_chip, size_t data_size) {
     stream->flash_chip = flash_chip;
     stream->write_ptr = 0;
     stream->read_ptr = 0;

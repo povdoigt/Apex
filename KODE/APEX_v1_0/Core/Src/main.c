@@ -36,7 +36,6 @@
 // header rfm96
 #include "drivers/rfm96w.h"
 
-#include "drivers/rfm96w.h"
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
 #include "peripherals/gpio.h"
@@ -51,11 +50,9 @@
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
+#include "utils/types.h"
 #include "utils/usb.h"
 
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_adc.h"
-#include "stm32f4xx_ll_adc.h"
 #include "usb_device.h"
 /* USER CODE END Includes */
 
@@ -90,8 +87,8 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 ADXL375 adxl;
-BMI088 BMI088_imu;
-W25Q_Chip w25q_chip;
+bmi088_t BMI088_imu;
+W25Q_t w25q_chip;
 
 data_topic_t *data_topic_acc_ptr;
 data_topic_t *data_topic_gyr_ptr;
@@ -360,48 +357,48 @@ TASK_POOL_ALLOCATE(TASK_Program_start);
 
 void TASK_Program_start(void *argument) {
 
-  	osThreadAttr_t attr0 = {
-		.name = "TASK_BMI088_ReadAcc",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
+  	// osThreadAttr_t attr0 = {
+	// 	.name = "TASK_BMI088_ReadAcc",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
 
-	data_topic_acc_ptr = NULL;
+	// data_topic_acc_ptr = NULL;
 
-  	TASK_BMI088_ReadAcc_ARGS args0 = {
-		.imu = &BMI088_imu,
-		.delay = 100,        // 100 ms delay
-		.dt = &data_topic_acc_ptr,
-		.timer_start = 0,
-		.timer_delay = 0,
-  	};
-	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, args0, attr0, osWaitForever);
+  	// TASK_BMI088_ReadAcc_ARGS args0 = {
+	// 	.imu = &BMI088_imu,
+	// 	.delay = 100,        // 100 ms delay
+	// 	.dt = &data_topic_acc_ptr,
+	// 	.timer_start = 0,
+	// 	.timer_delay = 0,
+  	// };
+	// OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, args0, attr0, osWaitForever);
 
-	osThreadAttr_t attr1 = {
-  		.name = "TASK_BMI088_ReadGyr",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
+	// osThreadAttr_t attr1 = {
+  	// 	.name = "TASK_BMI088_ReadGyr",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
 
-	data_topic_gyr_ptr = NULL;
+	// data_topic_gyr_ptr = NULL;
 
-  	TASK_BMI088_ReadGyr_ARGS args1 = {
-		.imu = &BMI088_imu,
-		.delay = 1000,        // 100 ms delay
-		.dt = &data_topic_gyr_ptr,
-		.timer_start = 0,
-		.timer_delay = 0,
-  	};
-  	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, args1, attr1, osWaitForever);
+  	// TASK_BMI088_ReadGyr_ARGS args1 = {
+	// 	.imu = &BMI088_imu,
+	// 	.delay = 1000,        // 100 ms delay
+	// 	.dt = &data_topic_gyr_ptr,
+	// 	.timer_start = 0,
+	// 	.timer_delay = 0,
+  	// };
+  	// OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, args1, attr1, osWaitForever);
 
 
-	TASK_Data_USB_Transmit_ARGS usb_args = {
-		.dt = &data_topic_acc_ptr,
-		.delay = 200,
-	};
-	osThreadAttr_t usb_attr = {
-		.name = "TASK_Data_USB_Transmit",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
-	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
+	// TASK_Data_USB_Transmit_ARGS usb_args = {
+	// 	.dt = &data_topic_acc_ptr,
+	// 	.delay = 200,
+	// };
+	// osThreadAttr_t usb_attr = {
+	// 	.name = "TASK_Data_USB_Transmit",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
 
 
   	osThreadExit_Cstm();
@@ -423,7 +420,7 @@ void TASK_Data_USB_Transmit(void *argument) {
 	char buffer_x[10];
 	char buffer_y[10];
 	char buffer_z[10];
-	FLOAT3 data;
+	float3_t data;
 
 	while (*dt == NULL) {
 		osDelay(10);

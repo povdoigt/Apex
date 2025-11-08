@@ -58,7 +58,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/queue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/scheduler.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/telem_format.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/tools.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/types.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/usb.c
@@ -66,11 +66,11 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/crc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/freertos.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_it.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_hal_msp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_hal_timebase_tim.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_it.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32f411xe.s
 )

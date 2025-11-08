@@ -21,16 +21,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "cmsis_gcc.h"
-#include "cmsis_os.h"
 #include "cmsis_os2.h"
 
 #include "drivers/w25q_mem.h"
 #include "peripherals/spi.h"
-#include "stm32f4xx_hal_def.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_spi.h"
 #include "utils/scheduler.h"
 
 
