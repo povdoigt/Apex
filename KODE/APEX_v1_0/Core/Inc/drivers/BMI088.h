@@ -700,14 +700,14 @@ typedef enum {
  */
 typedef struct {
     /* Accelerometer */
-    bmi_acc_range_range_t   acc_range;   /**< ±g full-scale range */
+    bmi_acc_range_t         acc_range;   /**< ±g full-scale range */
     bmi_acc_conf_bwp_t      acc_bwp;     /**< Bandwidth / oversampling */
     bmi_acc_conf_odr_t      acc_odr;     /**< Output Data Rate */
     bmi_acc_pwr_conf_t      acc_pwr;     /**< Power configuration */
     bmi_acc_pwr_ctrl_t      acc_ctrl;    /**< Power control enable/disable */
 
     /* Gyroscope */
-    bmi_gyr_range_range_t   gyr_range;   /**< ±°/s full-scale range */
+    bmi_gyr_range_t         gyr_range;   /**< ±°/s full-scale range */
     bmi_gyr_bandwidth_bw_t  gyr_bw;      /**< Bandwidth / filter setting */
     bmi_gyr_lpm1_mode_t     gyr_mode;    /**< Power mode selection */
 
