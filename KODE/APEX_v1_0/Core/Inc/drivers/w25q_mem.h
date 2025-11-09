@@ -17,7 +17,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "cmsis_os.h"
 #include "stm32f4xx_hal.h"
 
 #include "peripherals/spi.h"
@@ -235,16 +234,6 @@ W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, bool lock_s
 W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, uint8_t value, bool lock_sem);
 W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_t *chip, uint8_t *id, bool lock_sem);
 
-
-// static inline W25Q_STATE W25Q_WaitForReady_RTOS_NoLock(W25Q_t *chip);
-
-// inline W25Q_STATE W25Q_SendCmd_RTOS_NoLock(W25Q_t *chip, uint8_t cmd);
-// inline W25Q_STATE W25Q_SendCmdAddr_RTOS_NoLock(W25Q_t *chip, uint8_t cmd, uint32_t addr);
-// inline W25Q_STATE W25Q_ReadStatus_RTOS_NoLock(W25Q_t *chip, uint8_t sr_index);
-// inline W25Q_STATE W25Q_WriteStatus_RTOS_NoLock(W25Q_t *chip, uint8_t sr_index, uint8_t value);
-// inline W25Q_STATE W25Q_ReadID_RTOS_NoLock(W25Q_t *W25Q_t, uint8_t *id);
-
-
 #define W25Q_WaitForReady_RTOS_NoLock(chip)					W25Q_WaitForReady_RTOS_base(chip, false);
 
 #define W25Q_SendCmd_RTOS_NoLock(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, false);
@@ -252,15 +241,6 @@ W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_t *chip, uint8_t *id, bool lock_sem);
 #define W25Q_ReadStatus_RTOS_NoLock(chip, sr_index)			W25Q_ReadStatus_RTOS_base(chip, sr_index, false);
 #define W25Q_WriteStatus_RTOS_NoLock(chip, sr_index, value)	W25Q_WriteStatus_RTOS_base(chip, sr_index, value, false);
 #define W25Q_ReadID_RTOS_NoLock(wchip, id)					W25Q_ReadID_RTOS_base(wchip, id, false);
-
-
-// static inline W25Q_STATE W25Q_WaitForReady_RTOS(W25Q_t *chip);
-
-// inline W25Q_STATE W25Q_SendCmd_RTOS(W25Q_t *chip, uint8_t cmd);
-// inline W25Q_STATE W25Q_SendCmdAddr_RTOS(W25Q_t *chip, uint8_t cmd, uint32_t addr);
-// inline W25Q_STATE W25Q_ReadStatus_RTOS(W25Q_t *chip, uint8_t sr_index);
-// inline W25Q_STATE W25Q_WriteStatus_RTOS(W25Q_t *chip, uint8_t sr_index, uint8_t value);
-// inline W25Q_STATE W25Q_ReadID_RTOS(W25Q_t *W25Q_t, uint8_t *id);
 
 #define W25Q_WaitForReady_RTOS(chip)					W25Q_WaitForReady_RTOS_base(chip, true);
 #define W25Q_SendCmd_RTOS(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, true);

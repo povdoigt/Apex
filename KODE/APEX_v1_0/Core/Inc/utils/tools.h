@@ -38,6 +38,8 @@ void set_elems_from_csv(char **elems, char buffer[], char sep, int nbr_elems);
 // pointeur pointant vers les differentes chaines de caracteres.
 void set_line_to_csv(char **elems, char buffer[], char sep, int nbr_elems);
 
+HAL_StatusTypeDef TIM_Delay_Micro(uint32_t delay);
+
 // uint32_t GetMicros(void);
 
 // #define ASYNC_Delay_NUMBER 10

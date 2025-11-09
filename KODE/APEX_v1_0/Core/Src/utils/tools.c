@@ -1,5 +1,7 @@
-
 #include "utils/tools.h"
+
+#include "peripherals/tim.h"
+
 #include <stdio.h>
 
 void float_format(char *buff, float num, int precision, int width) {
@@ -14,9 +16,9 @@ void float_format(char *buff, float num, int precision, int width) {
     num_up = num_up > max_up ? max_up : num_up;
 
     if (num < 0) {
-        sprintf(buff, "-%u.%u", num_up, num_dw);
+        sprintf(buff, "-%lu.%lu", num_up, num_dw);
     } else {
-        sprintf(buff, "+%u.%u", num_up, num_dw);
+        sprintf(buff, "+%lu.%lu", num_up, num_dw);
     }
 }
 
@@ -58,6 +60,16 @@ void set_line_to_csv(char **elems, char buffer[], char sep, int nbr_elems) {
             strcat(buffer, str_sep);
     }
     strcat(buffer, "\n");
+}
+
+HAL_StatusTypeDef TIM_Delay_Micro(uint32_t delay) {
+    HAL_StatusTypeDef status;
+    status = HAL_TIM_Base_Start(&htim9);
+    if (status != HAL_OK) { return status; }
+    __HAL_TIM_SET_COUNTER(&htim9, 0);
+    while (__HAL_TIM_GET_COUNTER(&htim9) < delay);
+    status = HAL_TIM_Base_Stop(&htim9);
+    return status;  
 }
 
 // void SPI_HandleTypeDef_flag_init(SPI_HandleTypeDef_flag *hspi_flag, SPI_HandleTypeDef* hspi) {

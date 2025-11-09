@@ -21,18 +21,18 @@
 
 
 typedef struct FLASH_STREAM {
-    W25Q_Chip   *flash_chip;
+    W25Q_t      *flash_chip;
 
     uint32_t     write_ptr;
     uint32_t     read_ptr;
 
-    size_t data_size;
+    size_t       data_size;
 
     uint32_t     last_info_ptr;
 } FLASH_STREAM;
 
 
-void flash_stream_init(FLASH_STREAM* stream, W25Q_Chip* flash_chip, size_t data_size);
+void flash_stream_init(FLASH_STREAM* stream, W25Q_t* flash_chip, size_t data_size);
 
 void flash_stream_write(FLASH_STREAM* stream, uint8_t* data, uint16_t len);
 void flash_stream_read(FLASH_STREAM* stream, uint8_t* data, uint16_t len);

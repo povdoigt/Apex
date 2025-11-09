@@ -1,10 +1,10 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-typedef struct FLOAT3 {
+typedef struct float3_t {
     float x;
     float y;
     float z;
-} FLOAT3;
+} float3_t;
 
 #endif /* TYPES_H */
