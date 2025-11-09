@@ -22,7 +22,6 @@
 /* USER CODE BEGIN Includes */
 
 #include "main.h"
-#include "cmsis_gcc.h"
 #include "cmsis_os2.h"
 #include "crc.h"
 
@@ -33,7 +32,6 @@
 #include "drivers/BMI088.h"
 #include "drivers/led.h"
 #include "drivers/w25q_mem.h"
-// header rfm96
 #include "drivers/rfm96w.h"
 
 #include "peripherals/adc.h"
@@ -44,9 +42,6 @@
 #include "peripherals/tim.h"
 #include "peripherals/usart.h"
 
-
-#include "stm32f4xx_hal_gpio.h"
-#include "usbd_cdc_if.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
@@ -54,6 +49,7 @@
 #include "utils/usb.h"
 
 #include "usb_device.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -122,157 +118,58 @@ int main(void)
 
 	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_I2C3_Init();
-  MX_SPI2_Init();
-  MX_TIM2_Init();
-  MX_TIM4_Init();
-  MX_USART1_UART_Init();
-  MX_ADC1_Init();
-  MX_SPI1_Init();
-  MX_TIM3_Init();
-  MX_CRC_Init();
-  MX_TIM11_Init();
-  // Init rfm96 - Fréquence
-  RFM96_Chip rfm96_chip;
-  RFM96_Init(&rfm96_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
-               RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_I2C3_Init();
 
-  // Initialize LED for tests GPIO
+	MX_SPI1_Init();
+	MX_SPI2_Init();
 
-  /* USER CODE BEGIN 2 */
+	MX_TIM2_Init();
+	MX_TIM3_Init();
+	MX_TIM4_Init();
+	MX_TIM9_Init();
+	MX_TIM11_Init();
 
-	MX_USB_DEVICE_Init();
+	MX_USART1_UART_Init();
 
+	MX_ADC1_Init();
+	MX_SPI1_Init();
+	MX_CRC_Init();
 
-	// TEST TELEM ENVOI RFM96 INIT data to send
-	char data[6] = "Hello\0";
+	/* USER CODE BEGIN 2 */
 
-	// TEST TELEM RECEIVE RFM96 INIT
-	// char rx_buffer[256];
+	// MX_USB_DEVICE_Init();
 
 
-	// test receive telem
 
+	
+	TASK_POOL_CREATE(TASK_Program_start);
 
-	// const osThreadAttr_t TASK_start_Led0R_attributes = {
-	// 	.name = "TASK_start_Led0R",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (osPriority_t) osPriorityNormal,
-	// };
-	// const osThreadAttr_t TASK_start_Led0G_attributes = {
-	// 	.name = "TASK_start_Led0G",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (o
+	TASK_POOL_CREATE(TASK_BMI088_Init);
+	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
+	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+	TASK_POOL_CREATE(TASK_BMI088_ReadTemp);
 
-	// osThreadNew(TASK_start_Led0R, NULL, &TASK_start_Led0R_attributes);
-	// osThreadNew(TASK_start_Led0G, NULL, &TASK_start_Led0G_attributes);
+	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
+	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
+	TASK_POOL_CREATE(TASK_W25Q_Init);
+	TASK_POOL_CREATE(TASK_W25Q_WriteData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
 
+	TASK_POOL_CREATE(TASK_USB_Transmit);
+	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
 
-/* 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
-				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
+	Init_cleanup();
+	Init_spi_semaphores();
+	USB_Init();
 
-	W25Q_STATE state;
-	state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
-	assert_param(state == W25Q_OK);
-
-	bool led_state = true;
-	// HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
-
-	// W25Q_SendCmd(&w25q_chip, W25Q_CHIP_ERASE);
-
-
-	uint32_t t0 = HAL_GetTick();
-	uint8_t usb_watchdog[3] = {USBD_BUSY, USBD_BUSY, USBD_BUSY};
-	do {
-		USB_update_watchdog(usb_watchdog);
-		if (HAL_GetTick() - t0 >= 100) {
-			t0 = HAL_GetTick();
-			led_state = !led_state;
-			HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
-		} else {
-			HAL_Delay(1);
-		}
-	} while (!USB_is_connected(usb_watchdog));
-
-	DATA_ALL_TIMESTAMP_2 data = {
-		.dummy_start = 0xAA55,
-		.dummy_end = 0xADDE
+	osThreadAttr_t attr = {
+		.name = TASK_Program_start_name,
 	};
-
-	// uint32_t addr = 0;
-	// uint32_t addr0 = 0;
-	uint8_t rx_data[4096];
-	// t0 = HAL_GetTick();
-	// while (1) {
-	// 	data.timestamp++;
-	// 	state = W25Q_WriteData(&w25q_chip, (uint8_t*)&data, addr, sizeof(DATA_ALL_TIMESTAMP_2));
-	// 	addr += sizeof(DATA_ALL_TIMESTAMP_2);
-	// 	if (addr >= W25Q_FLASH_SIZE_BYTES) break;
-
-	// 	if (addr - addr0 >= 0x100000) {
-	// 		addr0 = addr;
-	// 		sprintf((char*)rx_data, "Wrote %u obj to W25Q flash (%u Mo)\r\n", addr / sizeof(DATA_ALL_TIMESTAMP_2), addr / 0x100000);
-	// 		CDC_Transmit_FS(rx_data, strlen((char*)rx_data));
-	// 	}
-	// 	if (HAL_GetTick() - t0 >= 500) {
-	// 		t0 = HAL_GetTick();
-	// 		led_state = !led_state;
-	// 		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
-	// 	} else {
-	// 		HAL_Delay(1);
-	// 	}
-	// }
-
-	t0 = HAL_GetTick();
-	led_state = true;
-	for (uint32_t i = 0; i < 4096 * 4; i++) {
-		W25Q_ReadData(&w25q_chip, rx_data, i * 4096, 4096);
-		CDC_Transmit_FS(rx_data, 4096);
-		if (HAL_GetTick() - t0 >= 500) {
-			t0 = HAL_GetTick();
-			led_state = !led_state;
-			HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
-		} else {
-			HAL_Delay(1);
-		}
-	}
-
-
-	
-	HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
-
-
-
-
-
-	
-	// TASK_POOL_CREATE(TASK_Program_start);
-
-	// TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
-	// TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
-
-	// TASK_POOL_CREATE(TASK_W25Q_SendCmd);
-	// TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
-	// TASK_POOL_CREATE(TASK_W25Q_Init);
-	// TASK_POOL_CREATE(TASK_W25Q_WriteData);
-	// TASK_POOL_CREATE(TASK_W25Q_ReadData);
-	// TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
-
-	// TASK_POOL_CREATE(TASK_USB_Transmit);
-	// TASK_POOL_CREATE(TASK_Data_USB_Transmit);
-
-	// Init_cleanup();
-	// Init_spi_semaphores();
-	// USB_Init();
-
-	// osThreadAttr_t attr = {
-	// 	.name = TASK_Program_start_name,
-	// };
-	// OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
 
 	// osThreadAttr_t attr = {
 	// 	.name = "TASK_W25Q_ReadWriteTest",
@@ -285,12 +182,12 @@ int main(void)
 
 	/* USER CODE END 2 */
 
-	// /* Init scheduler */
-	// osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-	// MX_FREERTOS_Init();
+	/* Init scheduler */
+	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+	MX_FREERTOS_Init();
 
-	// /* Start scheduler */
-	// osKernelStart();
+	/* Start scheduler */
+	osKernelStart();
 
 	/* We should never get here as control is now taken by the scheduler */
 
@@ -357,48 +254,93 @@ TASK_POOL_ALLOCATE(TASK_Program_start);
 
 void TASK_Program_start(void *argument) {
 
-  	// osThreadAttr_t attr0 = {
-	// 	.name = "TASK_BMI088_ReadAcc",
-	// 	.priority = (osPriority_t)osPriorityNormal,
-	// };
+	const bmi_config_t bmi_cfg = {
+		.acc_range  = BMI_ACC_RANGE_24G,
+		.acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
+		.acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
+		.acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
+		.acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
 
-	// data_topic_acc_ptr = NULL;
+		.gyr_range  = BMI_GYR_RANGE_2000,
+		.gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
+		.gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+	};
+	BMI_STATE st;
+	StaticEventGroup_t bmi_done_event_cb;
+	osEventFlagsId_t bmi_done_event_id = osEventFlagsNew(&(osEventFlagsAttr_t){
+		.name = "bmi_done_event",
+		.cb_mem = &bmi_done_event_cb,
+		.cb_size = sizeof(bmi_done_event_cb)
+	});
+	osEventFlagsClear(bmi_done_event_id, 0xFFFFFFFF);
 
-  	// TASK_BMI088_ReadAcc_ARGS args0 = {
-	// 	.imu = &BMI088_imu,
-	// 	.delay = 100,        // 100 ms delay
-	// 	.dt = &data_topic_acc_ptr,
-	// 	.timer_start = 0,
-	// 	.timer_delay = 0,
-  	// };
-	// OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, args0, attr0, osWaitForever);
+	osThreadAttr_t attr_init = {
+		.name = "TASK_BMI088_Init",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
 
-	// osThreadAttr_t attr1 = {
-  	// 	.name = "TASK_BMI088_ReadGyr",
-	// 	.priority = (osPriority_t)osPriorityNormal,
-	// };
+	TASK_BMI088_Init_ARGS args_init = {
+		.imu			= &BMI088_imu,
+		.hspi			= &hspi1,
+		.cs_acc_bank	= CS_ACC0_GPIO_Port,
+		.cs_acc_pin		= CS_ACC0_Pin,
+		.cs_gyr_bank	= CS_GYRO_GPIO_Port,
+		.cs_gyr_pin		= CS_GYRO_Pin,
+		.cfg			= &bmi_cfg,
+		.return_state	= &st,
+		.done_flags		= bmi_done_event_id,
+	};
+	OS_THREAD_NEW_CSTM(TASK_BMI088_Init, args_init,  attr_init, osWaitForever);
 
-	// data_topic_gyr_ptr = NULL;
+	osEventFlagsWait(bmi_done_event_id, 1, osFlagsWaitAll, osWaitForever);
 
-  	// TASK_BMI088_ReadGyr_ARGS args1 = {
-	// 	.imu = &BMI088_imu,
-	// 	.delay = 1000,        // 100 ms delay
-	// 	.dt = &data_topic_gyr_ptr,
-	// 	.timer_start = 0,
-	// 	.timer_delay = 0,
-  	// };
-  	// OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, args1, attr1, osWaitForever);
+	
 
 
-	// TASK_Data_USB_Transmit_ARGS usb_args = {
-	// 	.dt = &data_topic_acc_ptr,
-	// 	.delay = 200,
-	// };
-	// osThreadAttr_t usb_attr = {
-	// 	.name = "TASK_Data_USB_Transmit",
-	// 	.priority = (osPriority_t)osPriorityNormal,
-	// };
-	// OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
+
+  	osThreadAttr_t bmi_acc_attr = {
+		.name = "TASK_BMI_ACC",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+
+	TASK_BMI088_ReadAcc_ARGS bmi_acc_args = {
+		.imu			= &BMI088_imu,
+		.dt				= &data_topic_acc_ptr,
+		.return_state	= &st,
+	};
+
+	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, bmi_acc_args, bmi_acc_attr, osWaitForever);
+
+	
+
+
+	
+	osThreadAttr_t bmi_gyr_attr = {
+		.name = "TASK_BMI_GYR",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+
+	TASK_BMI088_ReadGyr_ARGS bmi_gyr_args = {
+		.imu			= &BMI088_imu,
+		.dt				= &data_topic_gyr_ptr,
+		.return_state	= &st,
+	};
+
+	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, bmi_gyr_args, bmi_gyr_attr, osWaitForever);
+
+	
+
+
+	
+	TASK_Data_USB_Transmit_ARGS usb_args = {
+		.dt = &data_topic_acc_ptr,
+		.delay = 10,
+	};
+	osThreadAttr_t usb_attr = {
+		.name = "TASK_Data_USB_Transmit",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
 
 
   	osThreadExit_Cstm();
@@ -540,6 +482,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* User can add his own implementation to report the file name and line
      number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
      line) */
+	while (1);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

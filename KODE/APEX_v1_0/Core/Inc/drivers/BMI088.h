@@ -842,29 +842,26 @@ BMI_STATE BMI088_ApplyConfig_RTOS(bmi088_t *imu, const bmi_config_t *cfg);
 
 typedef struct TASK_BMI088_ReadAcc_ARGS {
     bmi088_t        *imu;
-    float3_t      	*accel;
+    data_topic_t   **dt;
     BMI_STATE       *return_state;
-    osEventFlagsId_t done_flags;
 } TASK_BMI088_ReadAcc_ARGS;
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 10, 256);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 1, 1024);
 void TASK_BMI088_ReadAcc(void *arguments);
 
 typedef struct TASK_BMI088_ReadGyr_ARGS {
     bmi088_t        *imu;
-    float3_t      	*gyr;
+    data_topic_t   **dt;
     BMI_STATE       *return_state;
-    osEventFlagsId_t done_flags;
 } TASK_BMI088_ReadGyr_ARGS;
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 10, 256);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 1, 1024);
 void TASK_BMI088_ReadGyr(void *arguments);
 
 typedef struct TASK_BMI088_ReadTemp_ARGS {
     bmi088_t        *imu;
-    float         	*temp_c;
+    data_topic_t   **dt;
     BMI_STATE       *return_state;
-    osEventFlagsId_t done_flags;
 } TASK_BMI088_ReadTemp_ARGS;
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadTemp, 10, 256);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadTemp, 1, 1024);
 void TASK_BMI088_ReadTemp(void *arguments);
 
 

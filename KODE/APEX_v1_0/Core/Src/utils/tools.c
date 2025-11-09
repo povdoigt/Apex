@@ -16,9 +16,9 @@ void float_format(char *buff, float num, int precision, int width) {
     num_up = num_up > max_up ? max_up : num_up;
 
     if (num < 0) {
-        sprintf(buff, "-%u.%u", num_up, num_dw);
+        sprintf(buff, "-%lu.%lu", num_up, num_dw);
     } else {
-        sprintf(buff, "+%u.%u", num_up, num_dw);
+        sprintf(buff, "+%lu.%lu", num_up, num_dw);
     }
 }
 

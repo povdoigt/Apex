@@ -82,8 +82,8 @@ void Error_Handler(void);
 #define SENCE_BAT_GPIO_Port		GPIOB
 #define BUZZER_Pin				GPIO_PIN_1
 #define BUZZER_GPIO_Port		GPIOB
-#define CS_GRYO_Pin				GPIO_PIN_2
-#define CS_GRYO_GPIO_Port		GPIOB
+#define CS_GYRO_Pin				GPIO_PIN_2
+#define CS_GYRO_GPIO_Port		GPIOB
 #define LORA_DIO0_Pin			GPIO_PIN_15
 #define LORA_DIO0_GPIO_Port		GPIOA
 #define LED1G_Pin				GPIO_PIN_6
