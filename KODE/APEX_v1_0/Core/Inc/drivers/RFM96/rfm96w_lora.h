@@ -9,8 +9,8 @@
 // 
 
 
-#ifndef RFM96_LORA_h
-#define RFM96_LORA_h
+#ifndef RFM96W_LORA_h
+#define RFM96W_LORA_h
 
 #include "stm32f4xx_hal.h"
 #include "peripherals/spi.h"
@@ -503,4 +503,4 @@ void	RFM96_LORA_TransmitReceive(RFM96_LORA_Chip *RFM96_LORA_chip, uint8_t *tx_bu
 
 // TASK_RETURN ASYNC_RFM96_LORA_ParsePacket(SCHEDULER *scheduler, TASK *self);
 
-#endif
+#endif // RFM96W_LORA_h

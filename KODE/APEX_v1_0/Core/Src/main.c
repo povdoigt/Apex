@@ -33,7 +33,7 @@
 #include "drivers/led.h"
 #include "drivers/w25q_mem.h"
 // header rfm96
-#include "drivers/RFM96/rfm96w_lora.h"
+#include "drivers/rfm96w.h"
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
 #include "peripherals/gpio.h"
@@ -137,7 +137,7 @@ int main(void)
 	// Init rfm96 - Fréquence
 	RFM96_LORA_Chip RFM96_LORA_chip;
 	RFM96_LORA_Init(&RFM96_LORA_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
-				RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
+				RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3); // fréquence en Hz à modifier -> 869.5 MHz
 
   // Initialize LED for tests GPIO
 
