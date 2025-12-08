@@ -26,10 +26,12 @@
 #include "cmsis_os2.h"
 #include "crc.h"
 
+#include <math.h>
 #include <stdint.h>
 
 #include "drivers/ADXL375.h"
 #include "drivers/BMI088.h"
+#include "drivers/RFM96/rfm96w_lora.h"
 #include "drivers/led.h"
 #include "drivers/w25q_mem.h"
 // header rfm96
@@ -44,7 +46,7 @@
 
 
 #include "stm32f4xx_hal_gpio.h"
-// #include "usbd_cdc_if.h"
+#include "usbd_cdc_if.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
@@ -86,7 +88,6 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-BMI088 BMI088_imu;
 W25Q_Chip w25q_chip;
 
 data_topic_t *data_topic_acc_ptr;
@@ -136,8 +137,11 @@ int main(void)
 	MX_TIM11_Init();
 	// Init rfm96 - Fréquence
 	RFM96_LORA_Chip RFM96_LORA_chip;
+	BMI088 BMI088_imu;
 	RFM96_LORA_Init(&RFM96_LORA_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
-				RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3); // fréquence en Hz à modifier -> 869.5 MHz
+				RESET_LORA_GPIO_Port, RESET_LORA_Pin, 869500e3); // fréquence en Hz à modifier -> 869.5 MHz
+	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
+				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
   // Initialize LED for tests GPIO
 
@@ -147,7 +151,7 @@ int main(void)
 
 
 	// TEST TELEM ENVOI RFM96 INIT data to send
-	char data[6] = "Hello\0";
+	// char data[256] = "Hello\0";
 
 	// TEST TELEM RECEIVE RFM96 INIT
 	// char rx_buffer[256];
@@ -261,8 +265,48 @@ int main(void)
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
+	uint32_t t0 = HAL_GetTick();
+	uint8_t accx[10], accy[10], accz[10];
 	while (1) {
+
+		// test accelerometre
+		// BMI088_ReadAccelerometer(&BMI088_imu);
+		// float_format(accx, BMI088_imu.acc_mps2.x, 5, 10);
+		// float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
+		// float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
+		char buff[256];
+		// sprintf(buff, "ACC: %s, %s, %s\n", accx, accy, accz);
+		// CDC_Transmit_FS((uint8_t*)buff, strlen(buff));
+		// HAL_Delay(10);
+
+
+
+		// // code émetteur
+		// if (HAL_GetTick() - t0 >= 1000) {
+		// 	t0 = HAL_GetTick();
+		// 	RFM96_LORA_Print(&RFM96_LORA_chip, buff);
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	HAL_Delay(100);
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// }
+
+		// code récepteur
+		int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
+		if (rcv_len > 0) {
+			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			HAL_Delay(100);
+			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff, rcv_len);
+			buff[rcv_len] = '\0';
+			CDC_Transmit_FS((uint8_t *)buff, rcv_len + 1);
+		}
+
+
+
+
 		/* USER CODE END WHILE */
+
+		//code récepteur
 
 		/* USER CODE BEGIN 3 */
 	}
@@ -320,137 +364,137 @@ void SystemClock_Config(void)
 
 TASK_POOL_ALLOCATE(TASK_Program_start);
 
-void TASK_Program_start(void *argument) {
+// void TASK_Program_start(void *argument) {
 
-  	osThreadAttr_t attr0 = {
-		.name = "TASK_BMI088_ReadAcc",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
+//   	osThreadAttr_t attr0 = {
+// 		.name = "TASK_BMI088_ReadAcc",
+// 		.priority = (osPriority_t)osPriorityNormal,
+// 	};
 
-	data_topic_acc_ptr = NULL;
+// 	data_topic_acc_ptr = NULL;
 
-  	TASK_BMI088_ReadAcc_ARGS args0 = {
-		.imu = &BMI088_imu,
-		.delay = 100,        // 100 ms delay
-		.dt = &data_topic_acc_ptr,
-		.timer_start = 0,
-		.timer_delay = 0,
-  	};
-	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, args0, attr0, osWaitForever);
+//   	TASK_BMI088_ReadAcc_ARGS args0 = {
+// 		.imu = &BMI088_imu,
+// 		.delay = 100,        // 100 ms delay
+// 		.dt = &data_topic_acc_ptr,
+// 		.timer_start = 0,
+// 		.timer_delay = 0,
+//   	};
+// 	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, args0, attr0, osWaitForever);
 
-	osThreadAttr_t attr1 = {
-  		.name = "TASK_BMI088_ReadGyr",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
+// 	osThreadAttr_t attr1 = {
+//   		.name = "TASK_BMI088_ReadGyr",
+// 		.priority = (osPriority_t)osPriorityNormal,
+// 	};
 
-	data_topic_gyr_ptr = NULL;
+// 	data_topic_gyr_ptr = NULL;
 
-  	TASK_BMI088_ReadGyr_ARGS args1 = {
-		.imu = &BMI088_imu,
-		.delay = 1000,        // 100 ms delay
-		.dt = &data_topic_gyr_ptr,
-		.timer_start = 0,
-		.timer_delay = 0,
-  	};
-  	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, args1, attr1, osWaitForever);
-
-
-	TASK_Data_USB_Transmit_ARGS usb_args = {
-		.dt = &data_topic_acc_ptr,
-		.delay = 200,
-	};
-	osThreadAttr_t usb_attr = {
-		.name = "TASK_Data_USB_Transmit",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
-	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
+//   	TASK_BMI088_ReadGyr_ARGS args1 = {
+// 		.imu = &BMI088_imu,
+// 		.delay = 1000,        // 100 ms delay
+// 		.dt = &data_topic_gyr_ptr,
+// 		.timer_start = 0,
+// 		.timer_delay = 0,
+//   	};
+//   	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, args1, attr1, osWaitForever);
 
 
-  	osThreadExit_Cstm();
-	// for (;;) {
-	// 	osDelay(osWaitForever);
-	// }
-}
-
-TASK_POOL_ALLOCATE(TASK_Data_USB_Transmit);
-
-void TASK_Data_USB_Transmit(void *argument) {
-	TASK_Data_USB_Transmit_ARGS *args = (TASK_Data_USB_Transmit_ARGS *)argument;
-
-	data_topic_t **dt = args->dt;
-	uint32_t delay = args->delay;
-
-	char buffer[64];
-	char buffer_status[9];
-	char buffer_x[10];
-	char buffer_y[10];
-	char buffer_z[10];
-	FLOAT3 data;
-
-	while (*dt == NULL) {
-		osDelay(10);
-	}
-	data_sub_t sub = { 0 };
-	data_sub_attach(&sub, *dt, DATA_ATTACH_FROM_NOW);
-
-	osThreadAttr_t usb_attr = {
-		.name = "TASK_USB_Transmit",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
-	TASK_USB_Transmit_ARGS usb_args = {
-		.buff = (uint8_t*)buffer,
-		.len = 0,
-	};
-
-	for (;;) {
-		data_sub_wait_for_data(&sub, osWaitForever);
-		data_status_t status = data_sub_read(&sub, &data);
-		switch (status) {
-		case DT_OK:
-			strcpy(buffer_status, "OK");
-			break;
-		case DT_EMPTY:
-			strcpy(buffer_status, "EMPTY");
-			break;
-		case DT_DATA_LOSS:
-			strcpy(buffer_status, "LOSS");
-			break;
-		case DT_FULL:
-			strcpy(buffer_status, "FULL");
-			break;
-		case DT_BAD_ARG:
-			strcpy(buffer_status, "BAD_ARG");
-			break;
-		}
-		if (status == DT_OK || status == DT_DATA_LOSS) {
-			float_format(buffer_x, data.x, 4, 10);
-			float_format(buffer_y, data.y, 4, 10);
-			float_format(buffer_z, data.z, 4, 10);
-		} else {
-			float_format(buffer_x, +9999.9999, 4, 10);
-			float_format(buffer_y, +9999.9999, 4, 10);
-			float_format(buffer_z, +9999.9999, 4, 10);
-		}
+// 	TASK_Data_USB_Transmit_ARGS usb_args = {
+// 		.dt = &data_topic_acc_ptr,
+// 		.delay = 200,
+// 	};
+// 	osThreadAttr_t usb_attr = {
+// 		.name = "TASK_Data_USB_Transmit",
+// 		.priority = (osPriority_t)osPriorityNormal,
+// 	};
+// 	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
 
 
-		// Format data into CSV string
-		strcpy(buffer, "Status: ");
-		strcat(buffer, buffer_status);
-		strcat(buffer, ", Acc : ");
-		strcat(buffer, buffer_x);
-		strcat(buffer, ", ");
-		strcat(buffer, buffer_y);
-		strcat(buffer, ", ");
-		strcat(buffer, buffer_z);
-		strcat(buffer, "\n");
+//   	osThreadExit_Cstm();
+// 	// for (;;) {
+// 	// 	osDelay(osWaitForever);
+// 	// }
+// }
 
-		// // Transmit data over USB
-		usb_args.len = strlen(buffer);
-		OS_THREAD_NEW_CSTM(TASK_USB_Transmit, usb_args, usb_attr, osWaitForever);
+// TASK_POOL_ALLOCATE(TASK_Data_USB_Transmit);
 
-		osDelay(delay); // Adjust delay as needed
-	}
-}
+// void TASK_Data_USB_Transmit(void *argument) {
+// 	TASK_Data_USB_Transmit_ARGS *args = (TASK_Data_USB_Transmit_ARGS *)argument;
+
+// 	data_topic_t **dt = args->dt;
+// 	uint32_t delay = args->delay;
+
+// 	char buffer[64];
+// 	char buffer_status[9];
+// 	char buffer_x[10];
+// 	char buffer_y[10];
+// 	char buffer_z[10];
+// 	FLOAT3 data;
+
+// 	while (*dt == NULL) {
+// 		osDelay(10);
+// 	}
+// 	data_sub_t sub = { 0 };
+// 	data_sub_attach(&sub, *dt, DATA_ATTACH_FROM_NOW);
+
+// 	osThreadAttr_t usb_attr = {
+// 		.name = "TASK_USB_Transmit",
+// 		.priority = (osPriority_t)osPriorityNormal,
+// 	};
+// 	TASK_USB_Transmit_ARGS usb_args = {
+// 		.buff = (uint8_t*)buffer,
+// 		.len = 0,
+// 	};
+
+// 	for (;;) {
+// 		data_sub_wait_for_data(&sub, osWaitForever);
+// 		data_status_t status = data_sub_read(&sub, &data);
+// 		switch (status) {
+// 		case DT_OK:
+// 			strcpy(buffer_status, "OK");
+// 			break;
+// 		case DT_EMPTY:
+// 			strcpy(buffer_status, "EMPTY");
+// 			break;
+// 		case DT_DATA_LOSS:
+// 			strcpy(buffer_status, "LOSS");
+// 			break;
+// 		case DT_FULL:
+// 			strcpy(buffer_status, "FULL");
+// 			break;
+// 		case DT_BAD_ARG:
+// 			strcpy(buffer_status, "BAD_ARG");
+// 			break;
+// 		}
+// 		if (status == DT_OK || status == DT_DATA_LOSS) {
+// 			float_format(buffer_x, data.x, 4, 10);
+// 			float_format(buffer_y, data.y, 4, 10);
+// 			float_format(buffer_z, data.z, 4, 10);
+// 		} else {
+// 			float_format(buffer_x, +9999.9999, 4, 10);
+// 			float_format(buffer_y, +9999.9999, 4, 10);
+// 			float_format(buffer_z, +9999.9999, 4, 10);
+// 		}
+
+
+// 		// Format data into CSV string
+// 		strcpy(buffer, "Status: ");
+// 		strcat(buffer, buffer_status);
+// 		strcat(buffer, ", Acc : ");
+// 		strcat(buffer, buffer_x);
+// 		strcat(buffer, ", ");
+// 		strcat(buffer, buffer_y);
+// 		strcat(buffer, ", ");
+// 		strcat(buffer, buffer_z);
+// 		strcat(buffer, "\n");
+
+// 		// // Transmit data over USB
+// 		usb_args.len = strlen(buffer);
+// 		OS_THREAD_NEW_CSTM(TASK_USB_Transmit, usb_args, usb_attr, osWaitForever);
+
+// 		osDelay(delay); // Adjust delay as needed
+// 	}
+// }
 
 
 
