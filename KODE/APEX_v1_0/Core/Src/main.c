@@ -267,28 +267,30 @@ int main(void)
 	/* USER CODE BEGIN WHILE */
 	uint32_t t0 = HAL_GetTick();
 	uint8_t accx[10], accy[10], accz[10];
+	char buff[256];
+	
+
 	while (1) {
 
 		// test accelerometre
-		// BMI088_ReadAccelerometer(&BMI088_imu);
-		// float_format(accx, BMI088_imu.acc_mps2.x, 5, 10);
-		// float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
-		// float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
-		char buff[256];
-		// sprintf(buff, "ACC: %s, %s, %s\n", accx, accy, accz);
+		BMI088_ReadAccelerometer(&BMI088_imu);
+		float_format(accx, BMI088_imu.acc_mps2.x, 5, 10);
+		float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
+		float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
+		sprintf(buff, "ACC: %s, %s, %s\n", accx, accy, accz);
 		// CDC_Transmit_FS((uint8_t*)buff, strlen(buff));
 		// HAL_Delay(10);
 
 
-
-		// // code émetteur
-		// if (HAL_GetTick() - t0 >= 1000) {
-		// 	t0 = HAL_GetTick();
-		// 	RFM96_LORA_Print(&RFM96_LORA_chip, buff);
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	HAL_Delay(100);
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// }
+		/* APEX 1 */
+		// code émetteur
+		if (HAL_GetTick() - t0 >= 100) {
+			t0 = HAL_GetTick();
+			RFM96_LORA_Print(&RFM96_LORA_chip, buff);
+			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+			HAL_Delay(100);
+			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		}
 
 		// code récepteur
 		int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
@@ -301,12 +303,32 @@ int main(void)
 			CDC_Transmit_FS((uint8_t *)buff, rcv_len + 1);
 		}
 
+		/* APEX 2 */
+
+		// code récepteur
+		// int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
+		// if (rcv_len > 0) {
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	HAL_Delay(100);
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff, rcv_len);
+		// 	buff[rcv_len] = '\0';
+		// 	CDC_Transmit_FS((uint8_t *)buff, rcv_len + 1);
+		// }
+
+		//  code émetteur
+		// if (HAL_GetTick() - t0 >= 100) {
+		// 	t0 = HAL_GetTick();
+		// 	RFM96_LORA_Print(&RFM96_LORA_chip, buff);
+		// 	// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	// HAL_Delay(100);
+		// 	// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// }
 
 
 
 		/* USER CODE END WHILE */
 
-		//code récepteur
 
 		/* USER CODE BEGIN 3 */
 	}
