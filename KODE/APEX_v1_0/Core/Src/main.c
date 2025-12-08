@@ -34,7 +34,7 @@
 #include "drivers/RFM96/rfm96w_lora.h"
 #include "drivers/led.h"
 #include "drivers/w25q_mem.h"
-// header rfm96
+
 #include "drivers/rfm96w.h"
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
@@ -266,9 +266,10 @@ int main(void)
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	uint32_t t0 = HAL_GetTick();
-	uint8_t accx[10], accy[10], accz[10];
+	char accx[10], accy[10], accz[10];
 	char buff[256];
 	
+	bool sync_done = false;
 
 	while (1) {
 
@@ -277,53 +278,55 @@ int main(void)
 		float_format(accx, BMI088_imu.acc_mps2.x, 5, 10);
 		float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
 		float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
-		sprintf(buff, "ACC: %s, %s, %s\n", accx, accy, accz);
+		sprintf(buff, "APEX-2: ACC: %s, %s, %s\n", accx, accy, accz);
 		// CDC_Transmit_FS((uint8_t*)buff, strlen(buff));
 		// HAL_Delay(10);
 
 
-		/* APEX 1 */
-		// code émetteur
-		if (HAL_GetTick() - t0 >= 100) {
-			t0 = HAL_GetTick();
-			RFM96_LORA_Print(&RFM96_LORA_chip, buff);
-			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			HAL_Delay(100);
-			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		}
+		// /* APEX 1 */
+		// // code émetteur
+		// if (HAL_GetTick() - t0 >= 500) {
+		// 	t0 = HAL_GetTick();
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	RFM96_LORA_Print(&RFM96_LORA_chip, buff);
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// }
 
-		// code récepteur
-		int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
-		if (rcv_len > 0) {
-			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			HAL_Delay(100);
-			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff, rcv_len);
-			buff[rcv_len] = '\0';
-			CDC_Transmit_FS((uint8_t *)buff, rcv_len + 1);
-		}
-
-		/* APEX 2 */
-
-		// code récepteur
+		// // code récepteur
 		// int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
 		// if (rcv_len > 0) {
 		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	HAL_Delay(100);
+		// 	HAL_Delay(1);
 		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
 		// 	RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff, rcv_len);
 		// 	buff[rcv_len] = '\0';
 		// 	CDC_Transmit_FS((uint8_t *)buff, rcv_len + 1);
 		// }
 
-		//  code émetteur
-		// if (HAL_GetTick() - t0 >= 100) {
-		// 	t0 = HAL_GetTick();
-		// 	RFM96_LORA_Print(&RFM96_LORA_chip, buff);
-		// 	// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	// HAL_Delay(100);
-		// 	// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// }
+		/* APEX 2 */
+		// code émetteur
+		if (sync_done && HAL_GetTick() - t0 >= 500) {
+			t0 = HAL_GetTick();
+			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+			RFM96_LORA_Print(&RFM96_LORA_chip, buff);
+			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		}
+
+		// code récepteur
+		int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
+		if (rcv_len > 0) {
+			if (!sync_done) {
+				sync_done = true;
+				t0 = HAL_GetTick() + 250; // 50 ms pour un duty cycle de 50%
+			}
+
+			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			HAL_Delay(1);
+			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff, rcv_len);
+			buff[rcv_len] = '\0';
+			CDC_Transmit_FS((uint8_t *)buff, rcv_len + 1);
+		}
 
 
 
