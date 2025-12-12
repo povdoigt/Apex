@@ -296,7 +296,7 @@ int main(void)
 		// int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
 		// if (rcv_len > 0) {
 		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	HAL_Delay(1);
+		// 	HAL_Delay(10);
 		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
 		// 	RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff, rcv_len);
 		// 	buff[rcv_len] = '\0';
@@ -320,8 +320,9 @@ int main(void)
 				t0 = HAL_GetTick() + 250; // 50 ms pour un duty cycle de 50%
 			}
 
+			HAL_Delay(10);
 			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			HAL_Delay(1);
+			HAL_Delay(10);
 			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
 			RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff, rcv_len);
 			buff[rcv_len] = '\0';
