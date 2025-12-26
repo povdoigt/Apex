@@ -46,14 +46,14 @@ void RFM96_LORA_Init(RFM96_LORA_Chip        *RFM96_LORA_chip,
 
 	// Set the spreading factor to 6
 	// RFM96_LORA_WriteRegister(RFM96_LORA_chip, RFM96_LORA_LORA_REG_1E_MODEM_CONFIG2, RFM96_LORA_SPREADING_FACTOR_64CPS | RFM96_LORA_PAYLOAD_CRC_ON);
-	RFM96_LORA_WriteRegister(RFM96_LORA_chip, RFM96_LORA_LORA_REG_1E_MODEM_CONFIG2,0x74);
+	RFM96_LORA_WriteRegister(RFM96_LORA_chip, RFM96_LORA_LORA_REG_1E_MODEM_CONFIG2, 0x74);
 
 	// Set modem config 3 to auto AGC
 	RFM96_LORA_WriteRegister(RFM96_LORA_chip, RFM96_LORA_LORA_REG_26_MODEM_CONFIG3, RFM96_LORA_AGC_AUTO_ON);
 
 	// Set the output power to 10 dBm
 	// ON PEUT MONTER A 13 VOIRE 25
-	RFM96_LORA_SetTxPower(RFM96_LORA_chip, 13);
+	RFM96_LORA_SetTxPower(RFM96_LORA_chip, 20);
 
 
 	// Set the mode to5 standby
