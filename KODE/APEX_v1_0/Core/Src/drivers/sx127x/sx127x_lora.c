@@ -1,5 +1,6 @@
 #include "drivers/sx127x/sx127x_lora.h"
 #include "drivers/sx127x/sx127x_common.h"
+#include "stm32f4xx_hal.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -17,21 +18,11 @@ sx127x_status_t sx127x_LORA_Init(sx127x_chip_t *chip, sx127x_lora_config_t confi
 	// Set the RegOpMode
 	value = 0x00;
 	value |= sx127x_LORA_REG_01_OP_MODE_LRM_LoRa;	// LoRa mode
+	value |= sx127x_LORA_REG_01_OP_MODE_ASR_LoRa;	// LoRa access mode
+	value |= chip->band == sx127x_BAND_1 ? sx127x_LORA_REG_01_OP_MODE_LFMO_OFF : sx127x_LORA_REG_01_OP_MODE_LFMO_ON; // Set LF/HF mode based on frequency band
 	value |= sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP; // Sleep mode (normaly already set)
 	status = sx127x_RegWrite(chip, sx127x_REG_01_OP_MODE, value);
 	if (status != sx127x_STATUS_OK) { return status; }
-
-	// Set the mode to standby
-	status = sx127x_LORA_ChangeMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_STDBY);
-	if (status != sx127x_STATUS_OK) { return status; }
-
-	// Clear all IRQ flags
-	status = sx127x_RegWrite(chip, sx127x_LORA_REG_12_IRQ_FLAGS, 0xFF);
-	if (status != sx127x_STATUS_OK) { return status; }
-	// DEBUG: Verify IRQ flags are cleared
-	status = sx127x_RegRead(chip, sx127x_LORA_REG_12_IRQ_FLAGS, &value);
-	if (status != sx127x_STATUS_OK) { return status; }
-	if (value != 0x00) { return sx127x_STATUS_ERROR; }
 
 	// Set the fifo rx and tx base address to 0x00
 	status = sx127x_RegWrite(chip, sx127x_LORA_REG_0F_FIFO_RX_BASE_ADDR, 0x00);

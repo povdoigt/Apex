@@ -9,7 +9,7 @@
 // Max number of octets the LORA Rx/Tx FIFO can hold
 #define sx127x_FIFO_SIZE 255
 
-// The crystal oscillator frequency of the module
+// The crystal oscillator frequency of the module (32 MHz)
 #define sx127x_FXOSC 32000000.0
 
 // The Frequency Synthesizer step = sx127x_LORA_FXOSC / 2^^19
@@ -38,8 +38,8 @@ typedef enum sx127x_band_t {
 #define sx127x_OUTPUT_POWER_MIN    -4.2f
 #define sx127x_OUTPUT_POWER_MAX    20.0f
 
-// Register Write Not Read mas
-#define sx127x_REG_WRITE_MASK	0x10000000
+// Register Write Not Read mask
+#define sx127x_REG_WRITE_MASK	0b10000000
 
 
 // Common Register names (FSK/OOK and LoRa Mode)  

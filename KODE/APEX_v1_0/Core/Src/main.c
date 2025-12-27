@@ -141,7 +141,7 @@ int main(void)
 	BMI088 BMI088_imu;
 
 	sx127x_Init(&sx127x_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin, (sx127x_config_t) {
-		.frequency = 869250000,
+		.frequency = 869500000,
 		.ocp_current_mA = 240,
 		.power_dBm = 13.0,
 		.isLoRa = true,
@@ -285,6 +285,7 @@ int main(void)
 	uint32_t i = 0;
 	
 	bool sync_done = false;
+	sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
 
 	while (1) {
 
@@ -307,7 +308,7 @@ int main(void)
 			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
 			sx127x_LORA_TxSend(&sx127x_chip, (uint8_t*)buff1, len);
 			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_SINGLE);
+			sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
 		}
 
 		// code récepteur

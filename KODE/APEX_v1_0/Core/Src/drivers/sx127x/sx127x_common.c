@@ -157,6 +157,7 @@ sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency) {
     } else {
         return sx127x_STATUS_ERROR;
     }
+    frequency = frequency / sx127x_FSTEP;
 
     uint8_t freq_bytes[3] = {
         (uint8_t)(frequency >> 16),
@@ -214,6 +215,8 @@ sx127x_status_t sx127x_SetOcp(sx127x_chip_t *chip, float ocp_current_mA) {
     } else {
         ocp_trim = (uint8_t)((ocp_current_mA + 30) / 10);
     }
+    ocp_trim &= sx127x_REG_0B_OCP_OCP_TRIM_MASK; // Set bits [4-0] for OcpTrim value
+    ocp_trim |= sx127x_REG_0B_OCP_OCP_ON_ON;   // Enable OCP
 
     return sx127x_RegWrite(chip, sx127x_REG_0B_OCP, ocp_trim);
 }
