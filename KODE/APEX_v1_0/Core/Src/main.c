@@ -143,7 +143,7 @@ int main(void)
 	sx127x_Init(&sx127x_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin, (sx127x_config_t) {
 		.frequency = 869500000,
 		.ocp_current_mA = 240,
-		.power_dBm = 13.0,
+		.power_dBm = 20.0,
 		.isLoRa = true,
 		.modeConfig.lora = (sx127x_lora_config_t){
 			.implicitHeader = false,
@@ -294,63 +294,54 @@ int main(void)
 		float_format(accx, BMI088_imu.acc_mps2.x, 5, 10);
 		float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
 		float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
-		// CDC_Transmit_FS((uint8_t*)buff, strlen(buff));
-		// HAL_Delay(10);
 
+		// /* APEX 1 */
+		// sprintf(buff1, "APEX-1: ACC: %s, %s, %s", accx, accy, accz);
+		// // code émetteur
+		// if (HAL_GetTick() - t0 >= 500) {
+		// 	t0 = HAL_GetTick();
+		// 	sprintf(buff2, "%2u: %s\n", i++, buff1);
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	sx127x_LORA_TxSend(&sx127x_chip, (uint8_t*)buff2, strlen(buff2));
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
+		// }
+		// // code récepteur
+		// uint8_t len;
+		// sx127x_LORA_RxReceive(&sx127x_chip, (uint8_t*)buff2, &len);
+		// if (len > 0) {
+		// 	HAL_Delay(10);
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	HAL_Delay(10);
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	CDC_Transmit_FS((uint8_t*)buff2, len);
+		// }
 
-		/* APEX 1 */
-		sprintf(buff1, "APEX-1: ACC: %s, %s, %s\n", accx, accy, accz);
-		uint8_t len = strlen(buff1);
+		/* APEX 2 */
+		sprintf(buff1, "APEX-2: ACC: %s, %s, %s", accx, accy, accz);
 		// code émetteur
-		if (HAL_GetTick() - t0 >= 500) {
+		if (sync_done && HAL_GetTick() - t0 >= 500) {
 			t0 = HAL_GetTick();
-			sprintf(buff2, "%2u: %s", i++, buff1);
+			sprintf(buff2, "%2u: %s\n", i++, buff1);
 			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			sx127x_LORA_TxSend(&sx127x_chip, (uint8_t*)buff1, len);
+			sx127x_LORA_TxSend(&sx127x_chip, (uint8_t*)buff2, strlen(buff2));
 			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
 			sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
 		}
-
 		// code récepteur
-		uint8_t rcv_len;
-		sx127x_LORA_RxReceive(&sx127x_chip, (uint8_t*)buff2, &rcv_len);
-		if (rcv_len > 0) {
+		uint8_t len;
+		sx127x_LORA_RxReceive(&sx127x_chip, (uint8_t*)buff2, &len);
+		if (len > 0) {
+			if (!sync_done) {
+				sync_done = true;
+				t0 = HAL_GetTick() + 250; // 50 ms pour un duty cycle de 50%
+			}
 			HAL_Delay(10);
 			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
 			HAL_Delay(10);
 			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			buff2[rcv_len] = '\0';
-			CDC_Transmit_FS((uint8_t *)buff2, rcv_len + 1);
+			CDC_Transmit_FS((uint8_t*)buff2, len);
 		}
-
-		// /* APEX 2 */
-		// sprintf(buff1, "APEX-2: ACC: %s, %s, %s\n", accx, accy, accz);
-		// // code émetteur
-		// if (sync_done && HAL_GetTick() - t0 >= 500) {
-		// 	t0 = HAL_GetTick();
-		// 	sprintf(buff2, "%2u: %s", i++, buff1);
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	sx127x_LORA_TxSend(&sx127x_chip, (uint8_t*)buff1, strlen(buff1));
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_SINGLE);
-		// }
-
-		// // code récepteur
-		// uint8_t rcv_len;
-		// sx127x_LORA_RxReceive(&sx127x_chip, (uint8_t*)buff2, &rcv_len);
-		// if (rcv_len > 0) {
-		// 	if (!sync_done) {
-		// 		sync_done = true;
-		// 		t0 = HAL_GetTick() + 250; // 50 ms pour un duty cycle de 50%
-		// 	}
-
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	buff2[rcv_len] = '\0';
-		// 	CDC_Transmit_FS((uint8_t *)buff2, rcv_len + 1);
-		// }
 
 
 

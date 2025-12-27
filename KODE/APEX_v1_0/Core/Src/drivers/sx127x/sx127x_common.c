@@ -12,7 +12,7 @@ static inline void sx127x_SPI_Begin(sx127x_chip_t *chip) {
     HAL_GPIO_WritePin(chip->csPinBank, chip->csPin, GPIO_PIN_RESET);
 }
 
-static inline sx127x_status_t sx127x_SPI_Tx(sx127x_chip_t *chip, uint8_t *tx_buf, uint16_t tx_len) {
+static inline sx127x_status_t sx127x_SPI_Tx(sx127x_chip_t *chip, const uint8_t *tx_buf, uint16_t tx_len) {
     if (!chip || (!tx_buf && tx_len)) { return sx127x_STATUS_ERROR; }
     HAL_StatusTypeDef status = HAL_SPI_Transmit(chip->spiHandle, tx_buf, tx_len, HAL_MAX_DELAY);
     return (status == HAL_OK) ? sx127x_STATUS_OK : sx127x_STATUS_ERROR;
@@ -57,7 +57,7 @@ sx127x_status_t sx127x_RegWriteMulti(sx127x_chip_t *chip, uint8_t reg, const uin
         sx127x_SPI_End(chip);
         return status;
     }
-    status = sx127x_SPI_Tx(chip, (uint8_t *)buffer, buf_size);
+    status = sx127x_SPI_Tx(chip, buffer, buf_size);
     sx127x_SPI_End(chip);
     return status;
 }
@@ -157,7 +157,7 @@ sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency) {
     } else {
         return sx127x_STATUS_ERROR;
     }
-    frequency = frequency / sx127x_FSTEP;
+    frequency = (uint32_t)((float)frequency / sx127x_FSTEP);
 
     uint8_t freq_bytes[3] = {
         (uint8_t)(frequency >> 16),
@@ -182,6 +182,9 @@ sx127x_status_t sx127x_SetTxPower(sx127x_chip_t *chip, float power_dBm) {
     value |= power_dBm == 20 ? sx127x_REG_4D_PA_DAC_PA_DAC_HP : sx127x_REG_4D_PA_DAC_PA_DAC_DFT;
     sx127x_RegWrite(chip, sx127x_REG_4D_PA_DAC, value);
 
+    if (power_dBm > 17) {
+        power_dBm = 17; // Limit to 17 dBm max output power
+    }
     if (power_dBm > 15) {
         // Use PA Boost
         value = 0x00;
@@ -190,6 +193,7 @@ sx127x_status_t sx127x_SetTxPower(sx127x_chip_t *chip, float power_dBm) {
         value |= (uint8_t)(power_dBm - 2); // OutputPower
         return sx127x_RegWrite(chip, sx127x_REG_09_PA_CONFIG, value);
     } else {
+        // Use RFO (does not work for any reason... - use PA Boost anyway)
         uint8_t pMaxPower, pOutputPower;
         __sx127x_SetPwrvalue(chip, power_dBm, &pMaxPower, &pOutputPower);
         value = 0x00;

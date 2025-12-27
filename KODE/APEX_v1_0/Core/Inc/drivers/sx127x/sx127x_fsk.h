@@ -1,6 +1,6 @@
 
-# ifndef RFM96W_FSK_h
-# define RFM96W_FSK_h
+# ifndef sx127X_FSK_h
+# define sx127X_FSK_h
 // include
 #include "stm32f4xx_hal.h"
 #include "peripherals/spi.h"
@@ -115,4 +115,4 @@ typedef struct sx127x_fsk_config_t {
 sx127x_status_t sx127x_FSK_Init(sx127x_chip_t *sx127x_chip, sx127x_fsk_config_t config);
 
 
-# endif // RFM96W_FSK_h
+# endif // sx127X_FSK_h

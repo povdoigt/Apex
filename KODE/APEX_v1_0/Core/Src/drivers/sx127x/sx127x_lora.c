@@ -50,7 +50,7 @@ sx127x_status_t sx127x_LORA_Init(sx127x_chip_t *chip, sx127x_lora_config_t confi
 	value = 0x00;
 	value |= config.spreadingFactor;	// Spreading Factor
 	value |= sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM_OFF; // Normal Tx mode
-	value |= config.crcEnabled; // CRC enabled
+	value |= config.crcEnabled ? sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_ON : sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_OFF; // CRC
 	status = sx127x_RegWrite(chip, sx127x_LORA_REG_1E_MODEM_CONFIG2, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
@@ -157,7 +157,7 @@ sx127x_status_t sx127x_LORA_RxReceive(sx127x_chip_t *chip, uint8_t *buff, uint8_
 	if (status != sx127x_STATUS_OK) { return status; }
 	
 	// Check if it's a valid packet with a valid CRC
-	if (!(value & sx127x_LORA_IRQ_FLAG_VALID_HEADER_MSK) && (value & sx127x_LORA_IRQ_FLAG_PAYLOAD_CRC_ERROR_MSK)) {
+	if (!(value & sx127x_LORA_IRQ_FLAG_VALID_HEADER_MSK) || (value & sx127x_LORA_IRQ_FLAG_PAYLOAD_CRC_ERROR_MSK)) {
 		// Invalid packet
 		*len = 0;
 		return sx127x_STATUS_OK;
@@ -175,10 +175,12 @@ sx127x_status_t sx127x_LORA_RxReceive(sx127x_chip_t *chip, uint8_t *buff, uint8_
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// read the data from the fifo
-	for (uint8_t i = 0; i < packetLength; i++) {
-		status = sx127x_RegRead(chip, sx127x_REG_00_FIFO, &buff[i]);
-		if (status != sx127x_STATUS_OK) { return status; }
-	}
+	// for (uint8_t i = 0; i < packetLength; i++) {
+	// 	status = sx127x_RegRead(chip, sx127x_REG_00_FIFO, &buff[i]);
+	// 	if (status != sx127x_STATUS_OK) { return status; }
+	// }
+	status = sx127x_RegReadMulti(chip, sx127x_REG_00_FIFO, buff, packetLength);
+	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Reset the RxBaseAddr to 0x00
 	status = sx127x_RegWrite(chip, sx127x_LORA_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
