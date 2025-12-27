@@ -9,30 +9,12 @@
 #include <stdbool.h>
 
 
-// Register Write Not Read mas
-#define sx127x_LORA_REG_WRITE_MASK                        0x80
-#define sx127x_LORA_REG_READ_MASK                         0x00
-
-
-// Register names (LoRa Mode, from table 85)
-#define sx127x_LORA_REG_00_FIFO						0x00
-#define sx127x_LORA_REG_01_OP_MODE                 	0x01
-#define sx127x_LORA_REG_02_RESERVED                	0x02
-#define sx127x_LORA_REG_03_RESERVED                	0x03
-#define sx127x_LORA_REG_04_RESERVED                	0x04
-#define sx127x_LORA_REG_05_RESERVED                	0x05
-#define sx127x_LORA_REG_06_FRF_MSB                 	0x06
-#define sx127x_LORA_REG_07_FRF_MID                 	0x07
-#define sx127x_LORA_REG_08_FRF_LSB                 	0x08
-#define sx127x_LORA_REG_09_PA_CONFIG               	0x09
-#define sx127x_LORA_REG_0A_PA_RAMP                 	0x0a
-#define sx127x_LORA_REG_0B_OCP                     	0x0b
-#define sx127x_LORA_REG_0C_LNA                     	0x0c
+// Register names (LoRa Mode)
 #define sx127x_LORA_REG_0D_FIFO_ADDR_PTR           	0x0d
 #define sx127x_LORA_REG_0E_FIFO_TX_BASE_ADDR       	0x0e
 #define sx127x_LORA_REG_0F_FIFO_RX_BASE_ADDR       	0x0f
 #define sx127x_LORA_REG_10_FIFO_RX_CURRENT_ADDR    	0x10
-#define sx127x_LORA_REG_11_IRQ_FLAGS_MASK          	0x11
+#define sx127x_LORA_REG_11_IRQ_FLAGS_MSK          	0x11
 #define sx127x_LORA_REG_12_IRQ_FLAGS               	0x12
 #define sx127x_LORA_REG_13_RX_NB_BYTES             	0x13
 #define sx127x_LORA_REG_14_RX_HEADER_CNT_VALUE_MSB 	0x14
@@ -65,194 +47,184 @@
 #define sx127x_LORA_REG_37_DETECTION_THRESHOLD      0x37
 #define sx127x_LORA_REG_39_SYNC_WORD                0x39
 
-#define sx127x_LORA_REG_40_DIO_MAPPING1             0x40
-#define sx127x_LORA_REG_41_DIO_MAPPING2             0x41
-#define sx127x_LORA_REG_42_VERSION                  0x42
-
-#define sx127x_LORA_REG_4B_TCXO           			0x4b
-#define sx127x_LORA_REG_4D_PA_DAC         			0x4d
-#define sx127x_LORA_REG_5B_FORMER_TEMP    			0x5b
-#define sx127x_LORA_REG_61_AGC_REF        			0x61
-#define sx127x_LORA_REG_62_AGC_THRESH1    			0x62
-#define sx127x_LORA_REG_63_AGC_THRESH2    			0x63
-#define sx127x_LORA_REG_64_AGC_THRESH3    			0x64
-
-// sx127x_LORA_REG_01_OP_MODE                             0x01
-#define sx127x_LORA_LONG_RANGE_MODE                  0x80
-#define sx127x_LORA_ACCESS_SHARED_REG                0x40
-#define sx127x_LORA_LOW_FREQUENCY_MODE               0x08
-#define sx127x_LORA_MODE                             0x07
-#define sx127x_LORA_MODE_SLEEP                       0x00
-#define sx127x_LORA_MODE_STDBY                       0x01
-#define sx127x_LORA_MODE_FSTX                        0x02
-#define sx127x_LORA_MODE_TX                          0x03
-#define sx127x_LORA_MODE_FSRX                        0x04
-#define sx127x_LORA_MODE_RXCONTINUOUS                0x05
-#define sx127x_LORA_MODE_RXSINGLE                    0x06
-#define sx127x_LORA_MODE_CAD                         0x07
-
-// sx127x_LORA_REG_09_PA_CONFIG                           0x09
-#define sx127x_LORA_PA_SELECT                        0x80
-#define sx127x_LORA_MAX_POWER                        0x70
-#define sx127x_LORA_OUTPUT_POWER                     0x0f
-
-// sx127x_LORA_REG_0A_PA_RAMP                             0x0a
-#define sx127x_LORA_LOW_PN_TX_PLL_OFF                0x10
-#define sx127x_LORA_PA_RAMP                          0x0f
-#define sx127x_LORA_PA_RAMP_3_4MS                    0x00
-#define sx127x_LORA_PA_RAMP_2MS                      0x01
-#define sx127x_LORA_PA_RAMP_1MS                      0x02
-#define sx127x_LORA_PA_RAMP_500US                    0x03
-#define sx127x_LORA_PA_RAMP_250US                    0x04
-#define sx127x_LORA_PA_RAMP_125US                    0x05
-#define sx127x_LORA_PA_RAMP_100US                    0x06
-#define sx127x_LORA_PA_RAMP_62US                     0x07
-#define sx127x_LORA_PA_RAMP_50US                     0x08
-#define sx127x_LORA_PA_RAMP_40US                     0x09
-#define sx127x_LORA_PA_RAMP_31US                     0x0a
-#define sx127x_LORA_PA_RAMP_25US                     0x0b
-#define sx127x_LORA_PA_RAMP_20US                     0x0c
-#define sx127x_LORA_PA_RAMP_15US                     0x0d
-#define sx127x_LORA_PA_RAMP_12US                     0x0e
-#define sx127x_LORA_PA_RAMP_10US                     0x0f
-
-// sx127x_LORA_REG_0B_OCP                                 0x0b
-#define sx127x_LORA_OCP_ON                           0x20
-#define sx127x_LORA_OCP_TRIM                         0x1f
-
-// sx127x_LORA_REG_0C_LNA                                 0x0c
-#define sx127x_LORA_LNA_GAIN                         0xe0
-#define sx127x_LORA_LNA_GAIN_G1                      0x20
-#define sx127x_LORA_LNA_GAIN_G2                      0x40
-#define sx127x_LORA_LNA_GAIN_G3                      0x60
-#define sx127x_LORA_LNA_GAIN_G4                      0x80
-#define sx127x_LORA_LNA_GAIN_G5                      0xa0
-#define sx127x_LORA_LNA_GAIN_G6                      0xc0
-#define sx127x_LORA_LNA_BOOST_LF                     0x18
-#define sx127x_LORA_LNA_BOOST_LF_DEFAULT             0x00
-#define sx127x_LORA_LNA_BOOST_HF                     0x03
-#define sx127x_LORA_LNA_BOOST_HF_DEFAULT             0x00
-#define sx127x_LORA_LNA_BOOST_HF_150PC               0x11
-
-// sx127x_LORA_REG_11_IRQ_FLAGS_MASK                      0x11
-#define sx127x_LORA_RX_TIMEOUT_MASK                  0x80
-#define sx127x_LORA_RX_DONE_MASK                     0x40
-#define sx127x_LORA_PAYLOAD_CRC_ERROR_MASK           0x20
-#define sx127x_LORA_VALID_HEADER_MASK                0x10
-#define sx127x_LORA_TX_DONE_MASK                     0x08
-#define sx127x_LORA_CAD_DONE_MASK                    0x04
-#define sx127x_LORA_FHSS_CHANGE_CHANNEL_MASK         0x02
-#define sx127x_LORA_CAD_DETECTED_MASK                0x01
-
-// sx127x_LORA_REG_12_IRQ_FLAGS                           0x12
-#define sx127x_LORA_RX_TIMEOUT                       0x80
-#define sx127x_LORA_RX_DONE                          0x40
-#define sx127x_LORA_PAYLOAD_CRC_ERROR                0x20
-#define sx127x_LORA_VALID_HEADER                     0x10
-#define sx127x_LORA_TX_DONE                          0x08
-#define sx127x_LORA_CAD_DONE                         0x04
-#define sx127x_LORA_FHSS_CHANGE_CHANNEL              0x02
-#define sx127x_LORA_CAD_DETECTED                     0x01
-
-// sx127x_LORA_REG_18_MODEM_STAT                          0x18
-#define sx127x_LORA_RX_CODING_RATE                   0xe0
-#define sx127x_LORA_MODEM_STATUS_CLEAR               0x10
-#define sx127x_LORA_MODEM_STATUS_HEADER_INFO_VALID   0x08
-#define sx127x_LORA_MODEM_STATUS_RX_ONGOING          0x04
-#define sx127x_LORA_MODEM_STATUS_SIGNAL_SYNCHRONIZED 0x02
-#define sx127x_LORA_MODEM_STATUS_SIGNAL_DETECTED     0x01
-
-// sx127x_LORA_REG_1C_HOP_CHANNEL                         0x1c
-#define sx127x_LORA_PLL_TIMEOUT                      0x80
-#define sx127x_LORA_RX_PAYLOAD_CRC_IS_ON             0x40
-#define sx127x_LORA_FHSS_PRESENT_CHANNEL             0x3f
-
-// sx127x_LORA_REG_1D_MODEM_CONFIG1                       0x1d
-#define sx127x_LORA_BW_7_8KHZ                             0x00
-#define sx127x_LORA_BW_10_4KHZ                            0x01
-#define sx127x_LORA_BW_15_6KHZ                            0x02
-#define sx127x_LORA_BW_20_8KHZ                            0x03
-#define sx127x_LORA_BW_31_25KHZ                           0x04
-#define sx127x_LORA_BW_41_7KHZ                            0x05
-#define sx127x_LORA_BW_62_5KHZ                            0x06
-#define sx127x_LORA_BW_125KHZ                             0x07
-#define sx127x_LORA_BW_250KHZ                             0x08
-#define sx127x_LORA_BW_500KHZ                             0x09
-// #define sx127x_LORA_CODING_RATE                           0x0e
-// #define sx127x_LORA_CODING_RATE_4_5                       0x02
-// #define sx127x_LORA_CODING_RATE_4_6                       0x04
-// #define sx127x_LORA_CODING_RATE_4_7                       0x06
-// #define sx127x_LORA_CODING_RATE_4_8                       0x08
-#define sx127x_LORA_IMPLICIT_HEADER_MODE_ON               0x01
-#define sx127x_LORA_IMPLICIT_HEADER_MODE_OFF              0x00
-
-// sx127x_LORA_REG_1E_MODEM_CONFIG2                       0x1e
-#define sx127x_LORA_SPREADING_FACTOR_64CPS                0x60	// 255 bytes ->   13 ms
-#define sx127x_LORA_SPREADING_FACTOR_128CPS               0x70	// 255 bytes ->  398 ms
-#define sx127x_LORA_SPREADING_FACTOR_256CPS               0x80	// 255 bytes ->  701 ms
-#define sx127x_LORA_SPREADING_FACTOR_512CPS               0x90	// 255 bytes -> 1256 ms
-#define sx127x_LORA_SPREADING_FACTOR_1024CPS              0xa0	// 255 bytes -> 2264 ms
-#define sx127x_LORA_SPREADING_FACTOR_2048CPS              0xb0	// 255 bytes -> 4115 ms
-#define sx127x_LORA_SPREADING_FACTOR_4096CPS              0xc0	// 255 bytes -> 7735 ms
-#define sx127x_LORA_TX_CONTINUOUS_MODE                    0x08
-
-#define sx127x_LORA_PAYLOAD_CRC_ON                        0x04
-#define sx127x_LORA_PAYLOAD_CRC_OFF                       0x00
-#define sx127x_LORA_SYM_TIMEOUT_MSB                       0x03
-
-// sx127x_LORA_REG_26_MODEM_CONFIG3
-#define sx127x_LORA_MOBILE_NODE                           0x08 // HopeRF term
-#define sx127x_LORA_LOW_DATA_RATE_OPTIMIZE                0x08 // Semtechs term
-#define sx127x_LORA_AGC_AUTO_ON                           0x04
-
-// RFR96_REG_42_VERSION                             0x42
-#define sx127x_LORA_VERSION                               0x12 // 0x11 is also found
-
-// sx127x_LORA_REG_4B_TCXO                                0x4b
-#define sx127x_LORA_TCXO_TCXO_INPUT_ON                    0x10
-
-// sx127x_LORA_REG_4D_PA_DAC                              0x4d
-#define sx127x_LORA_PA_DAC_DISABLE                        0x04
-#define sx127x_LORA_PA_DAC_ENABLE                         0x07
-
-/* Public function prototypes ------------------------------------------------*/
-
-typedef struct sx127x_LORA_Chip {
-	SPI_HandleTypeDef    *spiHandle;		// SPI Handle
-	GPIO_TypeDef 	     *csPinBank;		// Chip Select Pin Bank
-	uint16_t 		      csPin;			// Chip Select Pin
-	GPIO_TypeDef 	     *resetPinBank;		// Reset Pin Bank
-	uint16_t 		      resetPin;			// Reset Pin
-} sx127x_LORA_Chip;
 
 
-/*
-Macro that call the ASYNC_SPI_TxRx_DMA_init function with the sx127x chip's parameters
-It requires:
-	- SCHEUDLER struct named "scheduler"
-	- TASK struct named "task"
-	- ASYNC_sx127x_LORA_..._CONTEXT struct named "context" which is the context of the task
-... to be defined in the current scope.
-Parameters:
-	- (uint8_t*)txBuf: the buffer to transmit
-	- (uint8_t*)rxBuf: the buffer to receive
-	- (size_t)txLen: the length of the buffer to transmit
-	- (size_t)rxLen: the length of the buffer to receive
-*/
-#define ASYNC_SPI_TxRx_DMA_static_init_sx127x(txBuf, rxBuf, txLen, rxLen) \
-	ASYNC_SPI_TxRx_DMA_static_init(task, \
-							context->sx127x_LORA_chip->spiHandle, \
-							context->sx127x_LORA_chip->csPinBank, context->sx127x_LORA_chip->csPin, \
-							txBuf, rxBuf, txLen, rxLen, self)
 
 
-void	sx127x_LORA_Init(sx127x_LORA_Chip        *sx127x_LORA_chip,
-			       SPI_HandleTypeDef *spiHandle,
-			       GPIO_TypeDef      *csPinBank,
-			       uint16_t           csPin,
-				   GPIO_TypeDef      *resetPinBank,
-				   uint16_t           resetPin,
-				   double			   frequency);
+// ====================== 0x01 RegOpMode ======================
+// [7] LongRangeMode:
+typedef enum sx127x_LORA_REG_01_OP_MODE_LRM {
+	sx127x_LORA_REG_01_OP_MODE_LRM_FSK_OOK	= 0b00000000,	// FSK/OOK mode
+	sx127x_LORA_REG_01_OP_MODE_LRM_LoRa   	= 0b10000000,	// LoRa mode
+} sx127x_LORA_REG_01_OP_MODE_LRM;
+#define sx127x_LORA_REG_01_OP_MODE_LRM_MSK 0b10000000
+// [6] AccessSharedReg:
+typedef enum sx127x_LORA_REG_01_OP_MODE_ASR {
+	sx127x_LORA_REG_01_OP_MODE_ASR_LoRa   	= 0b00000000,	// Access LoRa registers
+	sx127x_LORA_REG_01_OP_MODE_ASR_FSK_OOK	= 0b01000000,	// Access FSK/OOK registers
+} sx127x_LORA_REG_01_OP_MODE_ASR;
+#define sx127x_LORA_REG_01_OP_MODE_ASR_MSK 0b01000000
+// [5-4] Reserved
+// [3] LowFrequencyModeOn:
+typedef enum sx127x_LORA_REG_01_OP_MODE_LFMO {
+	sx127x_LORA_REG_01_OP_MODE_LFMO_OFF	= 0b00000000,	// HF mode (> 525MHz)
+	sx127x_LORA_REG_01_OP_MODE_LFMO_ON 	= 0b00001000,	// LF mode (<= 525MHz)
+} sx127x_LORA_REG_01_OP_MODE_LFMO;
+#define sx127x_LORA_REG_01_OP_MODE_LFMO_MSK 0b00001000
+// [2-0] Mode:
+typedef enum sx127x_LORA_REG_01_OP_MODE_MODE {
+	sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP        	= 0b00000000,	// Sleep
+	sx127x_LORA_REG_01_OP_MODE_MODE_STDBY        	= 0b00000001,	// Standby
+	sx127x_LORA_REG_01_OP_MODE_MODE_FSTX         	= 0b00000010,	// FSTX
+	sx127x_LORA_REG_01_OP_MODE_MODE_TX           	= 0b00000011,	// Tx
+	sx127x_LORA_REG_01_OP_MODE_MODE_FSRX         	= 0b00000100,	// FSRX
+	sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS	= 0b00000101,	// RxContinuous
+	sx127x_LORA_REG_01_OP_MODE_MODE_RX_SINGLE    	= 0b00000110,	// RxSingle
+	sx127x_LORA_REG_01_OP_MODE_MODE_CAD          	= 0b00000111,	// CAD
+} sx127x_LORA_REG_01_OP_MODE_MODE;
+#define sx127x_LORA_REG_01_OP_MODE_MODE_MSK 0b00000111
+
+
+
+
+
+// ====================== 0x11 & 0x12 RegIrqFlags & RegIrqFlagsMSK ======================
+#define sx127x_LORA_IRQ_FLAG_RX_TIMEOUT_MSK         	0b10000000
+#define sx127x_LORA_IRQ_FLAG_RX_DONE_MSK            	0b01000000
+#define sx127x_LORA_IRQ_FLAG_PAYLOAD_CRC_ERROR_MSK  	0b00100000
+#define sx127x_LORA_IRQ_FLAG_VALID_HEADER_MSK       	0b00010000
+#define sx127x_LORA_IRQ_FLAG_TX_DONE_MSK            	0b00001000
+#define sx127x_LORA_IRQ_FLAG_CAD_DONE_MSK           	0b00000100
+#define sx127x_LORA_IRQ_FLAG_FHSS_CHANGE_CHANNEL_MSK	0b00000010
+#define sx127x_LORA_IRQ_FLAG_CAD_DETECTED_MSK       	0b00000001
+
+
+
+
+
+// ====================== 0x18 RegModemStat ======================
+#define sx127x_LORA_RX_CODING_RATE_MSK					0b11100000
+#define sx127x_LORA_MODEM_STATUS_CLEAR_MSK				0b00010000
+#define sx127x_LORA_MODEM_STATUS_HEADER_VALID_MSK		0b00001000
+#define sx127x_LORA_MODEM_STATUS_RX_ONGOING_MSK			0b00000100
+#define sx127x_LORA_MODEM_STATUS_SIGNAL_SYNC_MSK		0b00000010
+#define sx127x_LORA_MODEM_STATUS_SIGNAL_DETECTED_MSK	0b00000001
+
+
+
+
+
+// ====================== 0x1c RegHopChannel ======================
+#define sx127x_LORA_PLL_TIMEOUT_MSK				0b10000000
+#define sx127x_LORA_RX_PAYLOAD_CRC_IS_ON_MSK	0b01000000
+#define sx127x_LORA_FHSS_PRESENT_CHANNEL_MSK	0b00111111
+
+
+
+
+
+// ====================== 0x1d RedModemConfig1 ======================
+// [7-4] Bandwidth:
+typedef enum sx127x_LORA_REG_1D_MODEM_CONFIG1_BW {
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_7_8KHZ		= 0b00000000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_10_4KHZ		= 0b00010000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_15_6KHZ		= 0b00100000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_20_8KHZ		= 0b00110000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_31_25KHZ	= 0b01000000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_41_7KHZ		= 0b01010000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_62_5KHZ		= 0b01100000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ		= 0b01110000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_250KHZ		= 0b10000000,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_500KHZ		= 0b10010000,
+	// 1010 to 1111 reserved
+} sx127x_LORA_REG_1D_MODEM_CONFIG1_BW;
+#define sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_MSK 0b11110000
+// [3-1] CodingRate:
+typedef enum sx127x_LORA_REG_1D_MODEM_CONFIG1_CR {
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5	= 0b00000010,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_6	= 0b00000100,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_7	= 0b00000110,
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_8	= 0b00001000,
+	// 101 to 111 reserved
+} sx127x_LORA_REG_1D_MODEM_CONFIG1_CR;
+#define sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_MSK 0b00001110
+// [0] ImplicitHeaderModeOn:
+typedef enum sx127x_LORA_REG_1D_MODEM_CONFIG1_IHMO {
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_IHMO_OFF	= 0b00000000,	// Explicit header mode
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_IHMO_ON	= 0b00000001,	// Implicit header mode
+} sx127x_LORA_REG_1D_MODEM_CONFIG1_IHMO;
+#define sx127x_LORA_REG_1D_MODEM_CONFIG1_IHMO_MSK 0b00000001
+
+
+
+
+
+// ====================== 0x1e RegModemConfig2 ======================
+// [7-4] SpreadingFactor:
+typedef enum sx127x_LORA_REG_1E_MODEM_CONFIG2_SF {
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_64CPS	= 0b01100000,	// SF6
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS	= 0b01110000,	// SF7
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_256CPS	= 0b10000000,	// SF8
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_512CPS	= 0b10010000,	// SF9
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_1024CPS	= 0b10100000,	// SF10
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_2048CPS	= 0b10110000,	// SF11
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_4096CPS	= 0b11000000,	// SF12
+	// 1101 to 1111 reserved
+} sx127x_LORA_REG_1E_MODEM_CONFIG2_SF;
+#define sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_MSK		0b11110000
+// [3] TxContinuousMode:
+typedef enum sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM {
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM_OFF	= 0b00000000,	// Normal Tx mode
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM_ON	= 0b00001000,	// Continuous Tx mode
+} sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM;
+#define sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM_MSK	0b00001000
+// [2] RxPayloadCrcOn:
+typedef enum sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC {
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_OFF	= 0b00000000,	// CRC disabled
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_ON		= 0b00000100,	// CRC enabled
+} sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC;
+#define sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_MSK	0b00000100
+// [1-0] SymbTimeoutMSB:
+#define sx127x_LORA_REG_1E_MODEM_CONFIG2_SYMB_TIMEOUT_MSB_MSK	0b00000011
+
+
+
+
+
+// ====================== 0x26 RegModemConfig3 ======================
+// [7-4] Unused
+// [3] LowDataRateOptimize:
+typedef enum sx127x_LORA_REG_26_MODEM_CONFIG3_LDRO {
+	sx127x_LORA_REG_26_MODEM_CONFIG3_LDRO_OFF	= 0b00000000,	// Disabled
+	sx127x_LORA_REG_26_MODEM_CONFIG3_LDRO_ON	= 0b00001000,	// Enabled
+} sx127x_LORA_REG_26_MODEM_CONFIG3_LDRO;
+#define sx127x_LORA_REG_26_MODEM_CONFIG3_LDRO_MSK 0b00001000
+// [2] AgcAutoOn:
+typedef enum sx127x_LORA_REG_26_MODEM_CONFIG3_AGCAO {
+	sx127x_LORA_REG_26_MODEM_CONFIG3_AGCAO_OFF	= 0b00000000,	// LNA gain set by RegLna
+	sx127x_LORA_REG_26_MODEM_CONFIG3_AGCAO_ON	= 0b00000100,	// LNA gain set by AGC loop
+} sx127x_LORA_REG_26_MODEM_CONFIG3_AGCAO;
+// [1-0] Reserved
+
+
+
+
+
+
+
+
+
+typedef struct sx127x_lora_config_t {
+	bool									implicitHeader;
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW		bandwidth;
+	sx127x_LORA_REG_1D_MODEM_CONFIG1_CR		codingRate;
+	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF		spreadingFactor;
+	bool 									crcEnabled;
+} sx127x_lora_config_t;
+
+
+
+void	sx127x_LORA_Init(sx127x_LORA_Chip *chip, sx127x_lora_config_t *config);
 void	sx127x_LORA_Reset(sx127x_LORA_Chip *sx127x_LORA_chip);
 uint8_t	sx127x_LORA_GetVersion(sx127x_LORA_Chip *sx127x_LORA_chip);
 void	sx127x_LORA_LoRaStandBy(sx127x_LORA_Chip *sx127x_LORA_chip);
@@ -268,215 +240,5 @@ void	sx127x_LORA_WriteString(sx127x_LORA_Chip *sx127x_LORA_chip, char *data);
 void	sx127x_LORA_Print(sx127x_LORA_Chip *sx127x_LORA_chip, char *data);
 int 	sx127x_LORA_ParsePacket(sx127x_LORA_Chip *sx127x_LORA_chip);
 void	sx127x_LORA_Read(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t *buff, int size);
-void	sx127x_LORA_ReadRegisters(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t reg, uint8_t *data, uint16_t len);
-uint8_t sx127x_LORA_ReadRegister(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t reg);
-void	sx127x_LORA_WriteRegisters(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t reg, uint8_t *data, uint16_t len);
-void	sx127x_LORA_WriteRegister(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t reg, uint8_t data);
-void	sx127x_LORA_TransmitReceive(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t *tx_buf, uint8_t *rx_buf, uint16_t tx_size, uint16_t rx_size);
-
-
-// =======================================================================
-
-
-// #define ASYNC_sx127x_LORA_BeginPacket_NUMBER 10
-
-// typedef enum ASYNC_sx127x_LORA_BeginPacket_State {
-// 	ASYNC_sx127x_LORA_BeginPacket_WAIT_READY,
-// 	ASYNC_sx127x_LORA_BeginPacket_LORA_STANDBY,
-// 	ASYNC_sx127x_LORA_BeginPacket_GET_CONFIG,
-// 	ASYNC_sx127x_LORA_BeginPacket_SET_CONFIG,
-// 	ASYNC_sx127x_LORA_BeginPacket_SET_FIFO_ADDR_PTR,
-// 	ASYNC_sx127x_LORA_BeginPacket_PAYLOAD_LENGTH,
-// 	ASYNC_sx127x_LORA_BeginPacket_END
-// } ASYNC_sx127x_LORA_BeginPacket_State;
-
-// typedef struct ASYNC_sx127x_LORA_BeginPacket_CONTEXT {
-// 	sx127x_LORA_Chip *sx127x_LORA_chip;		// sx127x chip
-
-// 	uint8_t tx_buf[2];
-// 	uint8_t rx_buf;
-
-// 	bool is_done;			// Pointer to a boolean to indicate if sub-task are done
-
-// 	ASYNC_sx127x_LORA_BeginPacket_State state;// Current state of the task
-// 	ASYNC_sx127x_LORA_BeginPacket_State next_state; // Next state of the task
-// } ASYNC_sx127x_LORA_BeginPacket_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_sx127x_LORA_BeginPacket);
-
-// void ASYNC_sx127x_LORA_BeginPacket_init(TASK *self, sx127x_LORA_Chip *sx127x_LORA_chip);
-// TASK_RETURN ASYNC_sx127x_LORA_BeginPacket(SCHEDULER *scheduler, TASK *self);
-
-
-// // =======================================================================
-
-
-// #define ASYNC_sx127x_LORA_EndPacket_NUMBER 10
-
-// typedef enum ASYNC_sx127x_LORA_EndPacket_State {
-// 	ASYNC_sx127x_LORA_EndPacket_WAIT_READY,
-// 	ASYNC_sx127x_LORA_EndPacket_SET_TX_MODE,
-// 	ASYNC_sx127x_LORA_EndPacket_ASK_TX_DONE,
-// 	ASYNC_sx127x_LORA_EndPacket_WAIT_TX_DONE,
-// 	ASYNC_sx127x_LORA_EndPacket_CLEAR_IRQ_FLAGS,
-// 	ASYNC_sx127x_LORA_EndPacket_END
-// } ASYNC_sx127x_LORA_EndPacket_State;
-
-// typedef struct ASYNC_sx127x_LORA_EndPacket_CONTEXT {
-// 	sx127x_LORA_Chip *sx127x_LORA_chip;		// sx127x chip
-// 	bool is_done;				// Pointer to a boolean to indicate if sub-task are done
-
-// 	uint8_t tx_buf[2];			// Transmit buffer
-// 	uint8_t rx_buf;				// Receive buffer
-
-// 	ASYNC_sx127x_LORA_EndPacket_State state; // Current state of the task
-// 	ASYNC_sx127x_LORA_EndPacket_State next_state; // Next state of the task
-// } ASYNC_sx127x_LORA_EndPacket_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_sx127x_LORA_EndPacket);
-
-// void ASYNC_sx127x_LORA_EndPacket_init(TASK *self, sx127x_LORA_Chip *sx127x_LORA_chip);
-// TASK_RETURN ASYNC_sx127x_LORA_EndPacket(SCHEDULER *scheduler, TASK *self);
-
-
-// // =======================================================================
-
-
-// #define ASYNC_sx127x_LORA_WriteFIFO_NUMBER 10
-
-// typedef enum ASYNC_sx127x_LORA_WriteFIFO_State {
-// 	ASYNC_sx127x_LORA_WriteFIFO_WAIT_READY,
-// 	ASYNC_sx127x_LORA_WriteFIFO_GET_CURRENT_LEN,
-// 	ASYNC_sx127x_LORA_WriteFIFO_GET_MAX_LEN,
-// 	ASYNC_sx127x_LORA_WriteFIFO_WRITE_FIFO,
-// 	ASYNC_sx127x_LORA_WriteFIFO_UPDATE_LEN,
-// 	ASYNC_sx127x_LORA_WriteFIFO_END
-// } ASYNC_sx127x_LORA_WriteFIFO_State;
-
-// typedef struct ASYNC_sx127x_LORA_WriteFIFO_CONTEXT {
-// 	sx127x_LORA_Chip *sx127x_LORA_chip;		// sx127x chip
-// 	uint8_t tx_fifo_buf[257];		// Transmit FIFO buffer (1 byte for the register address + 256 bytes for the FIFO data)
-// 	uint8_t tx_fifo_size;		// Transmit FIFO size
-// 	uint8_t tx_buf[2];			// Transmit buffer
-
-// 	bool is_done;				// Pointer to a boolean to indicate if sub-task are done
-
-// 	uint8_t current_len;		// Current length of the FIFO
-// 	uint8_t max_len;			// Max length of the FIFO
-
-// 	ASYNC_sx127x_LORA_WriteFIFO_State state; // Current state of the task
-// 	ASYNC_sx127x_LORA_WriteFIFO_State next_state; // Next state of the task
-// } ASYNC_sx127x_LORA_WriteFIFO_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_sx127x_LORA_WriteFIFO);
-
-// void ASYNC_sx127x_LORA_WriteFIFO_init(TASK *self, sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t *tx_buf, uint16_t tx_size);
-// TASK_RETURN ASYNC_sx127x_LORA_WriteFIFO(SCHEDULER *scheduler, TASK *self);
-
-
-// // =======================================================================
-
-
-// #define ASYNC_sx127x_LORA_SendPacket_NUMBER 10
-
-// typedef enum ASYNC_sx127x_LORA_SendPacket_State {
-// 	ASYNC_sx127x_LORA_SendPacket_WAIT_READY,
-// 	ASYNC_sx127x_LORA_SendPacket_BEGIN_PACKET,
-// 	ASYNC_sx127x_LORA_SendPacket_WRITE_FIFO,
-// 	ASYNC_sx127x_LORA_SendPacket_END_PACKET,
-// 	ASYNC_sx127x_LORA_SendPacket_END
-// } ASYNC_sx127x_LORA_SendPacket_State;
-
-// typedef struct ASYNC_sx127x_LORA_SendPacket_CONTEXT {
-// 	sx127x_LORA_Chip *sx127x_LORA_chip;		// sx127x chip
-// 	uint8_t *tx_buf;			// Transmit buffer
-// 	uint8_t tx_size;			// Transmit size
-
-// 	bool is_done;				// Pointer to a boolean to indicate if sub-task are done
-
-// 	ASYNC_sx127x_LORA_SendPacket_State state; // Current state of the task
-// 	ASYNC_sx127x_LORA_SendPacket_State next_state; // Next state of the task
-// } ASYNC_sx127x_LORA_SendPacket_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_sx127x_LORA_SendPacket);
-
-// void ASYNC_sx127x_LORA_SendPacket_init(TASK *self, sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t *tx_buf, uint8_t tx_size);
-// TASK_RETURN ASYNC_sx127x_LORA_SendPacket(SCHEDULER *scheduler, TASK *self);
-
-
-// // ====================================================================
-
-
-// #define ASYNC_sx127x_LORA_SetRxMode_NUMBER 5
-
-// typedef enum ASYNC_sx127x_LORA_SetRxMode_State {
-// 	ASYNC_sx127x_LORA_SetRxMode_Wait,
-// 	ASYNC_sx127x_LORA_SetRxMode_GetConfig1,
-// 	ASYNC_sx127x_LORA_SetRxMode_SetConfig1_Mode_FIFO,
-// 	ASYNC_sx127x_LORA_SetRxMode_DONE
-// } ASYNC_sx127x_LORA_SetRxMode_State;
-
-// typedef struct ASYNC_sx127x_LORA_SetRxMode_CONTEXT {
-// 	sx127x_LORA_Chip *sx127x_LORA_chip;
-
-// 	uint8_t tx0[2];
-// 	uint8_t tx1[2];
-// 	uint8_t tx2[2];
-// 	uint8_t rx;
-
-// 	bool is_done[3];
-
-// 	ASYNC_sx127x_LORA_SetRxMode_State state; // Current state of the task
-// 	ASYNC_sx127x_LORA_SetRxMode_State next_state; // Next state of the task
-// } ASYNC_sx127x_LORA_SetRxMode_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_sx127x_LORA_SetRxMode);
-
-// void ASYNC_sx127x_LORA_SetRxMode_init(TASK *self, sx127x_LORA_Chip *sx127x_LORA_chip);
-
-// TASK_RETURN ASYNC_sx127x_LORA_SetRxMode(SCHEDULER *scheduler, TASK *self);
-
-
-// // ====================================================================
-
-
-// #define ASYNC_sx127x_LORA_ParsePacket_NUMBER 5
-
-// typedef enum ASYNC_sx127x_LORA_ParsePacket_State {
-// 	ASYNC_sx127x_LORA_ParsePacket_Wait,
-// 	ASYNC_sx127x_LORA_ParsePacket_GetIRQ,
-// 	ASYNC_sx127x_LORA_ParsePacket_ResetIRQ,
-	
-// 	ASYNC_sx127x_LORA_ParsePacket_GetLen,
-// 	ASYNC_sx127x_LORA_ParsePacket_IsPacketAvailable,
-
-// 	ASYNC_sx127x_LORA_ParsePacket_GetRxAddr,
-// 	ASYNC_sx127x_LORA_ParsePacket_SetRxAddr,
-// 	ASYNC_sx127x_LORA_ParsePacket_GetData,
-// 	ASYNC_sx127x_LORA_ParsePacket_Done,
-// 	// IF RX RECEIVED
-// } ASYNC_sx127x_LORA_ParsePacket_State;
-
-// typedef struct ASYNC_sx127x_LORA_ParsePacket_CONTEXT {
-// 	sx127x_LORA_Chip *sx127x_LORA_chip;
-
-// 	uint8_t *len;
-// 	uint8_t i;
-// 	uint8_t *data;
-
-// 	uint8_t tx[2];
-// 	uint8_t rx;
-
-// 	bool is_done;
-
-// 	ASYNC_sx127x_LORA_ParsePacket_State state; // Current state of the task
-// 	ASYNC_sx127x_LORA_ParsePacket_State next_state; // Next state of the task
-// } ASYNC_sx127x_LORA_ParsePacket_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_sx127x_LORA_ParsePacket);
-
-// void ASYNC_sx127x_LORA_ParsePacket_init(TASK *self, sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t *data, uint8_t *len);
-
-// TASK_RETURN ASYNC_sx127x_LORA_ParsePacket(SCHEDULER *scheduler, TASK *self);
 
 #endif // sx127x_LORA_h

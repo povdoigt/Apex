@@ -31,11 +31,10 @@
 
 #include "drivers/ADXL375.h"
 #include "drivers/BMI088.h"
-#include "drivers/RFM96/rfm96w_lora.h"
+#include "drivers/sx127x.h"
 #include "drivers/led.h"
 #include "drivers/w25q_mem.h"
 
-#include "drivers/rfm96w.h"
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
 #include "peripherals/gpio.h"
