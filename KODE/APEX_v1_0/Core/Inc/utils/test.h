@@ -10,7 +10,6 @@
 #include "drivers/gps.h"
 #include "drivers/led.h"
 #include "drivers/LSM303AGR.h"
-#include "drivers/RFM96/rfm96w_lora.h"
 #include "drivers/w25q_mem.h"
 
 #include "utils/data_topic.h"
@@ -27,7 +26,6 @@ typedef struct COMPONENTS {
     LED_RGB                 *led_rgb_0;
     LED_RGB                 *led_rgb_1;
     LSM303AGR               *lsm;
-    RFM96_LORA_Chip              *lora;
     W25Q_Chip               *flash;
 } COMPONENTS;
 
@@ -139,7 +137,6 @@ void init_components(COMPONENTS             *components,
                      LED_RGB                *led_rgb_0,
                      LED_RGB                *led_rgb_1,
                      LSM303AGR              *lsm,
-                     RFM96_LORA_Chip             *lora_chip,
                      W25Q_Chip              *flash_chip
 );
 

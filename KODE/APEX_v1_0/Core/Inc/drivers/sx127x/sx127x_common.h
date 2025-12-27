@@ -340,10 +340,11 @@ typedef enum sx127x_REG_70_PLL_HOP_PLL_BANDWIDTH {
 
 
 typedef struct sx127x_chip_t {
-	SPI_HandleTypeDef    *spiHandle;    // SPI Handle
-	GPIO_TypeDef 	     *csPinBank;    // Chip Select Pin Bank
-	uint16_t 		      csPin;        // Chip Select Pin
-    sx127x_band_t         band;         // Frequency band
+	SPI_HandleTypeDef	*spiHandle;	// SPI Handle
+	GPIO_TypeDef 	    *csPinBank;	// Chip Select Pin Bank
+	uint16_t 		     csPin;		// Chip Select Pin
+    sx127x_band_t        band;		// Frequency band
+	uint8_t				 lastRxPtr;	// Last FIFO Rx pointer
 } sx127x_chip_t;
 
 
@@ -372,7 +373,7 @@ sx127x_status_t sx127x_RegReadMulti(sx127x_chip_t *chip, uint8_t reg, uint8_t *b
 
 sx127x_status_t __sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
                               GPIO_TypeDef *csPinBank, uint16_t csPin, uint32_t frequency,
-                              float ocp_current_mA);
+                              float ocp_current_mA, float power_dBm);
 sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency);
 sx127x_status_t sx127x_SetTxPower(sx127x_chip_t *chip, float power_dBm);
 sx127x_status_t sx127x_SetOcp(sx127x_chip_t *chip, float ocp_current_mA);

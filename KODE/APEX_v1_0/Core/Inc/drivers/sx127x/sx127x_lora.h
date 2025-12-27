@@ -3,6 +3,7 @@
 #ifndef sx127x_LORA_h
 #define sx127x_LORA_h
 
+#include "drivers/sx127x/sx127x_common.h"
 #include "stm32f4xx_hal.h"
 #include "peripherals/spi.h"
 #include "utils/scheduler.h"
@@ -224,21 +225,10 @@ typedef struct sx127x_lora_config_t {
 
 
 
-void	sx127x_LORA_Init(sx127x_LORA_Chip *chip, sx127x_lora_config_t *config);
-void	sx127x_LORA_Reset(sx127x_LORA_Chip *sx127x_LORA_chip);
-uint8_t	sx127x_LORA_GetVersion(sx127x_LORA_Chip *sx127x_LORA_chip);
-void	sx127x_LORA_LoRaStandBy(sx127x_LORA_Chip *sx127x_LORA_chip);
-void	sx127x_LORA_LoRaSleep(sx127x_LORA_Chip *sx127x_LORA_chip);
-void	sx127x_LORA_SetFrequency(sx127x_LORA_Chip *sx127x_LORA_chip, double frequency);
-double	sx127x_LORA_GetFrequency(sx127x_LORA_Chip *sx127x_LORA_chip);
-void 	sx127x_LORA_SetTxPower(sx127x_LORA_Chip *sx127x_LORA_chip, int8_t power);
-void	sx127x_LORA_SetOCP(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t mA);
-void	sx127x_LORA_BeginPacket(sx127x_LORA_Chip *sx127x_LORA_chip);
-void	sx127x_LORA_EndPacket(sx127x_LORA_Chip *sx127x_LORA_chip);
-void	sx127x_LORA_Write(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t *data, uint16_t len);
-void	sx127x_LORA_WriteString(sx127x_LORA_Chip *sx127x_LORA_chip, char *data);
-void	sx127x_LORA_Print(sx127x_LORA_Chip *sx127x_LORA_chip, char *data);
-int 	sx127x_LORA_ParsePacket(sx127x_LORA_Chip *sx127x_LORA_chip);
-void	sx127x_LORA_Read(sx127x_LORA_Chip *sx127x_LORA_chip, uint8_t *buff, int size);
+sx127x_status_t	sx127x_LORA_Init(sx127x_chip_t *chip, sx127x_lora_config_t config);
+sx127x_status_t sx127x_LORA_ChangeMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode);
+sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t len);
+sx127x_status_t sx127x_LORA_IsTxDone(sx127x_chip_t *chip, bool *isDone);
+sx127x_status_t sx127x_LORA_RxReceive(sx127x_chip_t *chip, uint8_t *buffer, uint8_t *len);
 
 #endif // sx127x_LORA_h

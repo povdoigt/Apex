@@ -8,23 +8,23 @@
 
 // =========================== Level 0: SPI Read/Write functions ===========================
 
-static inline void sx127x_SPI_Begin(chip_t *chip) {
+static inline void sx127x_SPI_Begin(sx127x_chip_t *chip) {
     HAL_GPIO_WritePin(chip->csPinBank, chip->csPin, GPIO_PIN_RESET);
 }
 
-static inline sx127x_status_t sx127x_SPI_Tx(chip_t *chip, uint8_t *tx_buf, uint16_t tx_len) {
+static inline sx127x_status_t sx127x_SPI_Tx(sx127x_chip_t *chip, uint8_t *tx_buf, uint16_t tx_len) {
     if (!chip || (!tx_buf && tx_len)) { return sx127x_STATUS_ERROR; }
     HAL_StatusTypeDef status = HAL_SPI_Transmit(chip->spiHandle, tx_buf, tx_len, HAL_MAX_DELAY);
     return (status == HAL_OK) ? sx127x_STATUS_OK : sx127x_STATUS_ERROR;
 }
 
-static inline sx127x_status_t sx127x_SPI_Rx(chip_t *chip, uint8_t *rx_buf, uint16_t rx_len) {
+static inline sx127x_status_t sx127x_SPI_Rx(sx127x_chip_t *chip, uint8_t *rx_buf, uint16_t rx_len) {
     if (!chip || (!rx_buf && rx_len)) { return sx127x_STATUS_ERROR; }
     HAL_StatusTypeDef status = HAL_SPI_Receive(chip->spiHandle, rx_buf, rx_len, HAL_MAX_DELAY);
     return (status == HAL_OK) ? sx127x_STATUS_OK : sx127x_STATUS_ERROR;
 }
 
-static inline void sx127x_SPI_End(chip_t *chip) {
+static inline void sx127x_SPI_End(sx127x_chip_t *chip) {
     HAL_GPIO_WritePin(chip->csPinBank, chip->csPin, GPIO_PIN_SET);
 }
 
@@ -34,7 +34,7 @@ static inline void sx127x_SPI_End(chip_t *chip) {
 
 // ================================== Level 1: Basic Read/Write functions ==================================
 
-sx127x_status_t sx127x_RegWrite(chip_t *chip, uint8_t reg, uint8_t value) {
+sx127x_status_t sx127x_RegWrite(sx127x_chip_t *chip, uint8_t reg, uint8_t value) {
     uint8_t tx_buf[2] = { reg | sx127x_REG_WRITE_MASK, value };
 
     sx127x_SPI_Begin(chip);
@@ -43,7 +43,7 @@ sx127x_status_t sx127x_RegWrite(chip_t *chip, uint8_t reg, uint8_t value) {
     return status;
 }
 
-sx127x_status_t sx127x_RegWriteMulti(chip_t *chip, uint8_t reg, const uint8_t *buffer, uint8_t buf_size) {
+sx127x_status_t sx127x_RegWriteMulti(sx127x_chip_t *chip, uint8_t reg, const uint8_t *buffer, uint8_t buf_size) {
     if (buf_size == 0) {
         return sx127x_STATUS_OK;
     }
@@ -62,7 +62,7 @@ sx127x_status_t sx127x_RegWriteMulti(chip_t *chip, uint8_t reg, const uint8_t *b
     return status;
 }
 
-sx127x_status_t sx127x_RegRead(chip_t *chip, uint8_t reg, uint8_t *value) {
+sx127x_status_t sx127x_RegRead(sx127x_chip_t *chip, uint8_t reg, uint8_t *value) {
     uint8_t tx_buf[1] = { reg & ~sx127x_REG_WRITE_MASK };
 
     sx127x_SPI_Begin(chip);
@@ -76,7 +76,7 @@ sx127x_status_t sx127x_RegRead(chip_t *chip, uint8_t reg, uint8_t *value) {
     return status;
 }
 
-sx127x_status_t sx127x_RegReadMulti(chip_t *chip, uint8_t reg, uint8_t *buffer, uint8_t buf_size) {
+sx127x_status_t sx127x_RegReadMulti(sx127x_chip_t *chip, uint8_t reg, uint8_t *buffer, uint8_t buf_size) {
     if (buf_size == 0) {
         return sx127x_STATUS_OK;
     }
@@ -104,9 +104,9 @@ sx127x_status_t sx127x_RegReadMulti(chip_t *chip, uint8_t reg, uint8_t *buffer, 
 void __sx127x_SetPwrvalue(sx127x_chip_t *chip, float Pout, uint8_t *pMaxPower, uint8_t *pOutputPower);
 
 
-sx127x_status_t __sx127x_Init(chip_t *chip, SPI_HandleTypeDef *spiHandle,
+sx127x_status_t __sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
                               GPIO_TypeDef *csPinBank, uint16_t csPin, uint32_t frequency,
-                              float ocp_current_mA) {
+                              float ocp_current_mA, float power_dBm) {
     if (!chip || !spiHandle || !csPinBank) {
         return sx127x_STATUS_ERROR;
     }
@@ -114,6 +114,8 @@ sx127x_status_t __sx127x_Init(chip_t *chip, SPI_HandleTypeDef *spiHandle,
     chip->spiHandle = spiHandle;
     chip->csPinBank = csPinBank;
     chip->csPin = csPin;
+
+    chip->lastRxPtr = 0;
 
     // Set CS pin high (if not already set)
     HAL_GPIO_WritePin(chip->csPinBank, chip->csPin, GPIO_PIN_SET);
@@ -132,11 +134,15 @@ sx127x_status_t __sx127x_Init(chip_t *chip, SPI_HandleTypeDef *spiHandle,
 
     // Check and set the frequency band
     status = sx127x_SetFrequency(chip, frequency);
+    if (status != sx127x_STATUS_OK) { return status; }
+
+    // Set power level
+    status = sx127x_SetTxPower(chip, power_dBm);
 
     return status;
 }
 
-sx127x_status_t sx127x_SetFrequency(chip_t *chip, uint32_t frequency) {
+sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency) {
     if (!chip) {
         return sx127x_STATUS_ERROR;
     }
@@ -170,13 +176,10 @@ sx127x_status_t sx127x_SetTxPower(sx127x_chip_t *chip, float power_dBm) {
     }
 
     uint8_t value;
-    if (power_dBm == 20) {
-        // Enable +20 dBm operation
-        value = 0x00;
-        value |= sx127x_REG_4D_PA_DAC_DEFAULT;
-        value |= sx127x_REG_4D_PA_DAC_PA_DAC_HP;
-        sx127x_RegWrite(chip, sx127x_REG_4D_PA_DAC, value);
-    }
+    value = 0x00;
+    value |= sx127x_REG_4D_PA_DAC_DEFAULT;
+    value |= power_dBm == 20 ? sx127x_REG_4D_PA_DAC_PA_DAC_HP : sx127x_REG_4D_PA_DAC_PA_DAC_DFT;
+    sx127x_RegWrite(chip, sx127x_REG_4D_PA_DAC, value);
 
     if (power_dBm > 15) {
         // Use PA Boost

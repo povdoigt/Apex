@@ -13,12 +13,14 @@ typedef union sx127x_config_mode_t {
 } sx127x_config_mode_t;
 
 typedef struct sx127x_config_t {
-	uint32_t				frequency;	// in Hz
-	bool					isLoRa;		// true: LoRa mode, false: FSK/OOK mode
-	sx127x_config_mode_t	modeConfig;	// Mode specific configuration
+	uint32_t				frequency;		// in Hz
+	float					ocp_current_mA;	// Over Current Protection current in mA
+	float 					power_dBm;		// Output power in dBm
+	bool					isLoRa;			// true: LoRa mode, false: FSK/OOK mode
+	sx127x_config_mode_t	modeConfig;		// Mode specific configuration
 } sx127x_config_t;
 
 sx127x_status_t sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
-							GPIO_TypeDef *csPinBank, uint16_t csPin, sx127x_config_t *config);
+							GPIO_TypeDef *csPinBank, uint16_t csPin, sx127x_config_t config);
 
 # endif // sx127x_h

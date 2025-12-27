@@ -33,6 +33,8 @@
 #include "drivers/BMI088.h"
 #include "drivers/sx127x.h"
 #include "drivers/led.h"
+#include "drivers/sx127x/sx127x_common.h"
+#include "drivers/sx127x/sx127x_lora.h"
 #include "drivers/w25q_mem.h"
 
 #include "peripherals/adc.h"
@@ -134,11 +136,23 @@ int main(void)
 	MX_TIM3_Init();
 	MX_CRC_Init();
 	MX_TIM11_Init();
-	// Init rfm96 - Fréquence
-	RFM96_LORA_Chip RFM96_LORA_chip;
+	
+	sx127x_chip_t sx127x_chip;
 	BMI088 BMI088_imu;
-	RFM96_LORA_Init(&RFM96_LORA_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
-				RESET_LORA_GPIO_Port, RESET_LORA_Pin, 869500e3); // fréquence en Hz à modifier -> 869.5 MHz
+
+	sx127x_Init(&sx127x_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin, (sx127x_config_t) {
+		.frequency = 869250000,
+		.ocp_current_mA = 240,
+		.power_dBm = 13.0,
+		.isLoRa = true,
+		.modeConfig.lora = (sx127x_lora_config_t){
+			.implicitHeader = false,
+			.bandwidth = sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ,
+			.codingRate = sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5,
+			.spreadingFactor = sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS,
+			.crcEnabled = true,
+		}
+	});
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
@@ -266,7 +280,7 @@ int main(void)
 	/* USER CODE BEGIN WHILE */
 	uint32_t t0 = HAL_GetTick();
 	char accx[10], accy[10], accz[10];
-	char buff1[256], buff2[256];
+	char buff1[256], buff2[260];
 
 	uint32_t i = 0;
 	
@@ -279,45 +293,50 @@ int main(void)
 		float_format(accx, BMI088_imu.acc_mps2.x, 5, 10);
 		float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
 		float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
-		sprintf(buff1, "APEX-1: ACC: %s, %s, %s\n", accx, accy, accz);
 		// CDC_Transmit_FS((uint8_t*)buff, strlen(buff));
 		// HAL_Delay(10);
 
 
 		/* APEX 1 */
+		sprintf(buff1, "APEX-1: ACC: %s, %s, %s\n", accx, accy, accz);
+		uint8_t len = strlen(buff1);
 		// code émetteur
 		if (HAL_GetTick() - t0 >= 500) {
 			t0 = HAL_GetTick();
 			sprintf(buff2, "%2u: %s", i++, buff1);
 			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			RFM96_LORA_Print(&RFM96_LORA_chip, buff2);
+			sx127x_LORA_TxSend(&sx127x_chip, (uint8_t*)buff1, len);
 			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+			sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_SINGLE);
 		}
 
 		// code récepteur
-		int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
+		uint8_t rcv_len;
+		sx127x_LORA_RxReceive(&sx127x_chip, (uint8_t*)buff2, &rcv_len);
 		if (rcv_len > 0) {
 			HAL_Delay(10);
 			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
 			HAL_Delay(10);
 			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff2, rcv_len);
 			buff2[rcv_len] = '\0';
 			CDC_Transmit_FS((uint8_t *)buff2, rcv_len + 1);
 		}
 
 		// /* APEX 2 */
+		// sprintf(buff1, "APEX-2: ACC: %s, %s, %s\n", accx, accy, accz);
 		// // code émetteur
 		// if (sync_done && HAL_GetTick() - t0 >= 500) {
 		// 	t0 = HAL_GetTick();
 		// 	sprintf(buff2, "%2u: %s", i++, buff1);
 		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	RFM96_LORA_Print(&RFM96_LORA_chip, buff2);
+		// 	sx127x_LORA_TxSend(&sx127x_chip, (uint8_t*)buff1, strlen(buff1));
 		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	sx127x_LORA_ChangeMode(&sx127x_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_SINGLE);
 		// }
 
 		// // code récepteur
-		// int rcv_len = RFM96_LORA_ParsePacket(&RFM96_LORA_chip);
+		// uint8_t rcv_len;
+		// sx127x_LORA_RxReceive(&sx127x_chip, (uint8_t*)buff2, &rcv_len);
 		// if (rcv_len > 0) {
 		// 	if (!sync_done) {
 		// 		sync_done = true;
@@ -328,7 +347,6 @@ int main(void)
 		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
 		// 	HAL_Delay(10);
 		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	RFM96_LORA_Read(&RFM96_LORA_chip, (uint8_t *)buff2, rcv_len);
 		// 	buff2[rcv_len] = '\0';
 		// 	CDC_Transmit_FS((uint8_t *)buff2, rcv_len + 1);
 		// }

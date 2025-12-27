@@ -112,7 +112,7 @@ typedef struct sx127x_fsk_config_t {
 
 
 
-sx127x_status_t sx127x_FSK_Init(sx127x_chip_t *sx127x_chip, sx127x_fsk_config_t *config);
+sx127x_status_t sx127x_FSK_Init(sx127x_chip_t *sx127x_chip, sx127x_fsk_config_t config);
 
 
 # endif // RFM96W_FSK_h

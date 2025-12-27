@@ -87,7 +87,6 @@ void init_components(COMPONENTS             *components,
                      LED_RGB                *led_rgb_0,
                      LED_RGB                *led_rgb_1,
                      LSM303AGR              *lsm,
-                     RFM96_LORA_Chip             *lora_chip,
                      W25Q_Chip              *flash_chip
 ) {
     components->adxl = adxl;
@@ -98,7 +97,6 @@ void init_components(COMPONENTS             *components,
     components->led_rgb_0 = led_rgb_0;
     components->led_rgb_1 = led_rgb_1;
     components->lsm = lsm;
-    components->lora = lora_chip;
     components->flash = flash_chip;
 }
 
@@ -122,9 +120,6 @@ void init_all_components(COMPONENTS* components) {
     // LED_RGB_Init(components->led_rgb_1, &htim4, TIM_CHANNEL_4, TIM_CHANNEL_2, TIM_CHANNEL_1);
 
     LSM303AGR_Init(components->lsm, &hi2c3);
-
-    RFM96_LORA_Init(components->lora, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin,
-               RESET_LORA_GPIO_Port, RESET_LORA_Pin, 868250e3);
 
     W25Q_Init(components->flash, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
 }
