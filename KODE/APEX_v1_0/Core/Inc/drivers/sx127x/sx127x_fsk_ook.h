@@ -6,8 +6,8 @@
 #include <stdbool.h>
 
 
-#define SX127X_FSK_BITRATE_MIN	  1200	// in kbps
-#define SX127X_FSK_BITRATE_MAX	300000	// in kbps
+#define SX127X_FSK_BITRATE_MIN	  1200	// in bps
+#define SX127X_FSK_BITRATE_MAX	300000	// in bps
 
 
 // Register names (FSK/OOK Mode)
