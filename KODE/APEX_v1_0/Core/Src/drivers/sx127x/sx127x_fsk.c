@@ -23,7 +23,7 @@ static void sx127x_FSK_OOK_RxBw_to_RegValue(sx127x_FSK_OOK_RxBw_t rxbw, uint8_t 
         case SX127X_FSK_OOK_RxBw_50_0kHz:  *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_20; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_3; break;
         case SX127X_FSK_OOK_RxBw_62_5kHz:  *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_16; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_3; break;
         case SX127X_FSK_OOK_RxBw_83_3kHz:  *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_24; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_2; break;
-        case SX127X_FSK_OKK_RxBw_100_0kHz: *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_20; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_2; break;
+        case SX127X_FSK_OOK_RxBw_100_0kHz: *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_20; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_2; break;
         case SX127X_FSK_OOK_RxBw_125_0kHz: *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_16; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_2; break;
         case SX127X_FSK_OOK_RxBw_166_7kHz: *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_24; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_1; break;
         case SX127X_FSK_OOK_RxBw_200_0kHz: *mant = sx127x_FSK_OOK_REG_12_RX_BW_MANT_20; *exp = sx127x_FSK_OOK_REG_12_RX_BW_EXP_1; break;
