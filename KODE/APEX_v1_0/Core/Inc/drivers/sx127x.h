@@ -3,6 +3,6 @@
 
 #include "sx127x/sx127x_common.h"
 #include "sx127x/sx127x_lora.h"
-#include "sx127x/sx127x_fsk.h"
+#include "sx127x/sx127x_fsk_ook.h"
 
 # endif // SX127x_H

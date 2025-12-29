@@ -34,13 +34,6 @@ sx127x_status_t sx127x_LORA_Config(sx127x_chip_t *chip, sx127x_lora_config_t con
 	status = sx127x_RegWrite(chip, sx127x_LORA_REG_0E_FIFO_TX_BASE_ADDR, 0x80);
 	if (status != sx127x_STATUS_OK) { return status; }
 
-	// Set lna boost
-	value = sx127x_REG_0C_LNA_LNA_GAIN_G1			// Gain set to G1 (highest)
-		  | sx127x_REG_0C_LNA_LNA_BOOST_LF_DFT		// Normal LNA current (LF)
-		  | sx127x_REG_0C_LNA_LNA_BOOST_HF_BOOST;	// LNA current boosted by 150% (HF)
-	status = sx127x_RegWrite(chip, sx127x_REG_0C_LNA, value);
-	if (status != sx127x_STATUS_OK) { return status; }
-
 	// Set the Modem Config1
 	value = config.bandwidth		// Bandwidth
 		  | config.codingRate		// Coding Rate

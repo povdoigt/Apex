@@ -3,6 +3,8 @@
 // include
 #include "drivers/sx127x/sx127x_common.h"
 
+#include <stdbool.h>
+
 
 #define SX127X_FSK_BITRATE_MIN	  1200	// in kbps
 #define SX127X_FSK_BITRATE_MAX	300000	// in kbps
@@ -788,12 +790,11 @@ typedef struct sx127x_FSK_OOK_config_t {
     sx127x_FSK_OOK_REG_0A_PA_RAMP_MOD_SHAPING	modShaping;	// modulation shaping
     sx127x_FSK_OOK_REG_0A_PA_RAMP_PA_RAMP		paRamp;		// PA ramp time
 	uint8_t										fifoThresh;	// FifoThresh
-	sx127x_FSK_OOK_mode_t						mode;		// FSK or OOK
 	sx127x_FSK_OOK_packet_cfg_t					packetCfg;	// packet configuration
 	union {
 		struct {
 			/* FSK specific */
-			int16_t	freqDev;	// frequency deviation in Hz
+			uint16_t fdev;	// frequency deviation in Hz
 		} fsk;
 
 		struct {
@@ -808,5 +809,6 @@ typedef struct sx127x_FSK_OOK_config_t {
 sx127x_status_t sx127x_FSK_Config(sx127x_chip_t *sx127x_chip, sx127x_FSK_OOK_config_t config);
 sx127x_status_t sx127x_OOK_Config(sx127x_chip_t *sx127x_chip, sx127x_FSK_OOK_config_t config);
 
+sx127x_status_t sx127x_FSK_OOK_ChangeMode(sx127x_chip_t *sx127x_chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode);
 
 #endif // SX127X_FSK_OOK_H

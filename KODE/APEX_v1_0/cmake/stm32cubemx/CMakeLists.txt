@@ -40,7 +40,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/LSM303AGR.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/sx127x/sx127x_common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/sx127x/sx127x_lora.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/sx127x/sx127x_fsk.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/sx127x/sx127x_fsk_ook.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/sx127x.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/w25q_mem.c
 
