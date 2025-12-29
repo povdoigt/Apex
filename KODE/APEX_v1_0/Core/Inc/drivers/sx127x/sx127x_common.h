@@ -311,8 +311,9 @@ typedef enum sx127x_status_t {
 } sx127x_status_t;
 
 typedef enum sx127x_modulation_t {
-	sx127x_MODULATION_FSK_OOK = 0,
-	sx127x_MODULATION_LORA    = 1,
+	sx127x_MODULATION_FSK,
+	sx127x_MODULATION_OOK,
+	sx127x_MODULATION_LORA,
 } sx127x_modulation_t;
 
 typedef struct sx127x_chip_t {

@@ -121,14 +121,23 @@ sx127x_status_t sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
     // Small delay to ensure the chip is ready after initialization
     HAL_Delay(10);
 
+    uint8_t value;
+    sx127x_status_t status;
+
     // Check the version register to verify communication
-    uint8_t version;
-    sx127x_status_t status = sx127x_RegRead(chip, sx127x_REG_42_VERSION, &version);
-    if (status != sx127x_STATUS_OK || (version != sx127x_VERSION_ID)) { return sx127x_STATUS_ERROR; }
+    status = sx127x_RegRead(chip, sx127x_REG_42_VERSION, &value);
+    if (status != sx127x_STATUS_OK || (value != sx127x_VERSION_ID)) { return sx127x_STATUS_ERROR; }
 
     // Set OCP
     status = sx127x_SetOcp(chip, ocp_current_mA);
     if (status != sx127x_STATUS_OK) { return status; }
+
+	// Set lna boost
+	value = sx127x_REG_0C_LNA_LNA_GAIN_G1			// Gain set to G1 (highest)
+		  | sx127x_REG_0C_LNA_LNA_BOOST_LF_DFT		// Normal LNA current (LF)
+		  | sx127x_REG_0C_LNA_LNA_BOOST_HF_BOOST;	// LNA current boosted by 150% (HF)
+	status = sx127x_RegWrite(chip, sx127x_REG_0C_LNA, value);
+	if (status != sx127x_STATUS_OK) { return status; }
 
     // Check and set the frequency band
     status = sx127x_SetFrequency(chip, frequency);
