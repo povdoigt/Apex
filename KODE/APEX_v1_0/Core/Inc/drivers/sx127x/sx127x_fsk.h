@@ -2,10 +2,11 @@
 #define SX127X_FSK_OOK_H
 // include
 #include "drivers/sx127x/sx127x_common.h"
+#include <stdbool.h>
 
 
-#define SX127X_FSK_BITRATE_MIN	  1200	// in kbps
-#define SX127X_FSK_BITRATE_MAX	300000	// in kbps
+#define SX127X_FSK_BITRATE_MIN	  1200	// in bps (1.2 kbps)
+#define SX127X_FSK_BITRATE_MAX	300000	// in bps (300 kbps)
 
 
 // Register names (FSK/OOK Mode)

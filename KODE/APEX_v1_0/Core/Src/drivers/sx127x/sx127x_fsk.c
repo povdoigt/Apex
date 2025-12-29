@@ -8,13 +8,14 @@
 
 // Helper function to calculate and set bitrate
 static sx127x_status_t sx127x_FSK_SetBitrate(sx127x_chip_t *chip, uint32_t bitrate) {
+	// Validate bitrate (constants are in bps: 1.2 kbps to 300 kbps)
 	if (bitrate < SX127X_FSK_BITRATE_MIN || bitrate > SX127X_FSK_BITRATE_MAX) {
 		return sx127x_STATUS_ERROR;
 	}
 
 	// BitRate = Fxosc / BitRateReg
 	// BitRateReg = Fxosc / BitRate
-	uint32_t bitrate_reg = (uint32_t)(sx127x_FXOSC / bitrate);
+	uint32_t bitrate_reg = sx127x_FXOSC / bitrate;
 
 	uint8_t msb = (uint8_t)(bitrate_reg >> 8);
 	uint8_t lsb = (uint8_t)(bitrate_reg & 0xFF);
@@ -32,7 +33,10 @@ static sx127x_status_t sx127x_FSK_SetBitrate(sx127x_chip_t *chip, uint32_t bitra
 static sx127x_status_t sx127x_FSK_SetFreqDev(sx127x_chip_t *chip, int16_t freq_dev_hz) {
 	// Fdev = Fstep * FdevReg
 	// FdevReg = Fdev / Fstep
-	uint32_t fdev_reg = (uint32_t)((float)abs(freq_dev_hz) / sx127x_FSTEP);
+	// sx127x_FSTEP = Fxosc / 2^19 = 32000000 / 524288 ≈ 61.03515625 Hz
+	// To avoid floating point, use: FdevReg = (Fdev * 524288) / 32000000 = (Fdev * 2^19) / Fxosc
+	uint32_t abs_freq_dev = (uint32_t)abs(freq_dev_hz);
+	uint32_t fdev_reg = (abs_freq_dev << 19) / sx127x_FXOSC;
 
 	uint8_t msb = (uint8_t)(fdev_reg >> 8);
 	uint8_t lsb = (uint8_t)(fdev_reg & 0xFF);
