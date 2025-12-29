@@ -1,7 +1,5 @@
-// sx127x.h
-
-#ifndef sx127x_LORA_h
-#define sx127x_LORA_h
+#ifndef SX127x_LORA_H
+#define SX127x_LORA_H
 
 #include "drivers/sx127x/sx127x_common.h"
 #include "stm32f4xx_hal.h"
@@ -11,42 +9,56 @@
 
 
 // Register names (LoRa Mode)
-#define sx127x_LORA_REG_0D_FIFO_ADDR_PTR           	0x0d
-#define sx127x_LORA_REG_0E_FIFO_TX_BASE_ADDR       	0x0e
-#define sx127x_LORA_REG_0F_FIFO_RX_BASE_ADDR       	0x0f
-#define sx127x_LORA_REG_10_FIFO_RX_CURRENT_ADDR    	0x10
-#define sx127x_LORA_REG_11_IRQ_FLAGS_MSK          	0x11
-#define sx127x_LORA_REG_12_IRQ_FLAGS               	0x12
-#define sx127x_LORA_REG_13_RX_NB_BYTES             	0x13
-#define sx127x_LORA_REG_14_RX_HEADER_CNT_VALUE_MSB 	0x14
-#define sx127x_LORA_REG_15_RX_HEADER_CNT_VALUE_LSB 	0x15
-#define sx127x_LORA_REG_16_RX_PACKET_CNT_VALUE_MSB 	0x16
+// REG 00~01 are common
+// REG 02~05 are mode specific
+// REG 06~09 are common
+// REG 0A are mode specific
+// REG 0B~0C are common
+#define sx127x_LORA_REG_0D_FIFO_ADDR_PTR			0x0d
+#define sx127x_LORA_REG_0E_FIFO_TX_BASE_ADDR		0x0e
+#define sx127x_LORA_REG_0F_FIFO_RX_BASE_ADDR		0x0f
+#define sx127x_LORA_REG_10_FIFO_RX_CURRENT_ADDR		0x10
+#define sx127x_LORA_REG_11_IRQ_FLAGS_MSK			0x11
+#define sx127x_LORA_REG_12_IRQ_FLAGS				0x12
+#define sx127x_LORA_REG_13_RX_NB_BYTES				0x13
+#define sx127x_LORA_REG_14_RX_HEADER_CNT_VALUE_MSB	0x14
+#define sx127x_LORA_REG_15_RX_HEADER_CNT_VALUE_LSB	0x15
+#define sx127x_LORA_REG_16_RX_PACKET_CNT_VALUE_MSB	0x16
 #define sx127x_LORA_REG_17_RX_PACKET_CNT_VALUE_LSB	0x17
-#define sx127x_LORA_REG_18_MODEM_STAT              	0x18
-#define sx127x_LORA_REG_19_PKT_SNR_VALUE           	0x19
-#define sx127x_LORA_REG_1A_PKT_RSSI_VALUE          	0x1a
-#define sx127x_LORA_REG_1B_RSSI_VALUE              	0x1b
-#define sx127x_LORA_REG_1C_HOP_CHANNEL             	0x1c
-#define sx127x_LORA_REG_1D_MODEM_CONFIG1           	0x1d
-#define sx127x_LORA_REG_1E_MODEM_CONFIG2           	0x1e
-#define sx127x_LORA_REG_1F_SYMB_TIMEOUT_LSB        	0x1f
-#define sx127x_LORA_REG_20_PREAMBLE_MSB            	0x20
-#define sx127x_LORA_REG_21_PREAMBLE_LSB            	0x21
-#define sx127x_LORA_REG_22_PAYLOAD_LENGTH          	0x22
-#define sx127x_LORA_REG_23_MAX_PAYLOAD_LENGTH      	0x23
-#define sx127x_LORA_REG_24_HOP_PERIOD              	0x24
-#define sx127x_LORA_REG_25_FIFO_RX_BYTE_ADDR       	0x25
-#define sx127x_LORA_REG_26_MODEM_CONFIG3           	0x26
+#define sx127x_LORA_REG_18_MODEM_STAT				0x18
+#define sx127x_LORA_REG_19_PKT_SNR_VALUE			0x19
+#define sx127x_LORA_REG_1A_PKT_RSSI_VALUE			0x1a
+#define sx127x_LORA_REG_1B_RSSI_VALUE				0x1b
+#define sx127x_LORA_REG_1C_HOP_CHANNEL				0x1c
+#define sx127x_LORA_REG_1D_MODEM_CONFIG1			0x1d
+#define sx127x_LORA_REG_1E_MODEM_CONFIG2			0x1e
+#define sx127x_LORA_REG_1F_SYMB_TIMEOUT_LSB			0x1f
+#define sx127x_LORA_REG_20_PREAMBLE_MSB				0x20
+#define sx127x_LORA_REG_21_PREAMBLE_LSB				0x21
+#define sx127x_LORA_REG_22_PAYLOAD_LENGTH			0x22
+#define sx127x_LORA_REG_23_MAX_PAYLOAD_LENGTH		0x23
+#define sx127x_LORA_REG_24_HOP_PERIOD				0x24
+#define sx127x_LORA_REG_25_FIFO_RX_BYTE_ADDR		0x25
+#define sx127x_LORA_REG_26_MODEM_CONFIG3			0x26
+#define sx127x_LORA_REG_27_PPM_CORRECTION			0x27
+#define sx127x_LORA_REG_28_FEI_MSB					0x28
+#define sx127x_LORA_REG_29_FEI_MID					0x29
+#define sx127x_LORA_REG_2A_FEI_LSB					0x2a
+// REG 2B is reserved
+#define sx127x_LORA_REG_2C_RSSI_WIDEBAND			0x2c
+// REG 2D~2E are reserved
+#define sx127x_LORA_REG_2F_IF_FREQ2					0x2f
+#define sx127x_LORA_REG_30_IF_FREQ1					0x30
+#define sx127x_LORA_REG_31_DETECT_OPTIMIZ			0x31
+// REG 32 is reserved
+#define sx127x_LORA_REG_33_INVERT_IQ				0x33
+// REG 34~35 are reserved
+#define sx127x_LORA_REG_37_DETECTION_THRESHOLD		0x37
+// REG 38 is reserved
+#define sx127x_LORA_REG_39_SYNC_WORD				0x39
+#define sx127x_LORA_REG_3A_HIGH_BW_OPTIMIZ2			0x3a
+#define sx127x_LORA_REG_3B_INVERT_IQ2				0x3b
 
-#define sx127x_LORA_REG_27_PPM_CORRECTION           0x27
-#define sx127x_LORA_REG_28_FEI_MSB                  0x28
-#define sx127x_LORA_REG_29_FEI_MID                  0x29
-#define sx127x_LORA_REG_2A_FEI_LSB                  0x2a
-#define sx127x_LORA_REG_2C_RSSI_WIDEBAND            0x2c
-#define sx127x_LORA_REG_31_DETECT_OPTIMIZ           0x31
-#define sx127x_LORA_REG_33_INVERT_IQ                0x33
-#define sx127x_LORA_REG_37_DETECTION_THRESHOLD      0x37
-#define sx127x_LORA_REG_39_SYNC_WORD                0x39
 
 
 
@@ -212,6 +224,7 @@ typedef enum sx127x_LORA_REG_26_MODEM_CONFIG3_AGCAO {
 
 
 // ====================== 0x40 RegDioMapping1 ======================
+// (masks are common with FSK/OOK mode)
 // [7-6] DIO0 Mapping:
 typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO0 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO0_RX_DONE	= 0b00000000,	// RxDone
@@ -219,7 +232,6 @@ typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO0 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO0_CAD_DONE	= 0b10000000,	// CadDone
 	// 11 reserved
 } sx127x_LORA_REG_40_DIO_MAPPING1_DIO0;
-#define sx127x_LORA_REG_40_DIO_MAPPING1_DIO0_MSK 0b11000000
 // [5-4] DIO1 Mapping:
 typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO1 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO1_RX_TIMEOUT				= 0b00000000,	// RxTimeout
@@ -227,7 +239,6 @@ typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO1 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO1_CAD_DETECTED			= 0b01000000,	// CadDetected
 	// 11 reserved
 } sx127x_LORA_REG_40_DIO_MAPPING1_DIO1;
-#define sx127x_LORA_REG_40_DIO_MAPPING1_DIO1_MSK 0b00110000
 // [3-2] DIO2 Mapping:
 typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO2 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO2_FHSS_PRESENT_CHANNEL	= 0b00000000,	// FhssPresentChannel
@@ -235,7 +246,6 @@ typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO2 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO2_FHSS_PRESENT_CHANNEL2	= 0b00001000,	// FhssPresentChannel (same as 00)
 	// 11 reserved
 } sx127x_LORA_REG_40_DIO_MAPPING1_DIO2;
-#define sx127x_LORA_REG_40_DIO_MAPPING1_DIO2_MSK 0b00001100
 // [1-0] DIO3 Mapping:
 typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO3 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO3_CAD_DONE			= 0b00000000,	// CadDone
@@ -243,13 +253,13 @@ typedef enum sx127x_LORA_REG_40_DIO_MAPPING1_DIO3 {
 	sx127x_LORA_REG_40_DIO_MAPPING1_DIO3_PAYLOAD_CRC_ERROR	= 0b00000010,	// PayloadCrcError
 	// 11 reserved
 } sx127x_LORA_REG_40_DIO_MAPPING1_DIO3;
-#define sx127x_LORA_REG_40_DIO_MAPPING1_DIO3_MSK 0b00000011
 
 
 
 
 
 // ====================== 0x41 RegDioMapping2 ======================
+// (masks are common with FSK/OOK mode)
 // [7-6] DIO4 Mapping:
 typedef enum sx127x_LORA_REG_41_DIO_MAPPING2_DIO4 {
 	sx127x_LORA_REG_41_DIO_MAPPING2_DIO4_CAD_DETECTED	= 0b00000000,	// CadDetected
@@ -257,7 +267,6 @@ typedef enum sx127x_LORA_REG_41_DIO_MAPPING2_DIO4 {
 	sx127x_LORA_REG_41_DIO_MAPPING2_DIO4_PLL_LOCK1		= 0b10000000,	// PllLock (same as 01)
 	// 11 reserved
 } sx127x_LORA_REG_41_DIO_MAPPING2_DIO4;
-#define sx127x_LORA_REG_41_DIO_MAPPING2_DIO4_MSK 0b11000000
 // [5-4] DIO5 Mapping:
 typedef enum sx127x_LORA_REG_41_DIO_MAPPING2_DIO5 {
 	sx127x_LORA_REG_41_DIO_MAPPING2_DIO5_MODE_READY	= 0b00000000,	// ModeReady
@@ -265,15 +274,8 @@ typedef enum sx127x_LORA_REG_41_DIO_MAPPING2_DIO5 {
 	sx127x_LORA_REG_41_DIO_MAPPING2_DIO5_CLK_OUT1	= 0b10000000,	// ClkOut (same as 01)
 	// 11 reserved
 } sx127x_LORA_REG_41_DIO_MAPPING2_DIO5;
-#define sx127x_LORA_REG_41_DIO_MAPPING2_DIO5_MSK 0b00110000
 // [3-1] Reserved
-// [0] ClkOutOnPayloadReady:
-typedef enum sx127x_LORA_REG_41_DIO_MAPPING2_MAP_PREAMBLE_DETECT {
-	sx127x_LORA_REG_41_DIO_MAPPING2_MPD_RSSI			= 0b00000000,	// ClkOut on RSSI
-	sx127x_LORA_REG_41_DIO_MAPPING2_MPD_PREAMBLE_DETECT	= 0b00000001,	// ClkOut on PreambleDetect
-} sx127x_LORA_REG_41_DIO_MAPPING2_MAP_PREAMBLE_DETECT;
-#define sx127x_LORA_REG_41_DIO_MAPPING2_MAP_PREAMBLE_DETECT_MSK 0b00000001
-
+// [0] ClkOutOnPayloadReady (common with FSK/OOK mode)
 
 
 
@@ -292,10 +294,10 @@ typedef struct sx127x_lora_config_t {
 
 
 
-sx127x_status_t	sx127x_LORA_Init(sx127x_chip_t *chip, sx127x_lora_config_t config);
+sx127x_status_t	sx127x_LORA_Config(sx127x_chip_t *chip, sx127x_lora_config_t config);
 sx127x_status_t sx127x_LORA_ChangeMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode);
 sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t len);
 sx127x_status_t sx127x_LORA_IsTxDone(sx127x_chip_t *chip, bool *isDone);
 sx127x_status_t sx127x_LORA_RxReceive(sx127x_chip_t *chip, uint8_t *buffer, uint8_t *len);
 
-#endif // sx127x_LORA_h
+#endif // SX127X_LORA_H

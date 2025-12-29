@@ -35,7 +35,7 @@ static inline void sx127x_SPI_End(sx127x_chip_t *chip) {
 // ================================== Level 1: Basic Read/Write functions ==================================
 
 sx127x_status_t sx127x_RegWrite(sx127x_chip_t *chip, uint8_t reg, uint8_t value) {
-    uint8_t tx_buf[2] = { reg | sx127x_REG_WRITE_MASK, value };
+    uint8_t tx_buf[2] = { reg | sx127x_REG_WRITE_MSK, value };
 
     sx127x_SPI_Begin(chip);
     sx127x_status_t status = sx127x_SPI_Tx(chip, tx_buf, 2);
@@ -48,7 +48,7 @@ sx127x_status_t sx127x_RegWriteMulti(sx127x_chip_t *chip, uint8_t reg, const uin
         return sx127x_STATUS_OK;
     }
     
-    uint8_t tx_reg = reg | sx127x_REG_WRITE_MASK;
+    uint8_t tx_reg = reg | sx127x_REG_WRITE_MSK;
 
     sx127x_status_t status;
     sx127x_SPI_Begin(chip);
@@ -63,7 +63,7 @@ sx127x_status_t sx127x_RegWriteMulti(sx127x_chip_t *chip, uint8_t reg, const uin
 }
 
 sx127x_status_t sx127x_RegRead(sx127x_chip_t *chip, uint8_t reg, uint8_t *value) {
-    uint8_t tx_buf[1] = { reg & ~sx127x_REG_WRITE_MASK };
+    uint8_t tx_buf[1] = { reg & ~sx127x_REG_WRITE_MSK };
 
     sx127x_SPI_Begin(chip);
     sx127x_status_t status = sx127x_SPI_Tx(chip, tx_buf, 1);
@@ -81,7 +81,7 @@ sx127x_status_t sx127x_RegReadMulti(sx127x_chip_t *chip, uint8_t reg, uint8_t *b
         return sx127x_STATUS_OK;
     }
 
-    uint8_t tx_reg = reg & ~sx127x_REG_WRITE_MASK;
+    uint8_t tx_reg = reg & ~sx127x_REG_WRITE_MSK;
 
     sx127x_status_t status;
     sx127x_SPI_Begin(chip);
@@ -104,9 +104,9 @@ sx127x_status_t sx127x_RegReadMulti(sx127x_chip_t *chip, uint8_t reg, uint8_t *b
 void __sx127x_SetPwrvalue(sx127x_chip_t *chip, float Pout, uint8_t *pMaxPower, uint8_t *pOutputPower);
 
 
-sx127x_status_t __sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
-                              GPIO_TypeDef *csPinBank, uint16_t csPin, uint32_t frequency,
-                              float ocp_current_mA, float power_dBm) {
+sx127x_status_t sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
+                            GPIO_TypeDef *csPinBank, uint16_t csPin, uint32_t frequency,
+                            float ocp_current_mA, float power_dBm) {
     if (!chip || !spiHandle || !csPinBank) {
         return sx127x_STATUS_ERROR;
     }
@@ -114,8 +114,6 @@ sx127x_status_t __sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
     chip->spiHandle = spiHandle;
     chip->csPinBank = csPinBank;
     chip->csPin = csPin;
-
-    chip->lastRxPtr = 0;
 
     // Set CS pin high (if not already set)
     HAL_GPIO_WritePin(chip->csPinBank, chip->csPin, GPIO_PIN_SET);
@@ -142,19 +140,31 @@ sx127x_status_t __sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
     return status;
 }
 
+sx127x_status_t sx127x_GetBand(sx127x_chip_t *chip, uint8_t *band) {
+    if (!chip || !band) {
+        return sx127x_STATUS_ERROR;
+    }
+
+    if (sx127x_BAND_1_MIN_FREQ <= chip->frequency && chip->frequency <= sx127x_BAND_1_MAX_FREQ) {
+        *band = sx127x_BAND_1;
+    } else if (sx127x_BAND_2_MIN_FREQ <= chip->frequency && chip->frequency <= sx127x_BAND_2_MAX_FREQ) {
+        *band = sx127x_BAND_2;
+    } else if (sx127x_BAND_3_MIN_FREQ <= chip->frequency && chip->frequency <= sx127x_BAND_3_MAX_FREQ) {
+        *band = sx127x_BAND_3;
+    } else {
+        return sx127x_STATUS_ERROR;
+    }
+
+    return sx127x_STATUS_OK;
+}
+
 sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency) {
     if (!chip) {
         return sx127x_STATUS_ERROR;
     }
 
     // Check and set the frequency band
-    if (sx127x_BAND_3_MIN_FREQ <= frequency && frequency <= sx127x_BAND_3_MAX_FREQ) {
-        chip->band = sx127x_BAND_3;
-    } else if (sx127x_BAND_2_MIN_FREQ <= frequency && frequency <= sx127x_BAND_2_MAX_FREQ) {
-        chip->band = sx127x_BAND_2;
-    } else if (sx127x_BAND_1_MIN_FREQ <= frequency && frequency <= sx127x_BAND_1_MAX_FREQ) {
-        chip->band = sx127x_BAND_1;
-    } else {
+    if (sx127x_GetBand(chip, NULL) != sx127x_STATUS_OK) {
         return sx127x_STATUS_ERROR;
     }
     frequency = (uint32_t)((float)frequency / sx127x_FSTEP);
@@ -219,7 +229,7 @@ sx127x_status_t sx127x_SetOcp(sx127x_chip_t *chip, float ocp_current_mA) {
     } else {
         ocp_trim = (uint8_t)((ocp_current_mA + 30) / 10);
     }
-    ocp_trim &= sx127x_REG_0B_OCP_OCP_TRIM_MASK; // Set bits [4-0] for OcpTrim value
+    ocp_trim &= sx127x_REG_0B_OCP_OCP_TRIM_MSK; // Set bits [4-0] for OcpTrim value
     ocp_trim |= sx127x_REG_0B_OCP_OCP_ON_ON;   // Enable OCP
 
     return sx127x_RegWrite(chip, sx127x_REG_0B_OCP, ocp_trim);
@@ -336,6 +346,6 @@ void __sx127x_SetPwrvalue(sx127x_chip_t *chip, float Pout, uint8_t *pMaxPower, u
         n0 = 7; n1 = 15;
     }
 
-    *pMaxPower = (n0 << 4) & sx127x_REG_09_PA_CONFIG_MAX_POWER_MASK;    // [6-4] MaxPower
-    *pOutputPower = n1 & sx127x_REG_09_PA_CONFIG_OUTPUT_POWER_MASK;     // [3-0] OutputPower
+    *pMaxPower = (n0 << 4) & sx127x_REG_09_PA_CONFIG_MAX_POWER_MSK;    // [6-4] MaxPower
+    *pOutputPower = n1 & sx127x_REG_09_PA_CONFIG_OUTPUT_POWER_MSK;     // [3-0] OutputPower
 }

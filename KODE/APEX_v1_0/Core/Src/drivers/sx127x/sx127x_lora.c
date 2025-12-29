@@ -7,20 +7,24 @@
 #include <string.h>
 
 
-sx127x_status_t sx127x_LORA_Init(sx127x_chip_t *chip, sx127x_lora_config_t config) {
+sx127x_status_t sx127x_LORA_Config(sx127x_chip_t *chip, sx127x_lora_config_t config) {
 	sx127x_status_t status;
 	uint8_t value = 0x00;
+
+	// Get chip frequency band
+	uint8_t band;
+	status = sx127x_GetBand(chip, &band);
+	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the mode to sleep (need to be in sleep mode to set LoRa mode)
 	status = sx127x_LORA_ChangeMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the RegOpMode
-	value = 0x00;
-	value |= sx127x_LORA_REG_01_OP_MODE_LRM_LoRa;	// LoRa mode
-	value |= sx127x_LORA_REG_01_OP_MODE_ASR_LoRa;	// LoRa access mode
-	value |= chip->band == sx127x_BAND_1 ? sx127x_LORA_REG_01_OP_MODE_LFMO_OFF : sx127x_LORA_REG_01_OP_MODE_LFMO_ON; // Set LF/HF mode based on frequency band
-	value |= sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP; // Sleep mode (normaly already set)
+	value = sx127x_LORA_REG_01_OP_MODE_LRM_LoRa		// LoRa mode
+		  | sx127x_LORA_REG_01_OP_MODE_ASR_LoRa		// LoRa access mode
+		  | (band == sx127x_BAND_1 ? sx127x_LORA_REG_01_OP_MODE_LFMO_OFF : sx127x_LORA_REG_01_OP_MODE_LFMO_ON)
+		  | sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP;	// Sleep mode (normaly already set)
 	status = sx127x_RegWrite(chip, sx127x_REG_01_OP_MODE, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
@@ -31,41 +35,40 @@ sx127x_status_t sx127x_LORA_Init(sx127x_chip_t *chip, sx127x_lora_config_t confi
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set lna boost
-	value = 0x00;
-	value |= sx127x_REG_0C_LNA_LNA_GAIN_G1; // Gain set to G1 (highest)
-	value |= sx127x_REG_0C_LNA_LNA_BOOST_LF_DFT; // Normal LNA current (LF)
-	value |= sx127x_REG_0C_LNA_LNA_BOOST_HF_BOOST; // LNA current boosted by 150% (HF)
+	value = sx127x_REG_0C_LNA_LNA_GAIN_G1			// Gain set to G1 (highest)
+		  | sx127x_REG_0C_LNA_LNA_BOOST_LF_DFT		// Normal LNA current (LF)
+		  | sx127x_REG_0C_LNA_LNA_BOOST_HF_BOOST;	// LNA current boosted by 150% (HF)
 	status = sx127x_RegWrite(chip, sx127x_REG_0C_LNA, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the Modem Config1
-	value = 0x00;
-	value |= config.bandwidth;			// Bandwidth
-	value |= config.codingRate;		// Coding Rate
-	value |= config.implicitHeader;	// Implicit Header mode
+	value = config.bandwidth		// Bandwidth
+		  | config.codingRate		// Coding Rate
+		  | config.implicitHeader;	// Implicit Header mode
 	status = sx127x_RegWrite(chip, sx127x_LORA_REG_1D_MODEM_CONFIG1, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the Modem Config2
-	value = 0x00;
-	value |= config.spreadingFactor;	// Spreading Factor
-	value |= sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM_OFF; // Normal Tx mode
-	value |= config.crcEnabled ? sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_ON : sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_OFF; // CRC
+	value = config.spreadingFactor						// Spreading Factor
+		  | sx127x_LORA_REG_1E_MODEM_CONFIG2_TXCM_OFF	// Normal Tx mode
+		  | (config.crcEnabled ? sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_ON : sx127x_LORA_REG_1E_MODEM_CONFIG2_RPC_OFF); // CRC
 	status = sx127x_RegWrite(chip, sx127x_LORA_REG_1E_MODEM_CONFIG2, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the Modem Config3
-	value = 0x00;
-	value |= sx127x_LORA_REG_26_MODEM_CONFIG3_LDRO_OFF; // LowDataRateOptimize disabled
-	value |= sx127x_LORA_REG_26_MODEM_CONFIG3_AGCAO_ON; // LNA gain set by AGC loop
+	value = sx127x_LORA_REG_26_MODEM_CONFIG3_LDRO_OFF	// LowDataRateOptimize disabled
+		  | sx127x_LORA_REG_26_MODEM_CONFIG3_AGCAO_ON;	// LNA gain set by AGC loop
 	status = sx127x_RegWrite(chip, sx127x_LORA_REG_26_MODEM_CONFIG3, value);
 	if (status != sx127x_STATUS_OK) { return status; }
+
+	chip->modulation = sx127x_MODULATION_LORA;
 
 	return sx127x_STATUS_OK;
 }
 
 
 sx127x_status_t sx127x_LORA_ChangeMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode) {
+	if (!chip || chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 	sx127x_status_t status;
 	uint8_t value = 0x00;
 
@@ -85,6 +88,7 @@ sx127x_status_t sx127x_LORA_ChangeMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_O
 }
 
 sx127x_status_t sx127x_LORA_IsTxDone(sx127x_chip_t *chip, bool *isDone) {
+	if (!chip || chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 	sx127x_status_t status;
 	uint8_t irq_flags;
 
@@ -104,6 +108,7 @@ sx127x_status_t sx127x_LORA_IsTxDone(sx127x_chip_t *chip, bool *isDone) {
 }
 
 sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t len) {
+	if (!chip || chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 	sx127x_status_t status;
 
 	len = len > 128 ? 128 : len; // Max payload length is 128 bytes
@@ -139,6 +144,7 @@ sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t l
 }
 
 sx127x_status_t sx127x_LORA_RxReceive(sx127x_chip_t *chip, uint8_t *buff, uint8_t *len) {
+	if (!chip || chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 	sx127x_status_t status;
 	uint8_t packetLength = 0;
 	uint8_t value;
