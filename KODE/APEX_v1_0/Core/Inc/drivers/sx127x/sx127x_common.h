@@ -306,8 +306,10 @@ typedef enum sx127x_REG_70_PLL_HOP_PLL_BANDWIDTH {
 // ====================== Data Structures ======================
 
 typedef enum sx127x_status_t {
-    sx127x_STATUS_OK       = 0x00,
-    sx127x_STATUS_ERROR    = 0x01,
+    sx127x_STATUS_OK			= 0x00,
+    sx127x_STATUS_ERROR			= 0x01,
+	sx127x_STATUS_SPI_TIMEOUT	= 0x02,
+	sx127x_STATUS_MODEM_TIMEOUT	= 0x03,
 } sx127x_status_t;
 
 typedef enum sx127x_modulation_t {

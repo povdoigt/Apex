@@ -295,7 +295,7 @@ typedef struct sx127x_lora_config_t {
 
 
 sx127x_status_t	sx127x_LORA_Config(sx127x_chip_t *chip, sx127x_lora_config_t config);
-sx127x_status_t sx127x_LORA_ChangeMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode);
+sx127x_status_t sx127x_LORA_SetMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode);
 sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t len);
 sx127x_status_t sx127x_LORA_IsTxDone(sx127x_chip_t *chip, bool *isDone);
 sx127x_status_t sx127x_LORA_RxReceive(sx127x_chip_t *chip, uint8_t *buffer, uint8_t *len);

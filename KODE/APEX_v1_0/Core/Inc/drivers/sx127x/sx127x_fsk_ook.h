@@ -6,8 +6,12 @@
 #include <stdbool.h>
 
 
-#define SX127X_FSK_BITRATE_MIN	  1200	// in bps
-#define SX127X_FSK_BITRATE_MAX	300000	// in bps
+#define SX127X_FSK_OOK_BITRATE_MIN	  1200	// in bps
+#define SX127X_FSK_OOK_BITRATE_MAX	300000	// in bps
+
+
+#define SX127X_FSK_OOK_FIFO_SIZE		 64	// in bytes
+#define SX127X_FSK_OOK_MAX_PAYLOAD_SIZE	255	// in bytes
 
 
 // Register names (FSK/OOK Mode)
@@ -736,32 +740,32 @@ typedef enum sx127x_FSK_OOK_RxBw_t {
 
 typedef struct sx127x_FSK_OOK_packet_cfg_t {
     /* Preamble */
-    uint16_t preamble_len;          // RegPreambleMsb/Lsb
+    uint16_t	preamble_len;		// RegPreambleMsb/Lsb
 
     /* Sync word (no SyncAddr / no AddrFilt) */
-    bool     sync_on;               // RegSyncConfig.SyncOn
-    uint8_t  sync_len;              // 1..8 bytes
-    uint8_t  sync_word[8];          // RegSyncValue1..8
+    bool		sync_on;			// RegSyncConfig.SyncOn
+    uint8_t		sync_len;			// 1..8 bytes
+    uint8_t		sync_word[8];		// RegSyncValue1..8
 
     /* Packet format */
-    bool     variable_length;       // RegPacketConfig1.PacketFormat
-    uint8_t  payload_max_len;       // fixed: RegPayloadLength; variable: max accepted length
-    bool     crc_on;                // RegPacketConfig1.CrcOn
+    bool		variable_length;	// RegPacketConfig1.PacketFormat
+    uint16_t	payload_len;		// fixed: RegPayloadLength; variable: max accepted length
+    bool		crc_on;				// RegPacketConfig1.CrcOn
 } sx127x_FSK_OOK_packet_cfg_t;
 
-typedef enum {
+typedef enum sx127x_ook_thresh_type_t {
     SX127X_OOK_THRESH_FIXED,
     SX127X_OOK_THRESH_PEAK,
     SX127X_OOK_THRESH_AVERAGE,
 } sx127x_ook_thresh_type_t;
 
-typedef struct {
+typedef struct sx127x_ook_config_t {
     sx127x_ook_thresh_type_t thresh_type;
 
 	union {
 		struct {
 			/* FIXED */
-			uint8_t fixed_thresh;           // RegOokFix.OokThreshFixed
+			uint8_t	fixed_thresh;	// RegOokFix.OokThreshFixed
 		} fixed;
 
 		struct {
@@ -789,7 +793,6 @@ typedef struct sx127x_FSK_OOK_config_t {
 	sx127x_FSK_OOK_RxBw_t						RxBw;		// Rx bandwidth
     sx127x_FSK_OOK_REG_0A_PA_RAMP_MOD_SHAPING	modShaping;	// modulation shaping
     sx127x_FSK_OOK_REG_0A_PA_RAMP_PA_RAMP		paRamp;		// PA ramp time
-	uint8_t										fifoThresh;	// FifoThresh
 	sx127x_FSK_OOK_packet_cfg_t					packetCfg;	// packet configuration
 	union {
 		struct {
@@ -805,10 +808,18 @@ typedef struct sx127x_FSK_OOK_config_t {
 } sx127x_FSK_OOK_config_t;
 
 
+typedef struct sx127x_chip_FSK_OOK_t {
+	sx127x_chip_t *base_chip;
+	sx127x_FSK_OOK_config_t config;
+} sx127x_chip_FSK_OOK_t;
 
-sx127x_status_t sx127x_FSK_Config(sx127x_chip_t *sx127x_chip, sx127x_FSK_OOK_config_t config);
-sx127x_status_t sx127x_OOK_Config(sx127x_chip_t *sx127x_chip, sx127x_FSK_OOK_config_t config);
 
-sx127x_status_t sx127x_FSK_OOK_ChangeMode(sx127x_chip_t *sx127x_chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode);
+sx127x_status_t sx127x_FSK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_config_t config);
+sx127x_status_t sx127x_OOK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_config_t config);
+
+sx127x_status_t sx127x_FSK_OOK_SetMode(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode);
+
+sx127x_status_t sx127x_FSK_OOK_TxSendFixLen(sx127x_chip_FSK_OOK_t *chip, const uint8_t *data);
+sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_chip_FSK_OOK_t *chip, const uint8_t *data, uint8_t len);
 
 #endif // SX127X_FSK_OOK_H

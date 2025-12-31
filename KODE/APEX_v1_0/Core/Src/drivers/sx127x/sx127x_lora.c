@@ -17,7 +17,7 @@ sx127x_status_t sx127x_LORA_Config(sx127x_chip_t *chip, sx127x_lora_config_t con
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the mode to sleep (need to be in sleep mode to set LoRa mode)
-	status = sx127x_LORA_ChangeMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP);
+	status = sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the RegOpMode
@@ -60,7 +60,7 @@ sx127x_status_t sx127x_LORA_Config(sx127x_chip_t *chip, sx127x_lora_config_t con
 }
 
 
-sx127x_status_t sx127x_LORA_ChangeMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode) {
+sx127x_status_t sx127x_LORA_SetMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode) {
 	if (!chip || chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 	sx127x_status_t status;
 	uint8_t value = 0x00;
@@ -107,7 +107,7 @@ sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t l
 	len = len > 128 ? 128 : len; // Max payload length is 128 bytes
 
 	// Set the mode to standby
-	status = sx127x_LORA_ChangeMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_STDBY);
+	status = sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_STDBY);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the fifo pointer to TxBaseAddr (0x80)
@@ -123,7 +123,7 @@ sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t l
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the mode to transmit
-	status = sx127x_LORA_ChangeMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_TX);
+	status = sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_TX);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Check TxDone flag
