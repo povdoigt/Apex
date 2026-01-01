@@ -107,13 +107,15 @@ void __sx127x_SetPwrvalue(sx127x_chip_t *chip, float Pout, uint8_t *pMaxPower, u
 sx127x_status_t sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
                             GPIO_TypeDef *csPinBank, uint16_t csPin, uint32_t frequency,
                             float ocp_current_mA, float power_dBm) {
-    if (!chip || !spiHandle || !csPinBank) {
-        return sx127x_STATUS_ERROR;
-    }
+    if (!chip || !spiHandle || !csPinBank) { return sx127x_STATUS_ERROR; }
 
     chip->spiHandle = spiHandle;
     chip->csPinBank = csPinBank;
     chip->csPin = csPin;
+
+    chip->frequency = frequency;
+    chip->ocp_current_mA = ocp_current_mA;
+    chip->power_dBm = power_dBm;
 
     // Set CS pin high (if not already set)
     HAL_GPIO_WritePin(chip->csPinBank, chip->csPin, GPIO_PIN_SET);
@@ -150,9 +152,7 @@ sx127x_status_t sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
 }
 
 sx127x_status_t sx127x_GetBand(sx127x_chip_t *chip, uint8_t *band) {
-    if (!chip || !band) {
-        return sx127x_STATUS_ERROR;
-    }
+    if (!chip || !band) { return sx127x_STATUS_ERROR; }
 
     if (sx127x_BAND_1_MIN_FREQ <= chip->frequency && chip->frequency <= sx127x_BAND_1_MAX_FREQ) {
         *band = sx127x_BAND_1;
@@ -168,14 +168,11 @@ sx127x_status_t sx127x_GetBand(sx127x_chip_t *chip, uint8_t *band) {
 }
 
 sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency) {
-    if (!chip) {
-        return sx127x_STATUS_ERROR;
-    }
+    if (!chip) { return sx127x_STATUS_ERROR; }
 
     // Check and set the frequency band
-    if (sx127x_GetBand(chip, NULL) != sx127x_STATUS_OK) {
-        return sx127x_STATUS_ERROR;
-    }
+    uint8_t band;
+    if (sx127x_GetBand(chip, &band) != sx127x_STATUS_OK) { return sx127x_STATUS_ERROR; }
     frequency = (uint32_t)((float)frequency / sx127x_FSTEP);
 
     uint8_t freq_bytes[3] = {
@@ -187,13 +184,9 @@ sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency) {
 }
 
 sx127x_status_t sx127x_SetTxPower(sx127x_chip_t *chip, float power_dBm) {
-    if (!chip) {
-        return sx127x_STATUS_ERROR;
-    }
+    if (!chip) { return sx127x_STATUS_ERROR; }
 
-    if (power_dBm < sx127x_OUTPUT_POWER_MIN || power_dBm > sx127x_OUTPUT_POWER_MAX) {
-        return sx127x_STATUS_ERROR;
-    }
+    if (power_dBm < sx127x_OUTPUT_POWER_MIN || power_dBm > sx127x_OUTPUT_POWER_MAX) { return sx127x_STATUS_ERROR; }
 
     uint8_t value;
     value = 0x00;
@@ -224,13 +217,9 @@ sx127x_status_t sx127x_SetTxPower(sx127x_chip_t *chip, float power_dBm) {
 }
 
 sx127x_status_t sx127x_SetOcp(sx127x_chip_t *chip, float ocp_current_mA) {
-    if (!chip) {
-        return sx127x_STATUS_ERROR;
-    }
+    if (!chip) { return sx127x_STATUS_ERROR; }
 
-    if (ocp_current_mA < sx127x_OCP_IMAX_MIN || ocp_current_mA > sx127x_OCP_IMAX_MAX) {
-        return sx127x_STATUS_ERROR;
-    }
+    if (ocp_current_mA < sx127x_OCP_IMAX_MIN || ocp_current_mA > sx127x_OCP_IMAX_MAX) { return sx127x_STATUS_ERROR; }
 
     uint8_t ocp_trim = 0;
     if (ocp_current_mA <= 120) {

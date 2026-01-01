@@ -36,12 +36,15 @@ static void sx127x_FSK_OOK_RxBw_to_RegValue(sx127x_FSK_OOK_RxBw_t rxbw, uint8_t 
 	}
 }
 
-static sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_config_t config, sx127x_modulation_t modulation) {
-    if (!chip || modulation == sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
+static sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config, sx127x_modulation_t modulation) {
+    if (!chip) { return sx127x_STATUS_ERROR; }
     
     sx127x_status_t status;
     uint8_t value = 0x00;
     
+	chip->base_chip = base_chip;
+	chip->config = config;
+
     // Get chip frequency band
     uint8_t band;
     status = sx127x_GetBand(chip->base_chip, &band);
@@ -141,15 +144,19 @@ static sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_chip_FSK_OOK_t *chip, sx12
 	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_20_RX_TIMEOUT_1, 0x01);
 	if (status != sx127x_STATUS_OK) { return status; }
 
+
     return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_FSK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_config_t config) {
+sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config) {
 	if (!chip) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
 
-	status = __sx127x_FSK_OOK_Config(chip, config, sx127x_MODULATION_FSK);
+	// Update chip modulation mode
+	chip->base_chip->modulation = sx127x_MODULATION_FSK;
+
+	status = __sx127x_FSK_OOK_Config(chip, base_chip, config, sx127x_MODULATION_FSK);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set frequency deviation (FSK mode only)
@@ -162,19 +169,19 @@ sx127x_status_t sx127x_FSK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_co
 	status = sx127x_RegWriteMulti(chip->base_chip, sx127x_FSK_OOK_REG_04_FDEV_MSB, fdev_buf, 2);
 	if (status != sx127x_STATUS_OK) { return status; }
 
-	// Update chip modulation mode
-	chip->base_chip->modulation = sx127x_MODULATION_FSK;
-
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_OOK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_config_t config) {
+sx127x_status_t sx127x_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config) {
     if (!chip) { return sx127x_STATUS_ERROR; }
     
     sx127x_status_t status;
     uint8_t value = 0x00;
 
-	status = __sx127x_FSK_OOK_Config(chip, config, sx127x_MODULATION_OOK);
+    // Update chip modulation mode
+    chip->base_chip->modulation = sx127x_MODULATION_OOK;
+
+	status = __sx127x_FSK_OOK_Config(chip, base_chip, config, sx127x_MODULATION_OOK);
 	if (status != sx127x_STATUS_OK) { return status; }
     
     // Set OOK-specific configuration
@@ -210,9 +217,6 @@ sx127x_status_t sx127x_OOK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_co
             break;
     }
     
-    // Update chip modulation mode
-    chip->base_chip->modulation = sx127x_MODULATION_OOK;
-    
     return sx127x_STATUS_OK;
 }
 
@@ -221,7 +225,7 @@ sx127x_status_t sx127x_OOK_Config(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_co
 
 
 
-sx127x_status_t sx127x_FSK_OOK_SetMode(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode) {
+sx127x_status_t sx127x_FSK_OOK_SetMode(sx127x_FSK_OOK_chip_t *chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
@@ -241,7 +245,7 @@ sx127x_status_t sx127x_FSK_OOK_SetMode(sx127x_chip_FSK_OOK_t *chip, sx127x_FSK_O
 
 
 
-sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_chip_FSK_OOK_t *chip, const uint8_t *data, uint16_t len, bool variable_length) {
+sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data, uint16_t len, bool variable_length) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
@@ -326,7 +330,7 @@ sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_chip_FSK_OOK_t *chip, const uint8
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_FSK_OOK_TxSendFixLen(sx127x_chip_FSK_OOK_t *chip, const uint8_t *data) {
+sx127x_status_t sx127x_FSK_OOK_TxSendFixLen(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
@@ -337,7 +341,7 @@ sx127x_status_t sx127x_FSK_OOK_TxSendFixLen(sx127x_chip_FSK_OOK_t *chip, const u
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_chip_FSK_OOK_t *chip, const uint8_t *data, uint8_t len) {
+sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data, uint8_t len) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
@@ -350,7 +354,7 @@ sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_chip_FSK_OOK_t *chip, const uint8_t
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t __sx127x_FSK_OOK_RxReceive_IRQ(sx127x_chip_FSK_OOK_t *chip, uint32_t RxTimeout_delay_ms,
+sx127x_status_t __sx127x_FSK_OOK_RxReceive_IRQ(sx127x_FSK_OOK_chip_t *chip, uint32_t RxTimeout_delay_ms,
 											   bool is_flag_2, uint8_t irq_mask, bool invert_mask) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 
@@ -379,7 +383,7 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive_IRQ(sx127x_chip_FSK_OOK_t *chip, uint
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_chip_FSK_OOK_t *chip, uint8_t *data, uint8_t *len_ptr) {
+sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *data, uint8_t *len_ptr) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
@@ -482,7 +486,7 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_chip_FSK_OOK_t *chip, uint8_t 
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_FSK_OOK_RxReceiveFixLen(sx127x_chip_FSK_OOK_t *chip, uint8_t *data) {
+sx127x_status_t sx127x_FSK_OOK_RxReceiveFixLen(sx127x_FSK_OOK_chip_t *chip, uint8_t *data) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
@@ -493,7 +497,7 @@ sx127x_status_t sx127x_FSK_OOK_RxReceiveFixLen(sx127x_chip_FSK_OOK_t *chip, uint
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_chip_FSK_OOK_t *chip, uint8_t *data, uint8_t *len_ptr) {
+sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *data, uint8_t *len_ptr) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data || !len_ptr) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;

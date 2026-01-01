@@ -284,20 +284,25 @@ typedef enum sx127x_LORA_REG_41_DIO_MAPPING2_DIO5 {
 
 
 
-typedef struct sx127x_lora_config_t {
+typedef struct sx127x_LORA_config_t {
 	bool									implicitHeader;
 	sx127x_LORA_REG_1D_MODEM_CONFIG1_BW		bandwidth;
 	sx127x_LORA_REG_1D_MODEM_CONFIG1_CR		codingRate;
 	sx127x_LORA_REG_1E_MODEM_CONFIG2_SF		spreadingFactor;
 	bool 									crcEnabled;
-} sx127x_lora_config_t;
+} sx127x_LORA_config_t;
+
+typedef struct sx127x_LORA_chip_t {
+	sx127x_chip_t *base_chip;
+	sx127x_LORA_config_t config;
+} sx127x_LORA_chip_t;
 
 
 
-sx127x_status_t	sx127x_LORA_Config(sx127x_chip_t *chip, sx127x_lora_config_t config);
-sx127x_status_t sx127x_LORA_SetMode(sx127x_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode);
-sx127x_status_t sx127x_LORA_TxSend(sx127x_chip_t *chip, uint8_t *data, uint8_t len);
-sx127x_status_t sx127x_LORA_IsTxDone(sx127x_chip_t *chip, bool *isDone);
-sx127x_status_t sx127x_LORA_RxReceive(sx127x_chip_t *chip, uint8_t *buffer, uint8_t *len);
+sx127x_status_t	sx127x_LORA_Config(sx127x_LORA_chip_t *chip, sx127x_chip_t *base_chip, sx127x_LORA_config_t config);
+sx127x_status_t sx127x_LORA_SetMode(sx127x_LORA_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode);
+sx127x_status_t sx127x_LORA_TxSend(sx127x_LORA_chip_t *chip, uint8_t *data, uint8_t len);
+sx127x_status_t sx127x_LORA_IsTxDone(sx127x_LORA_chip_t *chip, bool *isDone);
+sx127x_status_t sx127x_LORA_RxReceive(sx127x_LORA_chip_t *chip, uint8_t *buffer, uint8_t *len);
 
 #endif // SX127X_LORA_H
