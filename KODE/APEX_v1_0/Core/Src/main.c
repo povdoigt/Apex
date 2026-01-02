@@ -34,6 +34,7 @@
 #include "drivers/sx127x.h"
 #include "drivers/led.h"
 #include "drivers/sx127x/sx127x_common.h"
+#include "drivers/sx127x/sx127x_fsk_ook.h"
 #include "drivers/sx127x/sx127x_lora.h"
 #include "drivers/w25q_mem.h"
 
@@ -138,20 +139,41 @@ int main(void)
 	MX_TIM11_Init();
 	
 	sx127x_chip_t sx127x_chip;
-	sx127x_LORA_chip_t sx127x_lora_chip;
+	// sx127x_LORA_chip_t sx127x_lora_chip;
+	sx127x_FSK_OOK_chip_t sx127x_fsk_ook_chip;
 	BMI088 BMI088_imu;
 
 	sx127x_status_t sx127x_status;
 
 	sx127x_status = sx127x_Init(&sx127x_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin, 869500000, 240, 20.0);
 	if (sx127x_status != sx127x_STATUS_OK) { Error_Handler(); }
-	sx127x_status = sx127x_LORA_Config(&sx127x_lora_chip, &sx127x_chip, (sx127x_LORA_config_t){
-		.implicitHeader = false,
-		.bandwidth = sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ,
-		.codingRate = sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5,
-		.spreadingFactor = sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS,
-		.crcEnabled = true,
-	});
+	// sx127x_status = sx127x_LORA_Config(&sx127x_lora_chip, &sx127x_chip, (sx127x_LORA_config_t){
+	// 	.implicitHeader = false,
+	// 	.bandwidth = sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ,
+	// 	.codingRate = sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5,
+	// 	.spreadingFactor = sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS,
+	// 	.crcEnabled = true,
+	// });
+	// if (sx127x_status != sx127x_STATUS_OK) { Error_Handler(); }
+	sx127x_FSK_OOK_config_t fsk_config = {
+		.bitrate = 200000,
+		.RxBw = SX127X_FSK_OOK_RxBw_100_0kHz,
+		.modShaping = sx127x_FSK_OOK_REG_0A_PA_RAMP_MOD_SHAPING_FSK_BT_1_0,
+		.paRamp = sx127x_FSK_OOK_REG_0A_PA_RAMP_PA_RAMP_40US,				// Default PA ramp time
+		.packetCfg = {
+			.preamble_len = 5,												// Default preamble length
+			.sync_on = true,
+			.sync_len = 4,													// Default sync length
+			.sync_word = {0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01},	// Default sync word
+			.variable_length = true,
+			// .payload_len = 63,												// Default payload length
+			.crc_on = true,
+		},
+		.mod_config.fsk = {
+			.fdev = 55000,
+		},
+	};
+	sx127x_status = sx127x_FSK_Config(&sx127x_fsk_ook_chip, &sx127x_chip, fsk_config);
 	if (sx127x_status != sx127x_STATUS_OK) { Error_Handler(); }
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
@@ -283,9 +305,10 @@ int main(void)
 	char buff1[256], buff2[260];
 
 	uint32_t i = 0;
+	uint8_t len;
 	
 	bool sync_done = false;
-	sx127x_LORA_SetMode(&sx127x_lora_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
+	// sx127x_LORA_SetMode(&sx127x_lora_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
 
 	while (1) {
 
@@ -295,29 +318,29 @@ int main(void)
 		float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
 		float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
 
-		/* APEX 1 */
-		sprintf(buff1, "APEX-1: ACC: %s, %s, %s", accx, accy, accz);
-		// code émetteur
-		if (HAL_GetTick() - t0 >= 500) {
-			t0 = HAL_GetTick();
-			sprintf(buff2, "%2u: %s\n", i++, buff1);
-			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			sx127x_LORA_TxSend(&sx127x_lora_chip, (uint8_t*)buff2, strlen(buff2));
-			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			sx127x_LORA_SetMode(&sx127x_lora_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
-		}
-		// code récepteur
-		uint8_t len;
-		sx127x_LORA_RxReceive(&sx127x_lora_chip, (uint8_t*)buff2, &len);
-		if (len > 0) {
-			HAL_Delay(10);
-			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			HAL_Delay(10);
-			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			CDC_Transmit_FS((uint8_t*)buff2, len);
-		}
+		// /* APEX 1 LORA */
+		// sprintf(buff1, "APEX-1: ACC: %s, %s, %s", accx, accy, accz);
+		// // code émetteur
+		// if (HAL_GetTick() - t0 >= 500) {
+		// 	t0 = HAL_GetTick();
+		// 	sprintf(buff2, "%2u: %s\n", i++, buff1);
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	sx127x_LORA_TxSend(&sx127x_lora_chip, (uint8_t*)buff2, strlen(buff2));
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	sx127x_LORA_SetMode(&sx127x_lora_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
+		// }
+		// // code récepteur
+		// uint8_t len;
+		// sx127x_LORA_RxReceive(&sx127x_lora_chip, (uint8_t*)buff2, &len);
+		// if (len > 0) {
+		// 	HAL_Delay(10);
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	HAL_Delay(10);
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	CDC_Transmit_FS((uint8_t*)buff2, len);
+		// }
 
-		// /* APEX 2 */
+		// /* APEX 2 LORA */
 		// sprintf(buff1, "APEX-2: ACC: %s, %s, %s", accx, accy, accz);
 		// // code émetteur
 		// if (sync_done && HAL_GetTick() - t0 >= 500) {
@@ -343,7 +366,50 @@ int main(void)
 		// 	CDC_Transmit_FS((uint8_t*)buff2, len);
 		// }
 
+		/* APEX 1 FSK */
+		sprintf(buff1, "APEX-1: ACC: %s, %s, %s", accx, accy, accz);
+		// code émetteur
+		if (HAL_GetTick() - t0 >= 500) {
+			t0 = HAL_GetTick();
+			sprintf(buff2, "%2u: %s\n", i++, buff1);
+			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+			sx127x_FSK_OOK_TxSend(&sx127x_fsk_ook_chip, (uint8_t*)buff2, strlen(buff2));
+			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		}
+		// code récepteur
+		sx127x_status = sx127x_FSK_OOK_RxReceive(&sx127x_fsk_ook_chip, (uint8_t*)buff2, &len);
+		if (sx127x_status == sx127x_STATUS_OK && len > 0) {
+			HAL_Delay(10);
+			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			HAL_Delay(10);
+			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			CDC_Transmit_FS((uint8_t*)buff2, len);
+		}
 
+		// /* APEX 2 FSK */
+		// sprintf(buff1, "APEX-2: ACC: %s, %s, %s", accx, accy, accz);
+		// // code émetteur
+		// if (sync_done && HAL_GetTick() - t0 >= 500) {
+		// 	t0 = HAL_GetTick();
+		// 	sprintf(buff2, "%2u: %s\n", i++, buff1);
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// 	sx127x_FSK_OOK_TxSend(&sx127x_fsk_ook_chip, (uint8_t*)buff2, strlen(buff2));
+		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+		// }
+		// // code récepteur
+		// uint8_t len;
+		// sx127x_status = sx127x_FSK_OOK_RxReceive(&sx127x_fsk_ook_chip, (uint8_t*)buff2, &len);
+		// if (sx127x_status == sx127x_STATUS_OK && len > 0) {
+		// 	if (!sync_done) {
+		// 		sync_done = true;
+		// 		t0 = HAL_GetTick() + 250; // 50 ms pour un duty cycle de 50%
+		// 	}
+		// 	HAL_Delay(10);
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	HAL_Delay(10);
+		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+		// 	CDC_Transmit_FS((uint8_t*)buff2, len);
+		// }
 
 		/* USER CODE END WHILE */
 

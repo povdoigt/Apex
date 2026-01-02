@@ -797,7 +797,7 @@ typedef struct sx127x_FSK_OOK_config_t {
 	union {
 		struct {
 			/* FSK specific */
-			uint16_t fdev;	// frequency deviation in Hz
+			uint32_t fdev;	// frequency deviation in Hz
 		} fsk;
 
 		struct {

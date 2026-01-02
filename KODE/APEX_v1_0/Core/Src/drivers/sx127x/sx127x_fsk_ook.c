@@ -1,6 +1,7 @@
 #include "drivers/sx127x/sx127x_fsk_ook.h"
 #include "drivers/sx127x/sx127x_common.h"
 #include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_def.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -36,13 +37,14 @@ static void sx127x_FSK_OOK_RxBw_to_RegValue(sx127x_FSK_OOK_RxBw_t rxbw, uint8_t 
 	}
 }
 
-static sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config, sx127x_modulation_t modulation) {
+sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config, sx127x_modulation_t modulation) {
     if (!chip) { return sx127x_STATUS_ERROR; }
     
     sx127x_status_t status;
     uint8_t value = 0x00;
-    
+
 	chip->base_chip = base_chip;
+	chip->base_chip->modulation = modulation;
 	chip->config = config;
 
     // Get chip frequency band
@@ -72,9 +74,10 @@ static sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx12
     if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set RxConfig - enable AGC, disable AFC
-	value = sx127x_FSK_OOK_REG_0D_RX_CONFIG_RROC_ON		// Restart Rx on collision
+	value = sx127x_FSK_OOK_REG_0D_RX_CONFIG_RROC_OFF	// Restart Rx on collision
 		  | sx127x_FSK_OOK_REG_0D_RX_CONFIG_AFCAON_OFF	// AFC disabled
-		  | sx127x_FSK_OOK_REG_0D_RX_CONFIG_AGCAON_ON;	// AGC enabled
+		  | sx127x_FSK_OOK_REG_0D_RX_CONFIG_AGCAON_OFF	// AGC enabled
+		  | 0x00; // Default
 	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_0D_RX_CONFIG, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
@@ -135,14 +138,15 @@ static sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx12
 		  | sx127x_FSK_OOK_REG_31_PACKET_CONFIG2_BEACONON_OFF
 		  | len[0];
 	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_31_PACKET_CONFIG2, value);
+	if (status != sx127x_STATUS_OK) { return status; }
 
 	value = len[1];
 	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_32_PAYLOAD_LENGTH, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
-	// Set RxTimeoutRssi to 0x01 (T_out = 16 / BitRate)
-	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_20_RX_TIMEOUT_1, 0x01);
-	if (status != sx127x_STATUS_OK) { return status; }
+	// // Set RxTimeoutRssi to 0x01 (T_out = 16 / BitRate)
+	// status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_20_RX_TIMEOUT_1, 0x01);
+	// if (status != sx127x_STATUS_OK) { return status; }
 
 
     return sx127x_STATUS_OK;
@@ -152,9 +156,6 @@ sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *ba
 	if (!chip) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
-
-	// Update chip modulation mode
-	chip->base_chip->modulation = sx127x_MODULATION_FSK;
 
 	status = __sx127x_FSK_OOK_Config(chip, base_chip, config, sx127x_MODULATION_FSK);
 	if (status != sx127x_STATUS_OK) { return status; }
@@ -177,9 +178,6 @@ sx127x_status_t sx127x_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *ba
     
     sx127x_status_t status;
     uint8_t value = 0x00;
-
-    // Update chip modulation mode
-    chip->base_chip->modulation = sx127x_MODULATION_OOK;
 
 	status = __sx127x_FSK_OOK_Config(chip, base_chip, config, sx127x_MODULATION_OOK);
 	if (status != sx127x_STATUS_OK) { return status; }
@@ -320,11 +318,10 @@ sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8
 
 	// Wait for TxDone flag
 	bool tx_done = false;
-	uint8_t irq_flags;
 	while (!tx_done) {
-		status = sx127x_RegRead(chip->base_chip, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2, &irq_flags);
+		status = sx127x_RegRead(chip->base_chip, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2, &value);
 		if (status != sx127x_STATUS_OK) { return status; }
-		tx_done = irq_flags & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_PACKET_SENT_MSK;
+		tx_done = value & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_PACKET_SENT_MSK;
 	}
 
 	return sx127x_STATUS_OK;
@@ -368,6 +365,11 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive_IRQ(sx127x_FSK_OOK_chip_t *chip, uint
 		if (values[1] & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_OVERRUN_MSK) {
 			return sx127x_STATUS_ERROR;
 		}
+		if (values[0] & sx127x_FSK_OOK_REG_3E_IRQ_FLAGS1_RX_READY_MSK) {
+			// Something happened
+			__NOP();
+		}
+
 		// Check IRQ flag
 		bool condition = values[(uint8_t)is_flag_2] & irq_mask;
 		condition = invert_mask ? !condition : condition;
@@ -400,6 +402,7 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t 
 	uint32_t preamble_byts = chip->config.packetCfg.preamble_len;
 	uint32_t sync_byts = chip->config.packetCfg.sync_on ? (chip->config.packetCfg.sync_len) : 0;
 	uint32_t RxTimeout_delay_ms = (uint32_t)ceil((1 + preamble_byts + sync_byts) * bytes_time);
+	// RxTimeout_delay_ms = HAL_MAX_DELAY; // Disable timeout for debugging purposes
 
 	len = chip->config.packetCfg.payload_len;	// Default length, will be overwritten if variable length
 	i = 0;
@@ -507,7 +510,3 @@ sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *d
 
 	return sx127x_STATUS_OK;
 }
-
-
-
-
