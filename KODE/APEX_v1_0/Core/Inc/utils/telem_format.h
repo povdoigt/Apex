@@ -37,13 +37,13 @@ typedef struct TELEM_FORMAT_FT_APEX_DATA_RAW {
     float temperature;  // Temperature in Celsius
     float pressure;     // Pressure in hPa
 
-    FLOAT3 acc0;        // Acc 0
-    FLOAT3 gyr0;        // Gyr 0
+    float3_t acc0;        // Acc 0
+    float3_t gyr0;        // Gyr 0
 
-    FLOAT3 acc1;        // Acc 1
+    float3_t acc1;        // Acc 1
 
-    FLOAT3 acc2;        // Acc 2
-    FLOAT3 mag2;        // Mag 2
+    float3_t acc2;        // Acc 2
+    float3_t mag2;        // Mag 2
 
     // float longitude;    // Longitude in degrees
     // float latitude;     // Latitude in degrees

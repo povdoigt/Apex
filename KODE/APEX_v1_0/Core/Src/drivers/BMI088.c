@@ -1,734 +1,1029 @@
-#include "drivers/BMI088.h"
+/* bmi088.c — Niveaux 0 & 1
+ * APEX avionics — Bosch BMI088 (ACC + GYR)
+ */
+
+#include "stm32f4xx_hal.h"
 #include "cmsis_os2.h"
+
+#include "drivers/BMI088.h"
+
 #include "peripherals/spi.h"
-#include "stm32f4xx_hal_spi.h"
-#include "utils/circular_buffer.h"
+
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
 #include "utils/types.h"
-#include <stddef.h>
+
 #include <stdint.h>
-#include <string.h>
-#include <math.h>
 
-/*
- *
- * INITIALISATION
- *
+/* -------------------------------------------------------------------------- */
+/*                           Niveau 0 : SPI Primitives                        */
+/* -------------------------------------------------------------------------- */
+
+static inline void BMI088_SPI_Begin(bmi088_t *imu, bool is_gyr) {
+    HAL_GPIO_WritePin(is_gyr ? imu->cs_gyr_bank : imu->cs_acc_bank,
+                      is_gyr ? imu->cs_gyr_pin  : imu->cs_acc_pin,
+                      GPIO_PIN_RESET);
+}
+
+static inline BMI_STATE BMI088_SPI_Tx(bmi088_t *imu, uint8_t *tx_buf, uint16_t tx_len) {
+    if (!imu || !imu->spi || (!tx_buf && tx_len)) { return BMI_INVALID_ARG; }
+    BMI_STATE state = (HAL_SPI_Transmit(imu->spi, tx_buf, tx_len, HAL_MAX_DELAY) == HAL_OK) ? BMI_OK : BMI_SPI_ERR;
+    while (HAL_SPI_GetState(imu->spi) != HAL_SPI_STATE_READY);
+    return state;
+}
+
+static inline BMI_STATE BMI088_SPI_Rx(bmi088_t *imu, uint8_t *rx_buf, uint16_t rx_len) {
+    if (!imu || !imu->spi || (!rx_buf && rx_len)) { return BMI_INVALID_ARG; }
+    BMI_STATE state = (HAL_SPI_Receive(imu->spi, rx_buf, rx_len, HAL_MAX_DELAY) == HAL_OK) ? BMI_OK : BMI_SPI_ERR;
+    while (HAL_SPI_GetState(imu->spi) != HAL_SPI_STATE_READY);
+    return state;
+}
+
+static inline void BMI088_SPI_End(bmi088_t *imu, bool is_gyr) {
+    HAL_GPIO_WritePin(is_gyr ? imu->cs_gyr_bank : imu->cs_acc_bank,
+                      is_gyr ? imu->cs_gyr_pin  : imu->cs_acc_pin,
+                      GPIO_PIN_SET);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                       Niveau 1 : Primitives capteur                        */
+/* -------------------------------------------------------------------------- */
+/* Rappel protocole (datasheet):
+ *  - Gyro: 16-bit frames. Byte0 = (R/W bit0 + addr[6:0]), Byte1 = DATA.
+ *          Burst : auto-increment si CS maintenu bas. (pas de dummy)
+ *  - Acc : lecture avec 1 dummy byte AVANT la vraie donnée.
+ *          => single read = lire 2 octets après l'adresse et garder le 2e.
+ *          => burst N = lire (N+1) octets après l'adresse (jeter le 1er).
  */
-uint8_t BMI088_Init(BMI088 *imu,
-				    SPI_HandleTypeDef *spiHandle,
-				    GPIO_TypeDef *csAccPinBank, uint16_t csAccPin,
-				    GPIO_TypeDef *csGyrPinBank, uint16_t csGyrPin) {
 
-	/* Store interface parameters in struct */
-	imu->spiHandle 		= spiHandle;
-	imu->csAccPinBank 	= csAccPinBank;
-	imu->csAccPin 		= csAccPin;
-	imu->csGyrPinBank 	= csGyrPinBank;
-	imu->csGyrPin 		= csGyrPin;
+BMI_STATE BMI088_ReadRegister(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *value) {
+    if (!imu || !value) return BMI_INVALID_ARG;
 
-	imu->new_acc_data = false;
-	imu->new_gyr_data = false;
+    BMI_STATE st;
 
-	imu->ASYNC_busy = false;
+    /* Gyroscope: 1 (addr+R)           + 1 (data) */
+    /* Accelero:  1 (addr+R) + 1 dummy + 1 (data) */
+    uint8_t addr = reg | BMI_READ_MASK;
 
-	uint8_t status = 0;
+    BMI088_SPI_Begin(imu, is_gyr);
+    st = BMI088_SPI_Tx(imu, &addr, 1);
+    if (st != BMI_OK) { BMI088_SPI_End(imu, is_gyr); return st; }
+    if (!is_gyr) {
+        /* Pour l'accéléromètre, il faut lire un octet dummy avant la donnée */
+        st = BMI088_SPI_Rx(imu, value, 1);
+        if (st != BMI_OK) { BMI088_SPI_End(imu, is_gyr); return st; }
+    }
+    st = BMI088_SPI_Rx(imu, value, 1);
+    BMI088_SPI_End(imu, is_gyr);
+    if (st != BMI_OK) return st;
 
-	/*
-	 *
-	 * ACCELEROMETER
-	 *
-	 */
+    /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
+    TIM_Delay_Micro(2);
+    return st;
+}
 
-	uint8_t ACC_Range = BMI_ACC_RANGE_24G;
+BMI_STATE BMI088_WriteRegister(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t value) {
+    if (!imu) return BMI_INVALID_ARG;
 
-	/* Accelerometer requires rising edge on CSB at start-up to activate SPI */
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_RESET);
-	HAL_Delay(1);
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_SET);
-	HAL_Delay(50);
+    BMI_STATE st = BMI_OK;
+    uint8_t frame[2] = { reg & ~BMI_READ_MASK, value };
 
-	/* Perform accelerometer soft reset */
-	status += BMI088_WriteAccRegister(imu, BMI_ACC_SOFTRESET, 0xB6);
-	HAL_Delay(50);
+    BMI088_SPI_Begin(imu, is_gyr);
+    st = BMI088_SPI_Tx(imu, frame, 2);
+    BMI088_SPI_End(imu, is_gyr);
+    if (st != BMI_OK) return st;
 
-	/* Check chip ID */
-	uint8_t chipID;
-	status += BMI088_ReadAccRegister(imu, BMI_ACC_CHIP_ID, &chipID);
+    /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
+    TIM_Delay_Micro(2);
+    return st;
+}
 
-	if (chipID != 0x1E) {
-		__NOP();
-	//	return 0;
+BMI_STATE BMI088_ReadMultiple(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *data, uint16_t len) {
+    if (!imu || !data || !len) return BMI_INVALID_ARG;
+    BMI_STATE st = BMI_OK;
 
-	}
-	HAL_Delay(10);
+    uint8_t addr = reg | BMI_READ_MASK;
 
-	/* Configure accelerometer  */
-	uint8_t accConf = BMI_ACC_BWP_NORMAL | BMI_ACC_ODR_100;
-	status += BMI088_WriteAccRegister(imu, BMI_ACC_CONF, accConf); /* (no oversampling, ODR = 100 Hz, BW = 40 Hz) */
-	HAL_Delay(10);
+    BMI088_SPI_Begin(imu, is_gyr);
+    st = BMI088_SPI_Tx(imu, &addr, 1);
+    if (st != BMI_OK) { BMI088_SPI_End(imu, is_gyr); return st; }
+    if (!is_gyr) {
+        /* Pour l'accéléromètre, lire 1 octet dummy avant les vraies données */
+        st = BMI088_SPI_Rx(imu, data, 1);
+        if (st != BMI_OK) { BMI088_SPI_End(imu, is_gyr); return st; }
+    }
+    st = BMI088_SPI_Rx(imu, data, len);
+    BMI088_SPI_End(imu, is_gyr);
+    if (st != BMI_OK) return st;
 
-	status += BMI088_WriteAccRegister(imu, BMI_ACC_RANGE, ACC_Range); /* +- 3g range */
-	HAL_Delay(10);
+    /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
+    TIM_Delay_Micro(2);
+    return st; 
+}
 
-	/* Put accelerometer into active mode */
-	status += BMI088_WriteAccRegister(imu, BMI_ACC_PWR_CONF, 0x00);
-	HAL_Delay(10);
+BMI_STATE BMI088_ReadID(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id) {
+    if (!imu || !acc_id || !gyr_id) {
+        return BMI_INVALID_ARG;
+    }
 
-	/* Turn accelerometer on */
-	status += BMI088_WriteAccRegister(imu, BMI_ACC_PWR_CTRL, 0x04);
-	HAL_Delay(10);
+    /* Gyroscope CHIP_ID @ BMI_GYR_CHIP_ID */
+    BMI_STATE st = BMI088_ReadRegister(imu, true, BMI_GYR_CHIP_ID, gyr_id);
+    if (st != BMI_OK) { return st; }
 
-	/* Pre-compute accelerometer conversion constant (raw to m/s^2) */
-	imu->accConversion = (9.81f / 32768.0f) * pow(2.0, ACC_Range + 1) * 1.5f; /* Datasheet page 21-22 */
+    /* Accelerometer CHIP_ID @ BMI_ACC_CHIP_ID */
+    st = BMI088_ReadRegister(imu, false, BMI_ACC_CHIP_ID, acc_id);
+    return st;
+}
 
-	/* Init accelerometer offset (m/s^2) */
-	imu->acc_mps2_offset.x = 0.0f;
-	imu->acc_mps2_offset.y = 0.0f;
-	imu->acc_mps2_offset.z = 0.0f;
+BMI_STATE BMI088_SoftReset(bmi088_t *imu, bool is_gyr) {
+    if (!imu) {
+        return BMI_INVALID_ARG;
+    }
 
-	/*
-	 *
-	 * GYROSCOPE
-	 *
-	 */
+    uint8_t reg;
+    uint8_t cmd;
 
-	uint8_t GYR_Range = BMI_GYR_RANGE_2000;
+    if (is_gyr) {
+        reg = BMI_GYR_SOFTRESET;      /* 0x14U */
+        cmd = BMI_GYR_SOFTRESET_CMD;  /* 0b10110110 */
+    } else {
+        reg = BMI_ACC_SOFTRESET;      /* 0x7EU */
+        cmd = BMI_ACC_SOFTRESET_CMD;  /* 0b10110110 */
+    }
 
-	
-	HAL_GPIO_WritePin(imu->csGyrPinBank, imu->csGyrPin, GPIO_PIN_SET);
+    return BMI088_WriteRegister(imu, is_gyr, reg, cmd);
+}
 
-	/* Perform gyro soft reset */
-	status += BMI088_WriteGyrRegister(imu, BMI_GYR_SOFTRESET, 0xB6);
-	HAL_Delay(250);
+/* -------------------------------------------------------------------------- */
+/*                        Niveau 2 : Logique périphérique                     */
+/* -------------------------------------------------------------------------- */
 
-	/* Check chip ID */
-	status += BMI088_ReadGyrRegister(imu, BMI_GYR_CHIP_ID, &chipID);
+/**
+ * @brief Calcule le facteur de conversion pour l'accéléromètre en m/s².
+ * @param range Valeur du registre BMI_ACC_RANGE.
+ * @retval Facteur de conversion (m/s² par LSB).
+ * @note  D’après la formule Bosch, pages 21–22 de la datasheet Rev.1.9.
+ */
+static inline float BMI088_ComputeAccSensitivity(bmi_acc_range_t range) {
+    float factor = (1.0f / 32768.0f) * powf(2.0f, (float)range + 1.0f) * 1.5f;
+#if (BMI_ACCEL_UNIT_MS2)
+    return factor * 9.81f;
+#else
+    return factor;
+#endif
+}
 
-	if (chipID != 0x0F) {
-		__NOP();
-		//return 0;
+/**
+ * @brief Calcule le facteur de conversion pour le gyroscope en °/s.
+ * @param range Valeur du registre BMI_GYR_RANGE.
+ * @retval Facteur de conversion (°/s par LSB).
+ * @note  D’après la formule Bosch, page 28 de la datasheet Rev.1.9.
+ */
+static inline float BMI088_ComputeGyrSensitivity(bmi_gyr_range_t range) {
+    float factor = 2000.0f / (32768.0f * powf(2.0f, (float)range));
+#if (BMI_GYRO_UNIT_DPS)
+    return factor;
+#else
+    return factor * (3.14159265f / 180.0f);
+#endif
+}
 
-	}
-	HAL_Delay(10);
+/**
+ * @brief Initialise la partie accéléromètre du BMI088.
+ * @param imu Pointeur sur la structure de périphérique BMI088.
+ * @param cfg Configuration à appliquer.
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
+static inline BMI_STATE BMI088_InitAccelerometer(bmi088_t *imu) {
+    BMI_STATE st;
+    uint8_t acc_id = 0;
 
-	/* Configure gyroscope */
-	status += BMI088_WriteGyrRegister(imu, BMI_GYR_RANGE, GYR_Range); /* +- 1000 deg/s */
-	HAL_Delay(10);
+    /* SPI activation only for accelerometer*/
+    BMI088_ReadRegister(imu, false, BMI_ACC_CHIP_ID, &acc_id);
 
-	status += BMI088_WriteGyrRegister(imu, BMI_GYR_BANDWIDTH, BMI_GYR_BANDWIDTH_12);
-	HAL_Delay(10);
+    /* Soft-reset accéléromètre */              // Ne marche pas pour une raison inconnue
+    // st = BMI088_SoftReset(imu, false);
+    // if (st != BMI_OK) { return st; }
+    // HAL_Delay(50);
 
-	/* Pre-compute gyroscope conversion constant (raw to rad/s) */
-	// imu->gyrConversion = (M_PI / 180.0f) * 2000 / (32768.0f * pow(2.0, GYR_Range)); /* Datasheet page 28 */
-	imu->gyrConversion = 2000 / (32768.0f * pow(2.0, GYR_Range)); /* Datasheet page 28 */
+    // /* Vérification ID accéléromètre */
+    st = BMI088_ReadRegister(imu, false, BMI_ACC_CHIP_ID, &acc_id);
+    if (st != BMI_OK) { return st; }
+    if (acc_id != BMI_ACC_CHIP_ID_VALUE) { return BMI_UNKNOWN_ERR; }
 
-	/* Init gyroscope offset (rad/s) */
-	imu->gyr_rps_offset.x = 0.0f;
-	imu->gyr_rps_offset.y = 0.0f;
-	imu->gyr_rps_offset.z = 0.0f;
+    /* Activation alimentation accéléromètre */
+    st = BMI088_WriteRegister(imu, false, BMI_ACC_PWR_CTRL, BMI_ACC_PWR_CTRL_ENABLE);
+    if (st != BMI_OK) { return st; }
+    TIM_Delay_Micro(450);
 
-	return status;
+    return BMI_OK;
+}
 
+/**
+ * @brief Initialise la partie gyroscope du BMI088.
+ * @param imu Pointeur sur la structure de périphérique BMI088.
+ * @param cfg Configuration à appliquer.
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
+static inline BMI_STATE BMI088_InitGyroscope(bmi088_t *imu) {
+    BMI_STATE st;
+
+    /* Soft-reset gyroscope */
+    st = BMI088_SoftReset(imu, true);
+    if (st != BMI_OK) { return st; }
+    HAL_Delay(30);
+
+    /* Vérification ID gyroscope */
+    uint8_t gyr_id = 0;
+    st = BMI088_ReadRegister(imu, true, BMI_GYR_CHIP_ID, &gyr_id);
+    if (st != BMI_OK) { return st; }
+    if (gyr_id != BMI_GYR_CHIP_ID_VALUE) { return BMI_UNKNOWN_ERR; }
+
+    return BMI_OK;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               BMI088_Init                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Initialise le capteur BMI088 (accéléromètre + gyroscope).
+ * @param imu         Pointeur sur la structure BMI088.
+ * @param hspi        Handle SPI utilisé.
+ * @param cs_acc_bank Port GPIO du chip select accéléromètre.
+ * @param cs_acc_pin  Pin GPIO du chip select accéléromètre.
+ * @param cs_gyr_bank Port GPIO du chip select gyroscope.
+ * @param cs_gyr_pin  Pin GPIO du chip select gyroscope.
+ * @param cfg         Pointeur vers la configuration à appliquer.
+ * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
+ */
+BMI_STATE BMI088_Init(bmi088_t *imu,
+                      SPI_HandleTypeDef *hspi,
+                      GPIO_TypeDef *cs_acc_bank, uint16_t cs_acc_pin,
+                      GPIO_TypeDef *cs_gyr_bank, uint16_t cs_gyr_pin,
+                      const bmi_config_t *cfg) {
+    if (!imu || !hspi || !cfg) { return BMI_INVALID_ARG; }
+
+    imu->spi          = hspi;
+    imu->cs_acc_bank  = cs_acc_bank;
+    imu->cs_acc_pin   = cs_acc_pin;
+    imu->cs_gyr_bank  = cs_gyr_bank;
+    imu->cs_gyr_pin   = cs_gyr_pin;
+
+    BMI_STATE st;
+
+    /* Initialisation séparée des sous-blocs */
+    st = BMI088_InitAccelerometer(imu);
+    if (st != BMI_OK) { return st; }
+
+    st = BMI088_InitGyroscope(imu);
+    if (st != BMI_OK) { return st; }
+
+    st = BMI088_ApplyConfig(imu, cfg);
+    if (st != BMI_OK) { return st; }
+
+    return BMI_OK;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/*                            BMI088_ApplyConfig                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Applique une configuration complète au BMI088.
+ * @param imu Pointeur sur la structure de périphérique BMI088.
+ * @param cfg Pointeur sur la configuration à appliquer.
+ * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
+ */
+BMI_STATE BMI088_ApplyConfig(bmi088_t *imu, const bmi_config_t *cfg) {
+    if (!imu || !cfg) { return BMI_INVALID_ARG; }
+
+    BMI_STATE st;
+
+    /* --- Accelerometer configuration --- */
+    st = BMI088_WriteRegister(imu, false, BMI_ACC_CONF,
+        ((cfg->acc_bwp & BMI_ACC_CONF_BWP_MASK) |
+         (cfg->acc_odr & BMI_ACC_CONF_ODR_MASK)));
+    if (st != BMI_OK) { return st; }
+
+    st = BMI088_WriteRegister(imu, false, BMI_ACC_RANGE,
+        (cfg->acc_range & BMI_ACC_RANGE_MASK));
+    if (st != BMI_OK) { return st; }
+
+    st = BMI088_WriteRegister(imu, false, BMI_ACC_PWR_CONF,
+        (cfg->acc_pwr & BMI_ACC_PWR_CONF_MASK));
+    if (st != BMI_OK) { return st; }
+
+    st = BMI088_WriteRegister(imu, false, BMI_ACC_PWR_CTRL,
+        (cfg->acc_ctrl & BMI_ACC_PWR_CTRL_MASK));
+    if (st != BMI_OK) { return st; }
+
+    /* --- Gyroscope configuration --- */
+    st = BMI088_WriteRegister(imu, true, BMI_GYR_BANDWIDTH,
+        (cfg->gyr_bw & BMI_GYR_BANDWIDTH_BW_MASK));
+    if (st != BMI_OK) { return st; }
+
+    st = BMI088_WriteRegister(imu, true, BMI_GYR_RANGE,
+        (cfg->gyr_range & BMI_GYR_RANGE_MASK));
+    if (st != BMI_OK) { return st; }
+
+    st = BMI088_WriteRegister(imu, true, BMI_GYR_LPM1,
+        (cfg->gyr_mode & BMI_GYR_LPM1_MODE_MASK));
+    if (st != BMI_OK) { return st; }
+
+    /* Calcul des facteurs de conversion */
+    imu->acc_conv = BMI088_ComputeAccSensitivity(cfg->acc_range);
+    imu->gyr_conv = BMI088_ComputeGyrSensitivity(cfg->gyr_range);
+
+    imu->config = *cfg;
+    return BMI_OK;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            BMI088_ReadAcc                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Lit les mesures d’accélération du BMI088 et les convertit en m/s².
+ * @param imu Pointeur sur la structure de périphérique BMI088.
+ * @param accel Pointeur vers la structure de sortie des données d’accélération.
+ * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
+ */
+BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_t *accel) {
+    if (!imu || !accel) { return BMI_INVALID_ARG; }
+
+    uint8_t raw[6];
+    BMI_STATE st = BMI088_ReadMultiple(imu, false, BMI_ACC_X_LSB, raw, 6);
+    if (st != BMI_OK) { return st; }
+
+    int16_t rx = (int16_t)((raw[1] << 8) | raw[0]);
+    int16_t ry = (int16_t)((raw[3] << 8) | raw[2]);
+    int16_t rz = (int16_t)((raw[5] << 8) | raw[4]);
+
+    accel->x = rx * imu->acc_conv;
+    accel->y = ry * imu->acc_conv;
+    accel->z = rz * imu->acc_conv;
+
+    return BMI_OK;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            BMI088_ReadGyr                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Lit les mesures de rotation du BMI088 et les convertit en °/s.
+ * @param imu Pointeur sur la structure de périphérique BMI088.
+ * @param gyr Pointeur vers la structure de sortie des données de rotation.
+ * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
+ */
+BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyr) {
+    if (!imu || !gyr) { return BMI_INVALID_ARG; }
+
+    uint8_t raw[6];
+    BMI_STATE st = BMI088_ReadMultiple(imu, true, BMI_GYR_RATE_X_LSB, raw, 6);
+    if (st != BMI_OK) { return st; }
+
+    int16_t rx = (int16_t)((raw[1] << 8) | raw[0]);
+    int16_t ry = (int16_t)((raw[3] << 8) | raw[2]);
+    int16_t rz = (int16_t)((raw[5] << 8) | raw[4]);
+
+    gyr->x = rx * imu->gyr_conv;
+    gyr->y = ry * imu->gyr_conv;
+    gyr->z = rz * imu->gyr_conv;
+
+    return BMI_OK;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            BMI088_ReadTemp                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Lit la température interne du capteur et la convertit en °C.
+ * @param imu Pointeur sur la structure de périphérique BMI088.
+ * @param temp_c Pointeur vers la température convertie.
+ * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
+ */
+BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c) {
+    if (!imu || !temp_c) { return BMI_INVALID_ARG; }
+
+    uint8_t raw[2];
+    BMI_STATE st = BMI088_ReadMultiple(imu, false, BMI_TEMP_MSB, raw, 2);
+    if (st != BMI_OK) { return st; }
+
+    // 11-bit signed value (two's complement)
+    // LSB: bits [7:5] of raw[1], MSB: raw[0]
+    int16_t t_lsb_raw = (int16_t)((raw[1] & BMI_TEMP_LSB_MASK) >> 5);
+    int16_t t_msb_raw = (int16_t)(raw[0] << 3);
+    int16_t t_raw = t_msb_raw | t_lsb_raw;
+    if (t_msb_raw > 0x3E) {
+        if (t_msb_raw < 0xC1) {
+            t_raw -= 2048;  // two's complement adjustment for negative values
+        } else {
+            return BMI_UNKNOWN_ERR;  // invalid temperature reading
+        }
+    }
+
+    // Convert to °C using formula from datasheet (section 5.3.7 page 28)
+    *temp_c = (float)t_raw * 0.125f + 23.0f;
+    return BMI_OK;
 }
 
 
 
-/* ACCELEROMETER READS ARE DIFFERENT TO GYROSCOPE READS. SEND ONE BYTE ADDRESS, READ ONE DUMMY BYTE, READ TRUE DATA !!! */
-uint8_t BMI088_ReadAccRegister(BMI088 *imu, uint8_t regAddr, uint8_t *data) {
 
-	uint8_t txBuf[3] = {regAddr | 0x80, 0x00, 0x00};
-	uint8_t rxBuf[3];
 
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_RESET);
-	uint8_t status = (HAL_SPI_TransmitReceive(imu->spiHandle, txBuf, rxBuf, 3, HAL_MAX_DELAY) == HAL_OK);
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_SET);
 
-	if (status == 1) {
 
-		*data = rxBuf[2];
 
-	}
 
-	return status;
 
+
+/* -------------------------------------------------------------------------- */
+/*                           Niveau 0 : SPI Primitives  RTOS                      */
+/* -------------------------------------------------------------------------- */
+
+static inline BMI_STATE BMI088_SPI_Begin_RTOS(bmi088_t *imu, bool is_gyr) {
+    GPIO_TypeDef *cs_bank = is_gyr ? imu->cs_gyr_bank : imu->cs_acc_bank;
+    uint16_t cs_pin  = is_gyr ? imu->cs_gyr_pin  : imu->cs_acc_pin;
+    return SPI_Begin_DMA_RTOS(imu->spi, cs_bank, cs_pin) == HAL_OK ? BMI_OK : BMI_SPI_ERR;
 }
 
-uint8_t BMI088_ReadGyrRegister(BMI088 *imu, uint8_t regAddr, uint8_t *data) {
-
-	uint8_t txBuf[2] = {regAddr | 0x80, 0x00};
-	uint8_t rxBuf[2];
-
-	HAL_GPIO_WritePin(imu->csGyrPinBank, imu->csGyrPin, GPIO_PIN_RESET);
-	uint8_t status = (HAL_SPI_TransmitReceive(imu->spiHandle, txBuf, rxBuf, 2, HAL_MAX_DELAY) == HAL_OK);
-	HAL_GPIO_WritePin(imu->csGyrPinBank, imu->csGyrPin, GPIO_PIN_SET);
-
-	if (status == 1) {
-
-		*data = rxBuf[1];
-
-	}
-
-	return status;
-
+static inline BMI_STATE BMI088_SPI_Tx_RTOS(bmi088_t *imu, uint8_t *tx_buf, uint16_t tx_len) {
+    if (!imu || !imu->spi || (!tx_buf && tx_len)) { return BMI_INVALID_ARG; }
+    return SPI_Transmit_DMA_RTOS(imu->spi, tx_buf, tx_len) == HAL_OK ? BMI_OK : BMI_SPI_ERR;
 }
 
-uint8_t BMI088_WriteAccRegister(BMI088 *imu, uint8_t regAddr, uint8_t data) {
-
-	uint8_t txBuf[2] = {regAddr, data};
-
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_RESET);
-	uint8_t status = (HAL_SPI_Transmit(imu->spiHandle, txBuf, 2, HAL_MAX_DELAY) == HAL_OK);
-	while(HAL_SPI_GetState(imu->spiHandle) != HAL_SPI_STATE_READY);
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_SET);
-
-	return status;
-
+static inline BMI_STATE BMI088_SPI_Rx_RTOS(bmi088_t *imu, uint8_t *rx_buf, uint16_t rx_len) {
+    if (!imu || !imu->spi || (!rx_buf && rx_len)) { return BMI_INVALID_ARG; }
+    return SPI_Receive_DMA_RTOS(imu->spi, rx_buf, rx_len) == HAL_OK ? BMI_OK : BMI_SPI_ERR;
 }
 
-uint8_t BMI088_WriteGyrRegister(BMI088 *imu, uint8_t regAddr, uint8_t data) {
-
-	uint8_t txBuf[2] = {regAddr, data};
-
-	HAL_GPIO_WritePin(imu->csGyrPinBank, imu->csGyrPin, GPIO_PIN_RESET);
-	uint8_t status = (HAL_SPI_Transmit(imu->spiHandle, txBuf, 2, HAL_MAX_DELAY) == HAL_OK);
-	while(HAL_SPI_GetState(imu->spiHandle) != HAL_SPI_STATE_READY);
-	HAL_GPIO_WritePin(imu->csGyrPinBank, imu->csGyrPin, GPIO_PIN_SET);
-
-	return status;
-
+static inline BMI_STATE BMI088_SPI_End_RTOS(bmi088_t *imu, bool is_gyr) {
+    GPIO_TypeDef *cs_bank = is_gyr ? imu->cs_gyr_bank : imu->cs_acc_bank;
+    uint16_t cs_pin  = is_gyr ? imu->cs_gyr_pin  : imu->cs_acc_pin;
+    return SPI_End_DMA_RTOS(imu->spi, cs_bank, cs_pin) == HAL_OK ? BMI_OK : BMI_SPI_ERR;
 }
 
 
-uint8_t BMI088_ReadAccelerometer(BMI088 *imu) {
 
-	/* Read raw accelerometer data */
-	uint8_t txBuf[8] = {(BMI_ACC_DATA | 0x80), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* Register addr, 1 byte dummy, 6 bytes data */
-	uint8_t rxBuf[8];
 
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_RESET);
-	uint8_t status = (HAL_SPI_TransmitReceive(imu->spiHandle, txBuf, rxBuf, 8, HAL_MAX_DELAY) == HAL_OK);
-	HAL_GPIO_WritePin(imu->csAccPinBank, imu->csAccPin, GPIO_PIN_SET);
+/* -------------------------------------------------------------------------- */
+/*                       Niveau 1 : Primitives capteur RTOS                   */
+/* -------------------------------------------------------------------------- */
 
-	/* Form signed 16-bit integers */
-	int16_t accX = (int16_t) ((rxBuf[3] << 8) | rxBuf[2]);
-	int16_t accY = (int16_t) ((rxBuf[5] << 8) | rxBuf[4]);
-	int16_t accZ = (int16_t) ((rxBuf[7] << 8) | rxBuf[6]);
+BMI_STATE BMI088_ReadRegister_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *value, bool lock_sem) {
+    if (!imu || !value) return BMI_INVALID_ARG;
+    BMI_STATE st;
 
-	/* Convert to m/s^2 */
-	imu->acc_mps2.x = imu->accConversion * accX - imu->acc_mps2_offset.x;
-	imu->acc_mps2.y = imu->accConversion * accY - imu->acc_mps2_offset.y;
-	imu->acc_mps2.z = imu->accConversion * accZ - imu->acc_mps2_offset.z;
+    /* Gyroscope: 1 (addr+R)           + 1 (data) */
+    /* Accelero:  1 (addr+R) + 1 dummy + 1 (data) */
+    uint8_t addr = reg | BMI_READ_MASK;
 
-	return status;
+    if (lock_sem) {
+        if (osSemaphoreAcquire(imu->sem_id, osWaitForever) != osOK) {
+            return BMI_SEM_ERR;
+        }
+    }
 
+    st = BMI088_SPI_Begin_RTOS(imu, is_gyr);
+    if (st != BMI_OK) { 
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        return st; 
+    }
+    st = BMI088_SPI_Tx_RTOS(imu, &addr, 1);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        BMI088_SPI_End_RTOS(imu, is_gyr);
+        return st;
+    }
+    if (!is_gyr) {
+        /* Pour l'accéléromètre, il faut lire un octet dummy avant la donnée */
+        st = BMI088_SPI_Rx_RTOS(imu, value, 1);
+        if (st != BMI_OK) {
+            if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+            BMI088_SPI_End_RTOS(imu, is_gyr);
+            return st;
+        }
+    }
+    st = BMI088_SPI_Rx_RTOS(imu, value, 1);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        BMI088_SPI_End_RTOS(imu, is_gyr);
+        return st;
+    } 
+    BMI088_SPI_End_RTOS(imu, is_gyr);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        return st;
+    }
+
+    /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
+    TIM_Delay_Micro(2);
+
+    if (lock_sem) {
+        if (osSemaphoreRelease(imu->sem_id) != osOK) {
+            return BMI_SEM_ERR;
+        }
+    }
+
+    return st;
 }
 
-uint8_t BMI088_ReadGyroscope(BMI088 *imu) {
+BMI_STATE BMI088_WriteRegister_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t value, bool lock_sem) {
+    if (!imu) return BMI_INVALID_ARG;
 
-	/* Read raw gyroscope data */
-	uint8_t txBuf[7] = {(BMI_GYR_DATA | 0x80), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; /* Register addr, 6 bytes data */
-	uint8_t rxBuf[7];
+    BMI_STATE st = BMI_OK;
+    uint8_t frame[2] = { reg & ~BMI_READ_MASK, value };
 
-	HAL_GPIO_WritePin(imu->csGyrPinBank, imu->csGyrPin, GPIO_PIN_RESET);
-	uint8_t status = (HAL_SPI_TransmitReceive(imu->spiHandle, txBuf, rxBuf, 7, HAL_MAX_DELAY) == HAL_OK);
-	HAL_GPIO_WritePin(imu->csGyrPinBank, imu->csGyrPin, GPIO_PIN_SET);
+    if (lock_sem) {
+        if (osSemaphoreAcquire(imu->sem_id, osWaitForever) != osOK) {
+            return BMI_SEM_ERR;
+        }
+    }
 
-	/* Form signed 16-bit integers */
-	int16_t gyrX = (int16_t) ((rxBuf[2] << 8) | rxBuf[1]);
-	int16_t gyrY = (int16_t) ((rxBuf[4] << 8) | rxBuf[3]);
-	int16_t gyrZ = (int16_t) ((rxBuf[6] << 8) | rxBuf[5]);
+    st = BMI088_SPI_Begin_RTOS(imu, is_gyr);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        return st;
+    }
+    st = BMI088_SPI_Tx_RTOS(imu, frame, 2);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        BMI088_SPI_End_RTOS(imu, is_gyr);
+        return st;
+    }
+    st = BMI088_SPI_End_RTOS(imu, is_gyr);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        return st;
+    }
 
-	/* Convert to rad/s */
-	imu->gyr_rps.x = imu->gyrConversion * gyrX - imu->gyr_rps_offset.x;
-	imu->gyr_rps.y = imu->gyrConversion * gyrY - imu->gyr_rps_offset.y;
-	imu->gyr_rps.z = imu->gyrConversion * gyrZ - imu->gyr_rps_offset.z;
+    /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
+    TIM_Delay_Micro(2);
 
-	return status;
+    if (lock_sem) {
+        if (osSemaphoreRelease(imu->sem_id) != osOK) {
+            return BMI_SEM_ERR;
+        }
+    }
 
+    return st;
+}
+
+BMI_STATE BMI088_ReadMultiple_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t start_reg, uint8_t *data, uint16_t len, bool lock_sem) {
+    if (!imu || !data || !len) return BMI_INVALID_ARG;
+    BMI_STATE st = BMI_OK;
+
+    uint8_t addr = start_reg | BMI_READ_MASK;
+
+    if (lock_sem) {
+        if (osSemaphoreAcquire(imu->sem_id, osWaitForever) != osOK) {
+            return BMI_SEM_ERR;
+        }
+    }
+
+    st = BMI088_SPI_Begin_RTOS(imu, is_gyr);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        return st;
+    }
+    st = BMI088_SPI_Tx_RTOS(imu, &addr, 1);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        BMI088_SPI_End_RTOS(imu, is_gyr);
+        return st;
+    }
+    if (!is_gyr) {
+        /* Pour l'accéléromètre, lire 1 octet dummy avant les vraies données */
+        st = BMI088_SPI_Rx_RTOS(imu, data, 1);
+        if (st != BMI_OK) {
+            if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+            BMI088_SPI_End_RTOS(imu, is_gyr);
+            return st;
+        }
+    }
+    st = BMI088_SPI_Rx_RTOS(imu, data, len);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        BMI088_SPI_End_RTOS(imu, is_gyr);
+        return st;
+    }
+    st = BMI088_SPI_End_RTOS(imu, is_gyr);
+    if (st != BMI_OK) {
+        if (lock_sem) { osSemaphoreRelease(imu->sem_id); }
+        return st;
+    }
+
+    /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
+    TIM_Delay_Micro(2);
+
+    if (lock_sem) {
+        if (osSemaphoreRelease(imu->sem_id) != osOK) {
+            return BMI_SEM_ERR;
+        }
+    }
+
+    return st; 
+}
+
+// BMI_STATE BMI088_ReadMultiple_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t start_reg, uint8_t *data, uint16_t len, bool lock_sem) {
+
+//     uint8_t addr = start_reg | BMI_READ_MASK;
+
+//     osSemaphoreAcquire(imu->sem_id, osWaitForever);
+
+//     BMI088_SPI_Begin_RTOS(imu, is_gyr);
+//     BMI088_SPI_Tx_RTOS(imu, &addr, 1);
+//     if (!is_gyr) {
+//         /* Pour l'accéléromètre, lire 1 octet dummy avant les vraies données */
+//         BMI088_SPI_Rx_RTOS(imu, data, 1);
+//     }
+//     BMI088_SPI_Rx_RTOS(imu, data, len);
+//     BMI088_SPI_End_RTOS(imu, is_gyr);
+
+
+//     /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
+//     TIM_Delay_Micro(2);
+
+//     osSemaphoreRelease(imu->sem_id);
+
+//     return BMI_OK; 
+// }
+
+BMI_STATE BMI088_ReadID_RTOS_base(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id, bool lock_sem) {
+    if (!imu || !acc_id || !gyr_id) {
+        return BMI_INVALID_ARG;
+    }
+
+    /* Gyroscope CHIP_ID @ BMI_GYR_CHIP_ID */
+    BMI_STATE st = BMI088_ReadRegister_RTOS_base(imu, true, BMI_GYR_CHIP_ID, gyr_id, lock_sem);
+    if (st != BMI_OK) { return st; }
+
+    /* Accelerometer CHIP_ID @ BMI_ACC_CHIP_ID */
+    st = BMI088_ReadRegister_RTOS_base(imu, false, BMI_ACC_CHIP_ID, acc_id, lock_sem);
+    return st;
+}
+
+BMI_STATE BMI088_SoftReset_RTOS_base(bmi088_t *imu, bool is_gyr, bool lock_sem) {
+    if (!imu) {
+        return BMI_INVALID_ARG;
+    }
+
+    uint8_t reg;
+    uint8_t cmd;
+
+    if (is_gyr) {
+        reg = BMI_GYR_SOFTRESET;      /* 0x14U */
+        cmd = BMI_GYR_SOFTRESET_CMD;  /* 0b10110110 */
+    } else {
+        reg = BMI_ACC_SOFTRESET;      /* 0x7EU */
+        cmd = BMI_ACC_SOFTRESET_CMD;  /* 0b10110110 */
+    }
+
+    return BMI088_WriteRegister_RTOS_base(imu, is_gyr, reg, cmd, lock_sem);
 }
 
 
-bool BMI088_SelfTestAccelerometer(BMI088 *imu) {
-	float acc_x[256], acc_y[256], acc_z[256];
-	float acc_x_pos = 0, acc_y_pos = 0, acc_z_pos = 0;
-	float acc_x_neg = 0, acc_y_neg = 0, acc_z_neg = 0;
-	float acc_x_res = 0, acc_y_res = 0, acc_z_res = 0;
 
-	// Set to +-24g range
-	BMI088_WriteAccRegister(imu, BMI_ACC_RANGE, BMI_ACC_RANGE_24G);
-	BMI088_WriteAccRegister(imu, BMI_ACC_CONF, BMI_ACC_BWP_NORMAL | BMI_ACC_ODR_1600);
-	HAL_Delay(5);
 
-	BMI088_WriteAccRegister(imu, BMI_ACC_SELF_TEST, BMI_ACC_P_SELF_TEST);
-	HAL_Delay(55);
+/* -------------------------------------------------------------------------- */
+/*                      Niveau 2 : Logique périphérique RTOS                  */
+/* -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/*                 Sous-fonctions internes Init (version RTOS)                */
+/* -------------------------------------------------------------------------- */
 
-	for (int i = 0; i < 256; i++) {
-		BMI088_ReadAccelerometer(imu);
-		acc_x[i] = imu->acc_mps2.x * 1000 / 9.81f;
-		acc_y[i] = imu->acc_mps2.y * 1000 / 9.81f;
-		acc_z[i] = imu->acc_mps2.z * 1000 / 9.81f;
-		HAL_Delay(2);
-	}
+/**
+ * @brief Initialise la partie accéléromètre du BMI088 (version RTOS).
+ * @param imu       Pointeur sur la structure BMI088.
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
+static inline BMI_STATE BMI088_InitAccelerometer_RTOS(bmi088_t *imu) {
+    if (!imu) return BMI_INVALID_ARG;
+    BMI_STATE st;
 
-	for (int i = 0; i < 256; i++) {
-		acc_x_pos += acc_x[i];
-		acc_y_pos += acc_y[i];
-		acc_z_pos += acc_z[i];
-	}
-	acc_x_pos /= 256.0f - 1.0f; // Remove 1 degree of freedom
-	acc_y_pos /= 256.0f - 1.0f; // Remove 1 degree of freedom
-	acc_z_pos /= 256.0f - 1.0f; // Remove 1 degree of freedom
-	
-	BMI088_WriteAccRegister(imu, BMI_ACC_SELF_TEST, BMI_ACC_N_SELF_TEST);
-	HAL_Delay(55);
+    if (osSemaphoreAcquire(imu->sem_id, osWaitForever) != osOK) {
+        return BMI_SEM_ERR;
+    }
 
-	for (int i = 0; i < 256; i++) {
-		BMI088_ReadAccelerometer(imu);
-		acc_x[i] = imu->acc_mps2.x * 1000 / 9.81f;
-		acc_y[i] = imu->acc_mps2.y * 1000 / 9.81f;
-		acc_z[i] = imu->acc_mps2.z * 1000 / 9.81f;
-		HAL_Delay(10);
-	}
+    /* Soft-reset accéléromètre */          // Ne marche pas pour une raison inconnue
+    // st = BMI088_SoftReset_RTOS_NoLock(imu, false);
+    // if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+    // osDelay(1);
 
-	for (int i = 0; i < 256; i++) {
-		acc_x_neg += acc_x[i];
-		acc_y_neg += acc_y[i];
-		acc_z_neg += acc_z[i];
-	}
+    /* Vérification ID accéléromètre */
+    uint8_t acc_id = 0;
+    st = BMI088_ReadRegister_RTOS_NoLock(imu, false, BMI_ACC_CHIP_ID, &acc_id);
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+    if (acc_id != BMI_ACC_CHIP_ID_VALUE) return BMI_UNKNOWN_ERR;
 
-	acc_x_res = fabs(acc_x_pos - acc_x_neg);
-	acc_y_res = fabs(acc_y_pos - acc_y_neg);
-	acc_z_res = fabs(acc_z_pos - acc_z_neg);
+    /* Activation alimentation accéléromètre */
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, false, BMI_ACC_PWR_CTRL, BMI_ACC_PWR_CTRL_ENABLE);
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+    osDelay(1);
 
-	BMI088_WriteAccRegister(imu, BMI_ACC_SELF_TEST, BMI_ACC_NO_SELF_TEST);
-	HAL_Delay(55);
+    if (osSemaphoreRelease(imu->sem_id) != osOK) {
+        return BMI_SEM_ERR;
+    }
 
-	BMI088_Init(imu,imu->spiHandle,
-		        imu->csAccPinBank, imu->csAccPin,
-				imu->csGyrPinBank, imu->csGyrPin);
-
-	return ((acc_x_res > 1000.0f) && (acc_y_res > 1000.0f) && (acc_z_res > 500.0f));
+    return BMI_OK;
 }
 
-bool BMI088_SelfTestGyroscope(BMI088 *imu) {
-	uint8_t st_reg;
-	uint8_t st_reg_ready = 0;
-	uint8_t st_reg_failed = 1;
-	uint8_t st_reg_rate_ok = 0;
+/**
+ * @brief Initialise la partie gyroscope du BMI088 (version RTOS).
+ * @param imu       Pointeur sur la structure BMI088.
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
+static inline BMI_STATE BMI088_InitGyroscope_RTOS(bmi088_t *imu) {
+    if (!imu) return BMI_INVALID_ARG;
+    BMI_STATE st;
 
-	BMI088_WriteGyrRegister(imu, BMI_GYR_SELF_TEST, (1 << BMI_GYR_ST_B_TRIGGER));
-	while (!st_reg_ready) {
-		BMI088_ReadGyrRegister(imu, BMI_GYR_SELF_TEST, &st_reg);
-		st_reg_ready = (st_reg >> BMI_GYR_ST_B_READY) & 0x01;
-		HAL_Delay(1);
-	}
-	st_reg_failed = (st_reg >> BMI_GYR_ST_B_FAILED) & 0x01;
-	st_reg_rate_ok = (st_reg >> BMI_GYR_ST_B_RATE_OK) & 0x01;
+    if (osSemaphoreAcquire(imu->sem_id, osWaitForever) != osOK) {
+        return BMI_SEM_ERR;
+    }
 
-	return ((!st_reg_failed) && (st_reg_rate_ok));
+    /* Soft-reset gyroscope */
+    st = BMI088_SoftReset_RTOS_NoLock(imu, true);
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+    osDelay(30);
+
+    /* Vérification ID gyroscope */
+    uint8_t gyr_id = 0;
+    st = BMI088_ReadRegister_RTOS_NoLock(imu, true, BMI_GYR_CHIP_ID, &gyr_id);
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+    if (gyr_id != BMI_GYR_CHIP_ID_VALUE) return BMI_UNKNOWN_ERR;
+
+    if (osSemaphoreRelease(imu->sem_id) != osOK) {
+        return BMI_SEM_ERR;
+    }
+
+    return BMI_OK;
 }
 
 
-BMI088_OffsetData BMI088_OffsetAccelerometer(BMI088 *imu) {
-	BMI088_OffsetData offsetData = {0};
-	float acc_x[256], acc_y[256], acc_z[256];
 
-	for (int i = 0; i < 256; i++) {
-		BMI088_ReadAccelerometer(imu);
-		acc_x[i] = imu->acc_mps2.x + imu->acc_mps2_offset.x;
-		acc_y[i] = imu->acc_mps2.y + imu->acc_mps2_offset.y;
-		acc_z[i] = imu->acc_mps2.z + imu->acc_mps2_offset.z;
-		HAL_Delay(10);
-	}
+/* -------------------------------------------------------------------------- */
+/*                               BMI088_Init_RTOS                             */
+/* -------------------------------------------------------------------------- */
 
-	for (int i = 0; i < 256; i++) {
-		offsetData.avg.x += acc_x[i];
-		offsetData.avg.y += acc_y[i];
-		offsetData.avg.z += acc_z[i];
-	}
-	offsetData.avg.x /= 256.0f - 1.0f; // Remove 1 degree of freedom
-	offsetData.avg.y /= 256.0f - 1.0f; // Remove 1 degree of freedom
-	offsetData.avg.z /= 256.0f - 1.0f; // Remove 1 degree of freedom
+/**
+ * @brief Initialise le capteur BMI088 (accéléromètre + gyroscope) – version RTOS.
+ * @param imu         Pointeur sur la structure BMI088.
+ * @param hspi        Handle SPI utilisé.
+ * @param cs_acc_bank Port GPIO du chip select accéléromètre.
+ * @param cs_acc_pin  Pin GPIO du chip select accéléromètre.
+ * @param cs_gyr_bank Port GPIO du chip select gyroscope.
+ * @param cs_gyr_pin  Pin GPIO du chip select gyroscope.
+ * @param cfg         Pointeur sur la configuration à appliquer.
+ * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
+ */
+TASK_POOL_ALLOCATE(TASK_BMI088_Init);
+void TASK_BMI088_Init(void *argument) {
+    TASK_BMI088_Init_ARGS *args = (TASK_BMI088_Init_ARGS *)argument;
+    if (!args->imu || !args->hspi || !args->cfg) { *args->return_state = BMI_INVALID_ARG; osThreadExit_Cstm(); }
 
-	for (int i = 0; i < 256; i++) {
-		offsetData.std.x += pow(acc_x[i] - offsetData.avg.x, 2.0f);
-		offsetData.std.y += pow(acc_y[i] - offsetData.avg.y, 2.0f);
-		offsetData.std.z += pow(acc_z[i] - offsetData.avg.z, 2.0f);
-	}
-	offsetData.std.x = sqrt(offsetData.std.x / (256.0f - 1.0f)); // Remove 1 degree of freedom
-	offsetData.std.y = sqrt(offsetData.std.y / (256.0f - 1.0f)); // Remove 1 degree of freedom
-	offsetData.std.z = sqrt(offsetData.std.z / (256.0f - 1.0f)); // Remove 1 degree of freedom
+    args->imu->spi          = args->hspi;
+    args->imu->cs_acc_bank  = args->cs_acc_bank;
+    args->imu->cs_acc_pin   = args->cs_acc_pin;
+    args->imu->cs_gyr_bank  = args->cs_gyr_bank;
+    args->imu->cs_gyr_pin   = args->cs_gyr_pin;
 
-	return offsetData;
+    args->imu->sem_id = osSemaphoreNew(1, 1, &(osSemaphoreAttr_t){
+        .name = "BMI088_Semaphore",
+        .cb_mem = &args->imu->sem,
+        .cb_size = sizeof(args->imu->sem)
+    });
+    if (args->imu->sem_id == NULL) {
+        *args->return_state = BMI_SEM_ERR;
+        goto exit_flag;
+    }
+
+    /* Initialisation séparée de l’accéléromètre */
+    *args->return_state = BMI088_InitAccelerometer_RTOS(args->imu);
+    if (*args->return_state != BMI_OK) { goto exit_flag; }
+
+    /* Initialisation séparée du gyroscope */
+    *args->return_state = BMI088_InitGyroscope_RTOS(args->imu);
+    if (*args->return_state != BMI_OK) { goto exit_flag; }
+
+    /* Application de la configuration */
+    *args->return_state = BMI088_ApplyConfig_RTOS(args->imu, args->cfg);
+    if (*args->return_state != BMI_OK) { goto exit_flag; }
+
+    *args->return_state = BMI_OK;
+
+exit_flag:
+    if (args->done_flags) { osEventFlagsSet(args->done_flags, 1); }    
+    osThreadExit_Cstm();
 }
 
-BMI088_OffsetData BMI088_OffsetGyroscope(BMI088 *imu) {
-	BMI088_OffsetData offsetData = {0};
-	float gyr_x[256], gyr_y[256], gyr_z[256];
 
-	for (int i = 0; i < 256; i++) {
-		BMI088_ReadGyroscope(imu);
-		gyr_x[i] = imu->gyr_rps.x + imu->gyr_rps_offset.x;
-		gyr_y[i] = imu->gyr_rps.y + imu->gyr_rps_offset.y;
-		gyr_z[i] = imu->gyr_rps.z + imu->gyr_rps_offset.z;
-		HAL_Delay(10);
-	}
+/**
+ * @brief Applique une configuration complète au BMI088 (version RTOS).
+ * @param imu       Pointeur sur la structure BMI088.
+ * @param cfg       Pointeur sur la configuration à appliquer.
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
+BMI_STATE BMI088_ApplyConfig_RTOS(bmi088_t *imu, const bmi_config_t *cfg) {
+    if (!imu || !cfg) { return BMI_INVALID_ARG; }
 
-	for (int i = 0; i < 256; i++) {
-		offsetData.avg.x += gyr_x[i];
-		offsetData.avg.y += gyr_y[i];
-		offsetData.avg.z += gyr_z[i];
-	}
-	offsetData.avg.x /= 256.0f - 1.0f; // Remove 1 degree of freedom
-	offsetData.avg.y /= 256.0f - 1.0f; // Remove 1 degree of freedom
-	offsetData.avg.z /= 256.0f - 1.0f; // Remove 1 degree of freedom
+    BMI_STATE st;
 
-	for (int i = 0; i < 256; i++) {
-		offsetData.std.x += pow(gyr_x[i] - offsetData.avg.x, 2.0f);
-		offsetData.std.y += pow(gyr_y[i] - offsetData.avg.y, 2.0f);
-		offsetData.std.z += pow(gyr_z[i] - offsetData.avg.z, 2.0f);
-	}
-	offsetData.std.x = sqrt(offsetData.std.x / (256.0f - 1.0f)); // Remove 1 degree of freedom
-	offsetData.std.y = sqrt(offsetData.std.y / (256.0f - 1.0f)); // Remove 1 degree of freedom
-	offsetData.std.z = sqrt(offsetData.std.z / (256.0f - 1.0f)); // Remove 1 degree of freedom
+    if (osSemaphoreAcquire(imu->sem_id, osWaitForever) != osOK) {
+        return BMI_SEM_ERR;
+    }
 
-	return offsetData;
+    /* --- Accelerometer configuration --- */
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, false, BMI_ACC_CONF,
+        ((cfg->acc_bwp & BMI_ACC_CONF_BWP_MASK) |
+         (cfg->acc_odr & BMI_ACC_CONF_ODR_MASK)));
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, false, BMI_ACC_RANGE,
+        (cfg->acc_range & BMI_ACC_RANGE_MASK));
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, false, BMI_ACC_PWR_CONF,
+        (cfg->acc_pwr & BMI_ACC_PWR_CONF_MASK));
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, false, BMI_ACC_PWR_CTRL,
+        (cfg->acc_ctrl & BMI_ACC_PWR_CTRL_MASK));
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+
+    /* --- Gyroscope configuration --- */
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, true, BMI_GYR_BANDWIDTH,
+        (cfg->gyr_bw & BMI_GYR_BANDWIDTH_BW_MASK));
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, true, BMI_GYR_RANGE,
+        (cfg->gyr_range & BMI_GYR_RANGE_MASK));
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+
+    st = BMI088_WriteRegister_RTOS_NoLock(imu, true, BMI_GYR_LPM1,
+        (cfg->gyr_mode & BMI_GYR_LPM1_MODE_MASK));
+    if (st != BMI_OK) { osSemaphoreRelease(imu->sem_id); return st; }
+
+    if (osSemaphoreRelease(imu->sem_id) != osOK) {
+        return BMI_SEM_ERR;
+    }
+
+    imu->config = *cfg;
+
+    imu->acc_conv = BMI088_ComputeAccSensitivity(cfg->acc_range);
+    imu->gyr_conv = BMI088_ComputeGyrSensitivity(cfg->gyr_range);
+
+    return BMI_OK;
 }
 
+
+/* -------------------------------------------------------------------------- */
+/*                            BMI088_ReadAcc_RTOS                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Lecture des mesures d’accélération (m/s²) – version RTOS.
+ * @param imu       Pointeur sur la structure BMI088.
+ * @param ax, ay, az Pointeurs vers les valeurs d’accélération.
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
 TASK_POOL_ALLOCATE(TASK_BMI088_ReadAcc);
-
 void TASK_BMI088_ReadAcc(void *argument) {
-	TASK_BMI088_ReadAcc_ARGS *args = (TASK_BMI088_ReadAcc_ARGS*)(argument);
+    TASK_BMI088_ReadAcc_ARGS *args = (TASK_BMI088_ReadAcc_ARGS *)argument;
+    if (!args->imu || !args->dt) {
+        *args->return_state = BMI_INVALID_ARG;
+        osThreadExit_Cstm();
+    }
 
-	BMI088 *imu = args->imu;
-	data_topic_t **dt_ptr = args->dt;
-	uint32_t delay = args->delay;
-
-	uint8_t storage[CIRCULAR_BUFFER_BYTES(FLOAT3, 16)];
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(float3_t, 16)];
 	data_topic_t dt;
-	*dt_ptr = &dt;
+	*(args->dt) = &dt;
+	data_topic_init(&dt, storage, sizeof(float3_t), 16, CB_OVERWRITE_OLDEST);
 
-	data_topic_init(&dt, storage, sizeof(FLOAT3), 16, CB_OVERWRITE_OLDEST);
+    float3_t acc;
+    uint8_t raw[6];
+    int16_t rx, ry, rz;
 
-	FLOAT3 accData;
+    for (;;) {
+        *args->return_state = BMI088_ReadMultiple_RTOS(args->imu, false, BMI_ACC_X_LSB, raw, 6);
+        if (*args->return_state != BMI_OK) {  }
 
-	for (;;) {
-		uint8_t cmd = BMI_ACC_DATA | 0x80; /* Register addr, 1 byte dummy, 6 bytes data */
-		uint8_t rxBuf[6];
+        rx = (int16_t)((raw[1] << 8) | raw[0]);
+        ry = (int16_t)((raw[3] << 8) | raw[2]);
+        rz = (int16_t)((raw[5] << 8) | raw[4]);
 
-		// TASK_HAL_SPI_TransmitReceive_DMA(imu->spiHandle, imu->csAccPinBank, imu->csAccPin,
-		// 	                             txBuf, rxBuf, 8);
-		SPI_Begin_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
-		SPI_Transmit_DMA_RTOS(imu->spiHandle, &cmd, 1);
-		SPI_Receive_DMA_RTOS(imu->spiHandle, rxBuf, 1); // Dummy byte
-		SPI_Receive_DMA_RTOS(imu->spiHandle, rxBuf, 6); // Data bytes
-		SPI_End_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
+        acc.x = rx * args->imu->acc_conv;
+        acc.y = ry * args->imu->acc_conv;
+        acc.z = rz * args->imu->acc_conv;
 
-		/* Form signed 16-bit integers */
-		int16_t accX = (int16_t) ((rxBuf[1] << 8) | rxBuf[0]);
-		int16_t accY = (int16_t) ((rxBuf[3] << 8) | rxBuf[2]);
-		int16_t accZ = (int16_t) ((rxBuf[5] << 8) | rxBuf[4]);
+        *args->return_state = BMI_OK;
 
-		/* Convert to m/s^2 and construct FLOAT3 */
-		accData.x = imu->accConversion * accX - imu->acc_mps2_offset.x;
-		accData.y = imu->accConversion * accY - imu->acc_mps2_offset.y;
-		accData.z = imu->accConversion * accZ - imu->acc_mps2_offset.z;
+        data_topic_publish(&dt, &acc);
 
-		data_topic_publish(&dt, &accData);
-
-		osDelay(delay);
-	}
+        osDelay(10);
+    }
 }
 
+/* -------------------------------------------------------------------------- */
+/*                            BMI088_ReadGyr_RTOS                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @brief Lecture des mesures de rotation (°/s) – version RTOS.
+ * @param imu       Pointeur sur la structure BMI088.
+ * @param gx, gy, gz Pointeurs vers les vitesses angulaires.
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
 TASK_POOL_ALLOCATE(TASK_BMI088_ReadGyr);
-
 void TASK_BMI088_ReadGyr(void *argument) {
-	TASK_BMI088_ReadGyr_ARGS *args = (TASK_BMI088_ReadGyr_ARGS*)(argument);
+    TASK_BMI088_ReadGyr_ARGS *args = (TASK_BMI088_ReadGyr_ARGS *)argument;
+    if (!args->imu) {
+        *args->return_state = BMI_INVALID_ARG;
+        osThreadExit_Cstm();
+    }
 
-	BMI088 *imu = args->imu;
-	data_topic_t **dt_ptr = args->dt;
-	uint32_t delay = args->delay;
-
-	uint8_t storage[CIRCULAR_BUFFER_BYTES(FLOAT3, 16)];
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(float3_t, 16)];
 	data_topic_t dt;
-	*dt_ptr = &dt;
+	*args->dt = &dt;
+	data_topic_init(&dt, storage, sizeof(float3_t), 16, CB_OVERWRITE_OLDEST);
 
-	data_topic_init(&dt, storage, sizeof(FLOAT3), 16, CB_OVERWRITE_OLDEST);
+    float3_t gyr;
 
-	FLOAT3 gyrData;
+    for (;;) {
+        uint8_t raw[6];
+        *args->return_state = BMI088_ReadMultiple_RTOS(args->imu, true, BMI_GYR_RATE_X_LSB, raw, 6);
+        if (*args->return_state != BMI_OK) { }
 
-	for (;;) {
-		uint8_t cmd = BMI_GYR_DATA | 0x80; /* Register addr */
-		uint8_t rxBuf[6];
+        int16_t rx = (int16_t)((raw[1] << 8) | raw[0]);
+        int16_t ry = (int16_t)((raw[3] << 8) | raw[2]);
+        int16_t rz = (int16_t)((raw[5] << 8) | raw[4]);
 
-		// TASK_HAL_SPI_TransmitReceive_DMA(imu->spiHandle, imu->csGyrPinBank, imu->csGyrPin,
-		// 	                             txBuf, rxBuf, 7);
+        gyr.x = rx * args->imu->gyr_conv;
+        gyr.y = ry * args->imu->gyr_conv;
+        gyr.z = rz * args->imu->gyr_conv;
 
-		SPI_Begin_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
-		SPI_Transmit_DMA_RTOS(imu->spiHandle, &cmd, 1);
-		SPI_Receive_DMA_RTOS(imu->spiHandle, rxBuf, 6);
-		SPI_End_DMA_RTOS(imu->spiHandle, imu->csAccPinBank, imu->csAccPin);
+        *args->return_state = BMI_OK;
 
-		/* Form signed 16-bit integers */
-		int16_t gyrX = (int16_t) ((rxBuf[1] << 8) | rxBuf[0]);
-		int16_t gyrY = (int16_t) ((rxBuf[3] << 8) | rxBuf[2]);
-		int16_t gyrZ = (int16_t) ((rxBuf[5] << 8) | rxBuf[4]);
+        data_topic_publish(&dt, &gyr);
 
-		/* Convert to rad/s and construct FLOAT3 */
-		gyrData.x = imu->gyrConversion * gyrX - imu->gyr_rps_offset.x;
-		gyrData.y = imu->gyrConversion * gyrY - imu->gyr_rps_offset.y;
-		gyrData.z = imu->gyrConversion * gyrZ - imu->gyr_rps_offset.z;
-
-		data_topic_publish(&dt, &gyrData);
-
-		osDelay(delay);
-	}
+        osDelay(10);
+    }
 }
 
-// TASK_POOL_CREATE(ASYNC_BMI088_ReadSensorDMA);
+/* -------------------------------------------------------------------------- */
+/*                           BMI088_ReadTemp_RTOS                             */
+/* -------------------------------------------------------------------------- */
 
-// void ASYNC_BMI088_ReadSensorDMA_init(TASK *self, BMI088 *imu) {
-// 	ASYNC_BMI088_ReadSensorDMA_CONTEXT *context = (ASYNC_BMI088_ReadSensorDMA_CONTEXT*)self->context;
+/**
+ * @brief Lecture de la température interne du capteur (°C) – version RTOS.
+ * @param imu       Pointeur sur la structure BMI088.
+ * @param temp_c    Pointeur vers la température convertie (°C).
+ * @param lock_sem  Verrou SPI global (true = protéger via semaphore).
+ * @retval BMI_STATE BMI_OK si succès, code d’erreur sinon.
+ */
+TASK_POOL_ALLOCATE(TASK_BMI088_ReadTemp);
+void TASK_BMI088_ReadTemp(void *argument) {
+    TASK_BMI088_ReadTemp_ARGS *args = (TASK_BMI088_ReadTemp_ARGS *)argument;
+    if (!args->imu) {
+        *args->return_state = BMI_INVALID_ARG;   
+        osThreadExit_Cstm();
+    }
 
-// 	context->imu = imu;
-// 	context->state = ASYNC_BMI088_ReadSensorDMA_WAIT_BMI088;
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(float, 16)];
+	data_topic_t dt;
+	*args->dt = &dt;
+	data_topic_init(&dt, storage, sizeof(float), 16, CB_OVERWRITE_OLDEST);
 
-// 	// Can't be a problem because size of txBuf is BMI088_SPI_LEN (8)
-// 	memset(context->txBuf, 0, BMI088_SPI_LEN);
-// 	memset(context->rxBuf, 0, BMI088_SPI_LEN);
-// }
+    float temp_c;
 
-// TASK_RETURN ASYNC_BMI088_ReadAccelerometerDMA(SCHEDULER *scheduler, TASK *self) {
-// 	ASYNC_BMI088_ReadSensorDMA_CONTEXT *context = (ASYNC_BMI088_ReadSensorDMA_CONTEXT*)self->context;
+    for (;;) {
+        uint8_t raw[2];
+        *args->return_state = BMI088_ReadMultiple_RTOS(args->imu, false, BMI_TEMP_MSB, raw, 2);
+        if (*args->return_state != BMI_OK) { }
 
-// 	switch (context->state) {
-// 	case ASYNC_BMI088_ReadSensorDMA_WAIT_BMI088: {
-// 		if (!(context->imu->ASYNC_busy)) {
-// 			context->state = ASYNC_BMI088_ReadSensorDMA_START;
-// 			context->imu->ASYNC_busy = true;
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_ReadSensorDMA_START: {
-// 		context->txBuf[0] = BMI_ACC_DATA | 0x80;
-// 		TASK *task = SCHEDULER_add_task(scheduler, ASYNC_SPI_TxRx_DMA, true, (OBJ_POOL*)ASYNC_SPI_TxRx_DMA_POOL);
-// 		ASYNC_SPI_TxRx_DMA_init_Acc_BMI088(context->txBuf, context->rxBuf, 1, BMI088_SPI_LEN);
-// 		task->is_done = &(context->dma_complete);
-// 		context->state = ASYNC_BMI088_ReadSensorDMA_WAIT_DMA;
-// 		break;}
-// 	case ASYNC_BMI088_ReadSensorDMA_WAIT_DMA: {
-// 		if (context->dma_complete) {
-// 			context->state = ASYNC_BMI088_ReadSensorDMA_END;
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_ReadSensorDMA_END: {
-// 		uint8_t *rate_buf = context->rxBuf + 1; // Skip dummy byte
+        // 11-bit signed value (two's complement)
+        // LSB: bits [7:5] of raw[1], MSB: raw[0]
+        int16_t t_lsb_raw = (int16_t)((raw[1] & BMI_TEMP_LSB_MASK) >> 5);
+        int16_t t_msb_raw = (int16_t)(raw[0] << 3);
+        int16_t t_raw = t_msb_raw | t_lsb_raw;
+        if (t_msb_raw > 0x3E) {
+            if (t_msb_raw < 0xC1) {
+                t_raw -= 2048;  // two's complement adjustment for negative values
+            } else {
+                *args->return_state = BMI_UNKNOWN_ERR;  // invalid temperature reading
+                continue;
+            }
+        }
 
-// 		/* Form signed 16-bit integers */
-// 		int16_t accX = (int16_t) ((rate_buf[1] << 8) | rate_buf[0]);
-// 		int16_t accY = (int16_t) ((rate_buf[3] << 8) | rate_buf[2]);
-// 		int16_t accZ = (int16_t) ((rate_buf[5] << 8) | rate_buf[4]);
+        // Convert to °C using formula from datasheet (section 5.3.7 page 28)
+        temp_c = (float)t_raw * 0.125f + 23.0f;
+        *args->return_state = BMI_OK;
+        data_topic_publish(&dt, &temp_c);
 
-// 		/* Convert to m/s^2 */
-// 		context->imu->acc_mps2.x = context->imu->accConversion * accX - context->imu->acc_mps2_offset.x;
-// 		context->imu->acc_mps2.y = context->imu->accConversion * accY - context->imu->acc_mps2_offset.y;
-// 		context->imu->acc_mps2.z = context->imu->accConversion * accZ - context->imu->acc_mps2_offset.z;
-
-// 		context->imu->new_acc_data = true;
-
-// 		context->imu->ASYNC_busy = false;
-// 		return TASK_RETURN_STOP;
-// 		break;}
-// 	}
-// 	return TASK_RETURN_IDLE;
-// }
-
-// TASK_RETURN ASYNC_BMI088_ReadGyroscopeDMA(SCHEDULER *scheduler, TASK *self) {
-// 	ASYNC_BMI088_ReadSensorDMA_CONTEXT *context = (ASYNC_BMI088_ReadSensorDMA_CONTEXT*)self->context;
-
-// 	switch (context->state) {
-// 	case ASYNC_BMI088_ReadSensorDMA_WAIT_BMI088: {
-// 		if (!(context->imu->ASYNC_busy)) {
-// 			context->state = ASYNC_BMI088_ReadSensorDMA_START;
-// 			context->imu->ASYNC_busy = true;
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_ReadSensorDMA_START: {
-// 		context->txBuf[0] = BMI_GYR_DATA | 0x80;
-// 		context->dma_complete = false;
-// 		TASK *task = SCHEDULER_add_task(scheduler, ASYNC_SPI_TxRx_DMA, true, (OBJ_POOL*)ASYNC_SPI_TxRx_DMA_POOL);
-// 		ASYNC_SPI_TxRx_DMA_init_Gyr_BMI088(context->txBuf, context->rxBuf, 1, BMI088_SPI_LEN);
-// 		task->is_done = &(context->dma_complete);
-// 		context->state = ASYNC_BMI088_ReadSensorDMA_WAIT_DMA;
-// 		break;}
-// 	case ASYNC_BMI088_ReadSensorDMA_WAIT_DMA: {
-// 		if (context->dma_complete) {
-// 			context->state = ASYNC_BMI088_ReadSensorDMA_END;
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_ReadSensorDMA_END: {
-// 		uint8_t *rate_buf = context->rxBuf + 0; // No dummy byte
-
-// 		/* Form signed 16-bit integers */
-// 		int16_t gyrX = (int16_t) ((rate_buf[1] << 8) | rate_buf[0]);
-// 		int16_t gyrY = (int16_t) ((rate_buf[3] << 8) | rate_buf[2]);
-// 		int16_t gyrZ = (int16_t) ((rate_buf[5] << 8) | rate_buf[4]);
-
-// 		/* Convert to rad/s */
-// 		context->imu->gyr_rps.x = context->imu->gyrConversion * gyrX - context->imu->gyr_rps_offset.x;
-// 		context->imu->gyr_rps.y = context->imu->gyrConversion * gyrY - context->imu->gyr_rps_offset.y;
-// 		context->imu->gyr_rps.z = context->imu->gyrConversion * gyrZ - context->imu->gyr_rps_offset.z;
-
-// 		context->imu->new_gyr_data = true;
-
-// 		context->imu->ASYNC_busy = false;
-// 		return TASK_RETURN_STOP;
-// 		break;}
-// 	}
-// 	return TASK_RETURN_IDLE;
-// }
-
-
-// TASK_POOL_CREATE(ASYNC_BMI088_Sensor_Publisher);
-
-// void ASYNC_BMI088_Sensor_Publisher_init(TASK *self, BMI088 *imu, DATA_PUB *data_pub, uint32_t delay, size_t buffer_len) {
-// 	ASYNC_BMI088_Sensor_Publisher_CONTEXT *context = (ASYNC_BMI088_Sensor_Publisher_CONTEXT*)self->context;
-
-// 	context->imu = imu;
-// 	context->data_pub = data_pub;
-// 	context->delay = delay;
-
-// 	context->data_buffer = GMS_alloc(&GMS_memory, buffer_len * sizeof(FLOAT3_TIMESTAMP));
-// 	DATA_PUB_init(data_pub, context->data_buffer, sizeof(FLOAT3_TIMESTAMP), buffer_len);
-
-// 	context->state = ASYNC_BMI088_Sensor_Publisher_START_Timer;
-// }
-
-// TASK_RETURN ASYNC_BMI088_Accelero_Publisher(SCHEDULER *scheduler, TASK *self) {
-// 	ASYNC_BMI088_Sensor_Publisher_CONTEXT *context = (ASYNC_BMI088_Sensor_Publisher_CONTEXT*)self->context;
-
-// 	if (context->task_complet) {
-// 		return TASK_RETURN_STOP;
-// 	}
-
-// 	switch (context->state) {
-// 	case ASYNC_BMI088_Sensor_Publisher_START_Timer: {
-// 		context->timer_start = HAL_GetTick();
-// 		context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_Timer;
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_WAIT_Timer: {
-// 		if (HAL_GetTick() - context->timer_start >= context->delay) {
-// 			context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_BMI088;
-// 			context->timer_start = HAL_GetTick();
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_WAIT_BMI088: {
-// 		if (!(context->imu->ASYNC_busy)) {
-// 			context->state = ASYNC_BMI088_Sensor_Publisher_START;
-// 			context->imu->ASYNC_busy = true;
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_START: {
-// 		context->txBuf[0] = BMI_ACC_DATA | 0x80;
-// 		TASK *task = SCHEDULER_add_task(scheduler, ASYNC_SPI_TxRx_DMA, true, (OBJ_POOL*)ASYNC_SPI_TxRx_DMA_POOL);
-// 		ASYNC_SPI_TxRx_DMA_init_Acc_BMI088(context->txBuf, context->rxBuf, 1, BMI088_SPI_LEN);
-// 		task->is_done = &(context->dma_complete);
-// 		context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_DMA;
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_WAIT_DMA: {
-// 		if (context->dma_complete) {
-// 			context->state = ASYNC_BMI088_Sensor_Publisher_END;
-// 		}
-// 		}	// break is removed intentionally here to allow the next case to execute
-// 	case ASYNC_BMI088_Sensor_Publisher_END: {
-// 		uint8_t *rate_buf = context->rxBuf + 1; // Skip dummy byte
-
-// 		/* Form signed 16-bit integers */
-// 		int16_t accX = (int16_t) ((rate_buf[1] << 8) | rate_buf[0]);
-// 		int16_t accY = (int16_t) ((rate_buf[3] << 8) | rate_buf[2]);
-// 		int16_t accZ = (int16_t) ((rate_buf[5] << 8) | rate_buf[4]);
-
-// 		/* Convert to m/s^2 and build data struct */
-// 		FLOAT3 data = {
-// 			.x = context->imu->accConversion * accX - context->imu->acc_mps2_offset.x,
-// 			.y = context->imu->accConversion * accY - context->imu->acc_mps2_offset.y,
-// 			.z = context->imu->accConversion * accZ - context->imu->acc_mps2_offset.z,
-// 		};
-// 		FLOAT3_TIMESTAMP data_time = {
-// 			.data = data,
-// 			.timestamp = HAL_GetTick()
-// 		};
-// 		DATA_PUB_push(context->data_pub, &data_time);
-
-// 		context->imu->ASYNC_busy = false;
-// 		context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_Timer;
-// 		break;}
-// 	}
-// 	return TASK_RETURN_IDLE;
-// }
-
-// TASK_RETURN ASYNC_BMI088_Gyro_Publisher(SCHEDULER *scheduler, TASK *self) {
-// 	ASYNC_BMI088_Sensor_Publisher_CONTEXT *context = (ASYNC_BMI088_Sensor_Publisher_CONTEXT*)self->context;
-
-// 	if (context->task_complet) {
-// 		return TASK_RETURN_STOP;
-// 	}
-
-// 	switch (context->state) {
-// 	case ASYNC_BMI088_Sensor_Publisher_START_Timer: {
-// 		context->timer_start = HAL_GetTick();
-// 		context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_Timer;
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_WAIT_Timer: {
-// 		if (HAL_GetTick() - context->timer_start >= context->delay) {
-// 			context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_BMI088;
-// 			context->timer_start = HAL_GetTick();
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_WAIT_BMI088: {
-// 		if (!(context->imu->ASYNC_busy)) {
-// 			context->state = ASYNC_BMI088_Sensor_Publisher_START;
-// 			context->imu->ASYNC_busy = true;
-// 		}
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_START: {
-// 		context->txBuf[0] = BMI_GYR_DATA | 0x80;
-// 		context->dma_complete = false;
-// 		TASK *task = SCHEDULER_add_task(scheduler, ASYNC_SPI_TxRx_DMA, true, (OBJ_POOL*)ASYNC_SPI_TxRx_DMA_POOL);
-// 		ASYNC_SPI_TxRx_DMA_init_Gyr_BMI088(context->txBuf, context->rxBuf, 1, BMI088_SPI_LEN);
-// 		task->is_done = &(context->dma_complete);
-// 		context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_DMA;
-// 		break;}
-// 	case ASYNC_BMI088_Sensor_Publisher_WAIT_DMA: {
-// 		if (context->dma_complete) {
-// 			context->state = ASYNC_BMI088_Sensor_Publisher_END;
-// 		}
-// 		}	// break is removed, we can continue to END state
-// 	case ASYNC_BMI088_Sensor_Publisher_END: {
-// 		uint8_t *rate_buf = context->rxBuf + 0; // No dummy byte
-
-// 		/* Form signed 16-bit integers */
-// 		int16_t gyrX = (int16_t) ((rate_buf[1] << 8) | rate_buf[0]);
-// 		int16_t gyrY = (int16_t) ((rate_buf[3] << 8) | rate_buf[2]);
-// 		int16_t gyrZ = (int16_t) ((rate_buf[5] << 8) | rate_buf[4]);
-
-// 		/* Convert to rad/s and build data struct */
-// 		FLOAT3 data = {
-// 			.x = context->imu->gyrConversion * gyrX - context->imu->gyr_rps_offset.x,
-// 			.y = context->imu->gyrConversion * gyrY - context->imu->gyr_rps_offset.y,
-// 			.z = context->imu->gyrConversion * gyrZ - context->imu->gyr_rps_offset.z,
-// 		};
-// 		FLOAT3_TIMESTAMP data_time = {
-// 			.data = data,
-// 			.timestamp = HAL_GetTick()
-// 		};
-// 		DATA_PUB_push(context->data_pub, &data_time);
-
-// 		context->imu->ASYNC_busy = false;
-// 		context->state = ASYNC_BMI088_Sensor_Publisher_WAIT_Timer;
-// 		break;}
-// 	}
-// 	return TASK_RETURN_IDLE;
-// }
+        osDelay(10);
+    }
+}

@@ -27,6 +27,7 @@
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim9;
 TIM_HandleTypeDef htim11;
 
 /* TIM2 init function */
@@ -185,6 +186,41 @@ void MX_TIM4_Init(void)
   HAL_TIM_MspPostInit(&htim4);
 
 }
+/* TIM9 init function */
+void MX_TIM9_Init(void)
+{
+
+  /* USER CODE BEGIN TIM9_Init 0 */
+
+  /* USER CODE END TIM9_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+
+  /* USER CODE BEGIN TIM9_Init 1 */
+
+  /* USER CODE END TIM9_Init 1 */
+  htim9.Instance = TIM9;
+  htim9.Init.Prescaler = 96-1;
+  htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim9.Init.Period = 65535-1;
+  htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim9) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim9, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM9_Init 2 */
+  uint32_t pclk2_freq = HAL_RCC_GetPCLK2Freq();
+  uint32_t prescale = pclk2_freq / 1000000 - 1; // 1 MHz timer frequency
+  __HAL_TIM_SET_PRESCALER(&htim9, prescale);
+  /* USER CODE END TIM9_Init 2 */
+
+}
 /* TIM11 init function */
 void MX_TIM11_Init(void)
 {
@@ -247,6 +283,17 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
   /* USER CODE BEGIN TIM4_MspInit 1 */
 
   /* USER CODE END TIM4_MspInit 1 */
+  }
+  else if(tim_baseHandle->Instance==TIM9)
+  {
+  /* USER CODE BEGIN TIM9_MspInit 0 */
+
+  /* USER CODE END TIM9_MspInit 0 */
+    /* TIM9 clock enable */
+    __HAL_RCC_TIM9_CLK_ENABLE();
+  /* USER CODE BEGIN TIM9_MspInit 1 */
+
+  /* USER CODE END TIM9_MspInit 1 */
   }
   else if(tim_baseHandle->Instance==TIM11)
   {
@@ -350,6 +397,17 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 
   /* USER CODE END TIM4_MspDeInit 1 */
   }
+  else if(tim_baseHandle->Instance==TIM9)
+  {
+  /* USER CODE BEGIN TIM9_MspDeInit 0 */
+
+  /* USER CODE END TIM9_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_TIM9_CLK_DISABLE();
+  /* USER CODE BEGIN TIM9_MspDeInit 1 */
+
+  /* USER CODE END TIM9_MspDeInit 1 */
+  }
   else if(tim_baseHandle->Instance==TIM11)
   {
   /* USER CODE BEGIN TIM11_MspDeInit 0 */
@@ -415,15 +473,14 @@ uint32_t TIM_get_timer_frequency(TIM_HandleTypeDef* htim) {
 void TIM_set_frequency(TIM_HandleTypeDef* htim, float freq) {
 	uint32_t timer_freq = TIM_get_timer_frequency(htim);
 	uint32_t periode = htim->Init.Period;
-	float prescaler_float;;
-	uint32_t prescaler;
-	if (freq == 0) {
-		prescaler = 0;
-	} else {
-		prescaler_float = (float)timer_freq / ((float)periode * freq);
-		prescaler = (uint32_t)prescaler_float;
+  float max_freq = (float)timer_freq / (float)(periode + 1);
+	if (freq == 0 || (freq >= max_freq)) {
+    return; // Frequency too high or zero, no change
+  }else {
+    // Equation : freq = timer_freq / ((prescaler + 1) * (periode + 1))
+		uint32_t prescaler = (uint32_t)(max_freq / freq) - 1;
+	  __HAL_TIM_SET_PRESCALER(htim, prescaler);
 	}
-	__HAL_TIM_SET_PRESCALER(htim, (uint32_t)prescaler);
 }
 
 /* USER CODE END 1 */

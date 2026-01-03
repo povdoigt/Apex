@@ -1,5 +1,7 @@
 #include "utils/test.h"
 
+#include "drivers/BMI088.h"
+#include "drivers/w25q_mem.h"
 #include "utils/scheduler.h"
 
 #include "peripherals/adc.h"
@@ -80,14 +82,14 @@ void init_obj_pools() {
 
 void init_components(COMPONENTS             *components,
                      ADXL375                *adxl,
-                     BMI088                 *bmi,
+                     bmi088_t               *bmi,
                      BMP388_HandleTypeDef   *bmp,
                      BUZZER                 *buzzer,
                      GPS_t                  *gps,
                      LED_RGB                *led_rgb_0,
                      LED_RGB                *led_rgb_1,
                      LSM303AGR              *lsm,
-                     W25Q_Chip              *flash_chip
+                     W25Q_t                 *flash_chip
 ) {
     components->adxl = adxl;
     components->bmi = bmi;

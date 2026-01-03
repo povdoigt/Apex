@@ -22,7 +22,6 @@
 /* USER CODE BEGIN Includes */
 
 #include "main.h"
-#include "cmsis_gcc.h"
 #include "cmsis_os2.h"
 #include "crc.h"
 
@@ -47,18 +46,14 @@
 #include "peripherals/tim.h"
 #include "peripherals/usart.h"
 
-
-#include "stm32f4xx_hal_gpio.h"
-#include "usbd_cdc_if.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
+#include "utils/types.h"
 #include "utils/usb.h"
 
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_adc.h"
-#include "stm32f4xx_ll_adc.h"
 #include "usb_device.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -91,7 +86,9 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-W25Q_Chip w25q_chip;
+ADXL375 adxl;
+bmi088_t BMI088_imu;
+W25Q_t w25q_chip;
 
 data_topic_t *data_topic_acc_ptr;
 data_topic_t *data_topic_gyr_ptr;
@@ -186,11 +183,78 @@ int main(void)
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_I2C3_Init();
 
-  	/* USER CODE BEGIN 2 */
+	MX_SPI1_Init();
+	MX_SPI2_Init();
 
-	MX_USB_DEVICE_Init();
+	MX_TIM2_Init();
+	MX_TIM3_Init();
+	MX_TIM4_Init();
+	MX_TIM9_Init();
+	MX_TIM11_Init();
 
+	MX_USART1_UART_Init();
+
+	MX_ADC1_Init();
+	MX_SPI1_Init();
+	MX_CRC_Init();
+
+	/* USER CODE BEGIN 2 */
+
+	// MX_USB_DEVICE_Init();
+
+
+
+	
+	TASK_POOL_CREATE(TASK_Program_start);
+
+	TASK_POOL_CREATE(TASK_BMI088_Init);
+	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
+	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+	TASK_POOL_CREATE(TASK_BMI088_ReadTemp);
+
+	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
+	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
+	TASK_POOL_CREATE(TASK_W25Q_Init);
+	TASK_POOL_CREATE(TASK_W25Q_WriteData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadData);
+	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
+
+	TASK_POOL_CREATE(TASK_USB_Transmit);
+	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
+
+	Init_cleanup();
+	Init_spi_semaphores();
+	USB_Init();
+
+	osThreadAttr_t attr = {
+		.name = TASK_Program_start_name,
+	};
+	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+
+	// osThreadAttr_t attr = {
+	// 	.name = "TASK_W25Q_ReadWriteTest",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+	// TASK_W25Q_ReadWriteTest_ARGS rwtest_args = {
+	// 	.chip = &w25q_chip,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_W25Q_ReadWriteTest, rwtest_args, attr, osWaitForever);
+
+	/* USER CODE END 2 */
+
+	/* Init scheduler */
+	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+	MX_FREERTOS_Init();
+
+	/* Start scheduler */
+	osKernelStart();
+
+	/* We should never get here as control is now taken by the scheduler */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
@@ -316,48 +380,93 @@ TASK_POOL_ALLOCATE(TASK_Program_start);
 
 // void TASK_Program_start(void *argument) {
 
-//   	osThreadAttr_t attr0 = {
-// 		.name = "TASK_BMI088_ReadAcc",
-// 		.priority = (osPriority_t)osPriorityNormal,
-// 	};
+	const bmi_config_t bmi_cfg = {
+		.acc_range  = BMI_ACC_RANGE_24G,
+		.acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
+		.acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
+		.acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
+		.acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
 
-// 	data_topic_acc_ptr = NULL;
+		.gyr_range  = BMI_GYR_RANGE_2000,
+		.gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
+		.gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+	};
+	BMI_STATE st;
+	StaticEventGroup_t bmi_done_event_cb;
+	osEventFlagsId_t bmi_done_event_id = osEventFlagsNew(&(osEventFlagsAttr_t){
+		.name = "bmi_done_event",
+		.cb_mem = &bmi_done_event_cb,
+		.cb_size = sizeof(bmi_done_event_cb)
+	});
+	osEventFlagsClear(bmi_done_event_id, 0xFFFFFFFF);
 
-//   	TASK_BMI088_ReadAcc_ARGS args0 = {
-// 		.imu = &BMI088_imu,
-// 		.delay = 100,        // 100 ms delay
-// 		.dt = &data_topic_acc_ptr,
-// 		.timer_start = 0,
-// 		.timer_delay = 0,
-//   	};
-// 	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, args0, attr0, osWaitForever);
+	osThreadAttr_t attr_init = {
+		.name = "TASK_BMI088_Init",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
 
-// 	osThreadAttr_t attr1 = {
-//   		.name = "TASK_BMI088_ReadGyr",
-// 		.priority = (osPriority_t)osPriorityNormal,
-// 	};
+	TASK_BMI088_Init_ARGS args_init = {
+		.imu			= &BMI088_imu,
+		.hspi			= &hspi1,
+		.cs_acc_bank	= CS_ACC0_GPIO_Port,
+		.cs_acc_pin		= CS_ACC0_Pin,
+		.cs_gyr_bank	= CS_GYRO_GPIO_Port,
+		.cs_gyr_pin		= CS_GYRO_Pin,
+		.cfg			= &bmi_cfg,
+		.return_state	= &st,
+		.done_flags		= bmi_done_event_id,
+	};
+	OS_THREAD_NEW_CSTM(TASK_BMI088_Init, args_init,  attr_init, osWaitForever);
 
-// 	data_topic_gyr_ptr = NULL;
+	osEventFlagsWait(bmi_done_event_id, 1, osFlagsWaitAll, osWaitForever);
 
-//   	TASK_BMI088_ReadGyr_ARGS args1 = {
-// 		.imu = &BMI088_imu,
-// 		.delay = 1000,        // 100 ms delay
-// 		.dt = &data_topic_gyr_ptr,
-// 		.timer_start = 0,
-// 		.timer_delay = 0,
-//   	};
-//   	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, args1, attr1, osWaitForever);
+	
 
 
-// 	TASK_Data_USB_Transmit_ARGS usb_args = {
-// 		.dt = &data_topic_acc_ptr,
-// 		.delay = 200,
-// 	};
-// 	osThreadAttr_t usb_attr = {
-// 		.name = "TASK_Data_USB_Transmit",
-// 		.priority = (osPriority_t)osPriorityNormal,
-// 	};
-// 	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
+
+  	osThreadAttr_t bmi_acc_attr = {
+		.name = "TASK_BMI_ACC",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+
+	TASK_BMI088_ReadAcc_ARGS bmi_acc_args = {
+		.imu			= &BMI088_imu,
+		.dt				= &data_topic_acc_ptr,
+		.return_state	= &st,
+	};
+
+	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, bmi_acc_args, bmi_acc_attr, osWaitForever);
+
+	
+
+
+	
+	osThreadAttr_t bmi_gyr_attr = {
+		.name = "TASK_BMI_GYR",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+
+	TASK_BMI088_ReadGyr_ARGS bmi_gyr_args = {
+		.imu			= &BMI088_imu,
+		.dt				= &data_topic_gyr_ptr,
+		.return_state	= &st,
+	};
+
+	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, bmi_gyr_args, bmi_gyr_attr, osWaitForever);
+
+	
+
+
+	
+	TASK_Data_USB_Transmit_ARGS usb_args = {
+		.dt = &data_topic_acc_ptr,
+		.delay = 10,
+	};
+	osThreadAttr_t usb_attr = {
+		.name = "TASK_Data_USB_Transmit",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
 
 
 //   	osThreadExit_Cstm();
@@ -374,12 +483,12 @@ TASK_POOL_ALLOCATE(TASK_Program_start);
 // 	data_topic_t **dt = args->dt;
 // 	uint32_t delay = args->delay;
 
-// 	char buffer[64];
-// 	char buffer_status[9];
-// 	char buffer_x[10];
-// 	char buffer_y[10];
-// 	char buffer_z[10];
-// 	FLOAT3 data;
+	char buffer[64];
+	char buffer_status[9];
+	char buffer_x[10];
+	char buffer_y[10];
+	char buffer_z[10];
+	float3_t data;
 
 // 	while (*dt == NULL) {
 // 		osDelay(10);
@@ -501,6 +610,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* User can add his own implementation to report the file name and line
      number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
      line) */
+	while (1);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

@@ -19,7 +19,7 @@
 
 typedef struct COMPONENTS {
     ADXL375                 *adxl;
-    BMI088                  *bmi;
+    bmi088_t                *bmi;
     BMP388_HandleTypeDef    *bmp;
     BUZZER                  *buzzer;
     GPS_t                   *gps;
@@ -31,7 +31,7 @@ typedef struct COMPONENTS {
 
 typedef struct DATAS {
     // Sensors
-    BMI088                  *imu;
+    bmi088_t                *imu;
     BMP388_HandleTypeDef    *bmp;
     GPS_t                   *gps;
 
@@ -130,13 +130,14 @@ void init_obj_pools(void);
 
 void init_components(COMPONENTS             *components,
                      ADXL375                *adxl,
-                     BMI088                 *bmi,
+                     bmi088_t               *bmi,
                      BMP388_HandleTypeDef   *bmp,
                      BUZZER                 *buzzer,
                      GPS_t                  *gps,
                      LED_RGB                *led_rgb_0,
                      LED_RGB                *led_rgb_1,
                      LSM303AGR              *lsm,
+                     RFM96_Chip             *lora_chip,
                      W25Q_Chip              *flash_chip
 );
 
