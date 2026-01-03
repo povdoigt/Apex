@@ -310,6 +310,7 @@ typedef enum sx127x_status_t {
     sx127x_STATUS_ERROR			= 0x01,
 	sx127x_STATUS_SPI_TIMEOUT	= 0x02,
 	sx127x_STATUS_MODEM_TIMEOUT	= 0x03,
+	sx127x_STATUS_OVERRUN		= 0x04,
 } sx127x_status_t;
 
 typedef enum sx127x_modulation_t {
@@ -318,15 +319,19 @@ typedef enum sx127x_modulation_t {
 	sx127x_MODULATION_LORA,
 } sx127x_modulation_t;
 
-typedef struct sx127x_chip_t {
+typedef struct sx127x_base_config_t {
 	SPI_HandleTypeDef	*spiHandle;			// SPI Handle
 	GPIO_TypeDef 	    *csPinBank;			// Chip Select Pin Bank
 	uint16_t 		     csPin;				// Chip Select Pin
 	uint32_t			 frequency;			// in Hz
 	float				 ocp_current_mA;	// Over Current Protection current in mA
 	float 				 power_dBm;			// Output power in dBm
-	sx127x_modulation_t	 modulation;		// Current modulation mode
-} sx127x_chip_t;
+} sx127x_base_config_t;
+
+typedef struct sx127x_base_chip_t {
+	sx127x_base_config_t	config;			// Configuration parameters
+	sx127x_modulation_t		modulation;		// Current modulation mode
+} sx127x_base_chip_t;
 
 
 
@@ -337,10 +342,10 @@ typedef struct sx127x_chip_t {
 
 // ================================== Level 1: Basic Read/Write functions ==================================
 
-sx127x_status_t sx127x_RegWrite(sx127x_chip_t *chip, uint8_t reg, uint8_t value);
-sx127x_status_t sx127x_RegWriteMulti(sx127x_chip_t *chip, uint8_t reg, const uint8_t *buffer, uint8_t buf_size);
-sx127x_status_t sx127x_RegRead(sx127x_chip_t *chip, uint8_t reg, uint8_t *value);
-sx127x_status_t sx127x_RegReadMulti(sx127x_chip_t *chip, uint8_t reg, uint8_t *buffer, uint8_t buf_size);
+sx127x_status_t sx127x_RegWrite(sx127x_base_chip_t *chip, uint8_t reg, uint8_t value);
+sx127x_status_t sx127x_RegWriteMulti(sx127x_base_chip_t *chip, uint8_t reg, const uint8_t *buffer, uint8_t buf_size);
+sx127x_status_t sx127x_RegRead(sx127x_base_chip_t *chip, uint8_t reg, uint8_t *value);
+sx127x_status_t sx127x_RegReadMulti(sx127x_base_chip_t *chip, uint8_t reg, uint8_t *buffer, uint8_t buf_size);
 
 
 
@@ -348,12 +353,10 @@ sx127x_status_t sx127x_RegReadMulti(sx127x_chip_t *chip, uint8_t reg, uint8_t *b
 
 // ================================== Level 2: High level function ==================================
 
-sx127x_status_t sx127x_Init(sx127x_chip_t *chip, SPI_HandleTypeDef *spiHandle,
-                            GPIO_TypeDef *csPinBank, uint16_t csPin, uint32_t frequency,
-                            float ocp_current_mA, float power_dBm);
-sx127x_status_t sx127x_GetBand(sx127x_chip_t *chip, uint8_t *band);
-sx127x_status_t sx127x_SetFrequency(sx127x_chip_t *chip, uint32_t frequency);
-sx127x_status_t sx127x_SetTxPower(sx127x_chip_t *chip, float power_dBm);
-sx127x_status_t sx127x_SetOcp(sx127x_chip_t *chip, float ocp_current_mA);
+sx127x_status_t sx127x_InitBase(sx127x_base_chip_t *chip, sx127x_base_config_t config);
+sx127x_status_t sx127x_GetBand(sx127x_base_chip_t *chip, uint8_t *band);
+sx127x_status_t sx127x_SetFrequency(sx127x_base_chip_t *chip, uint32_t frequency);
+sx127x_status_t sx127x_SetTxPower(sx127x_base_chip_t *chip, float power_dBm);
+sx127x_status_t sx127x_SetOcp(sx127x_base_chip_t *chip, float ocp_current_mA);
 
 #endif // SX127X_COMMON_H

@@ -8,7 +8,7 @@
 #include <math.h>
 
 // Helper function to convert RxBw enum to register values
-static void sx127x_FSK_OOK_RxBw_to_RegValue(sx127x_FSK_OOK_RxBw_t rxbw, uint8_t *mant, uint8_t *exp) {
+static void __sx127x_FSK_OOK_RxBw_to_RegValue(sx127x_FSK_OOK_RxBw_t rxbw, uint8_t *mant, uint8_t *exp) {
 	// RxBw = Fxosc / (RxBwMant * 2^(RxBwExp + 2))
 	// Based on datasheet Table 19
 	switch (rxbw) {
@@ -37,7 +37,22 @@ static void sx127x_FSK_OOK_RxBw_to_RegValue(sx127x_FSK_OOK_RxBw_t rxbw, uint8_t 
 	}
 }
 
-sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config, sx127x_modulation_t modulation) {
+static sx127x_status_t __sx127x_FSK_OOK_SetMode(sx127x_FSK_OOK_chip_t *chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode) {
+	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
+
+	sx127x_status_t status;
+	uint8_t value;
+	status = sx127x_RegRead(chip->base_chip, sx127x_REG_01_OP_MODE, &value);
+	if (status != sx127x_STATUS_OK) { return status; }
+	value &= ~sx127x_FSK_OOK_REG_01_OP_MODE_MODE_MSK;
+	value |= mode;
+	status = sx127x_RegWrite(chip->base_chip, sx127x_REG_01_OP_MODE, value);
+	if (status != sx127x_STATUS_OK) { return status; }
+
+	return sx127x_STATUS_OK;
+}
+
+sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_FSK_OOK_config_t config, sx127x_modulation_t modulation) {
     if (!chip) { return sx127x_STATUS_ERROR; }
     
     sx127x_status_t status;
@@ -53,7 +68,7 @@ sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip
     if (status != sx127x_STATUS_OK) { return status; }
     
     // Set the mode to sleep (required to switch from LoRa to FSK or configure FSK)
-    status = sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_SLEEP);
+    status = __sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_SLEEP);
 	if (status != sx127x_STATUS_OK) { return status; }
     
     // Set the RegOpMode to FSK/OOK mode
@@ -76,7 +91,7 @@ sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip
 	// Set RxConfig - enable AGC, disable AFC
 	value = sx127x_FSK_OOK_REG_0D_RX_CONFIG_RROC_OFF	// Restart Rx on collision
 		  | sx127x_FSK_OOK_REG_0D_RX_CONFIG_AFCAON_OFF	// AFC disabled
-		  | sx127x_FSK_OOK_REG_0D_RX_CONFIG_AGCAON_OFF	// AGC enabled
+		  | sx127x_FSK_OOK_REG_0D_RX_CONFIG_AGCAON_ON	// AGC enabled
 		  | 0x00; // Default
 	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_0D_RX_CONFIG, value);
 	if (status != sx127x_STATUS_OK) { return status; }
@@ -89,7 +104,7 @@ sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip
 
 	// Set RxBw (Receiver bandwidth)
 	uint8_t rxbw_mant, rxbw_exp;
-	sx127x_FSK_OOK_RxBw_to_RegValue(config.RxBw, &rxbw_mant, &rxbw_exp);
+	__sx127x_FSK_OOK_RxBw_to_RegValue(config.RxBw, &rxbw_mant, &rxbw_exp);
 	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_12_RX_BW, rxbw_mant | rxbw_exp);
 	if (status != sx127x_STATUS_OK) { return status; }
 
@@ -152,7 +167,7 @@ sx127x_status_t __sx127x_FSK_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip
     return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config) {
+sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_FSK_OOK_config_t config) {
 	if (!chip) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
@@ -165,7 +180,7 @@ sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *ba
 	// Fdev register value = Fdev / Fstep
 	uint16_t fdev_reg = (uint16_t)((float)config.mod_config.fsk.fdev / sx127x_FSTEP);
 	uint8_t fdev_buf[2] = {
-		(uint8_t)((fdev_reg >> 8) & 0xFF),
+		(uint8_t)((fdev_reg >> 8) & 0x3F), // [15-14] Reserved
 		(uint8_t)((fdev_reg >> 0) & 0xFF) };
 	status = sx127x_RegWriteMulti(chip->base_chip, sx127x_FSK_OOK_REG_04_FDEV_MSB, fdev_buf, 2);
 	if (status != sx127x_STATUS_OK) { return status; }
@@ -173,7 +188,7 @@ sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *ba
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config) {
+sx127x_status_t sx127x_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_FSK_OOK_config_t config) {
     if (!chip) { return sx127x_STATUS_ERROR; }
     
     sx127x_status_t status;
@@ -221,52 +236,68 @@ sx127x_status_t sx127x_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *ba
 
 
 
-
-
-sx127x_status_t sx127x_FSK_OOK_SetMode(sx127x_FSK_OOK_chip_t *chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode) {
+sx127x_status_t __sx127x_FSK_OOK_RxReceive_IRQ(sx127x_FSK_OOK_chip_t *chip, uint32_t Timeout_delay_ms,
+											   bool is_flag_2, uint8_t irq_mask, bool invert_mask, uint8_t irq[2]) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
-	uint8_t value;
-	status = sx127x_RegRead(chip->base_chip, sx127x_REG_01_OP_MODE, &value);
-	if (status != sx127x_STATUS_OK) { return status; }
-	value &= ~sx127x_FSK_OOK_REG_01_OP_MODE_MODE_MSK;
-	value |= mode;
-	status = sx127x_RegWrite(chip->base_chip, sx127x_REG_01_OP_MODE, value);
-	if (status != sx127x_STATUS_OK) { return status; }
+
+	uint32_t t0 = HAL_GetTick();
+	while (true) {
+		status = sx127x_RegReadMulti(chip->base_chip, sx127x_FSK_OOK_REG_3E_IRQ_FLAGS1, irq, 2);
+		if (status != sx127x_STATUS_OK) { return status; }
+
+		// Check IRQ flag
+		bool condition = irq[(uint8_t)is_flag_2] & irq_mask;
+		condition = invert_mask ? !condition : condition;
+		if (condition) {
+			break;
+		}
+		// Check for timeout
+		if ((HAL_GetTick() - t0) > Timeout_delay_ms) {
+			return sx127x_STATUS_MODEM_TIMEOUT;
+		}
+	}
 
 	return sx127x_STATUS_OK;
 }
 
 
 
-
-
-
-sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data, uint16_t len, bool variable_length) {
+sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data, uint16_t len) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
-	uint8_t value;
+	uint8_t values[2];
 	uint16_t max_size = SX127X_FSK_OOK_FIFO_SIZE;
 
 	// Set the mode to standby
-	status = sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_STDBY);
+	status = __sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_STDBY);
 	if (status != sx127x_STATUS_OK) { return status; }
 
-	// Variable length packets: first byte is length
-	if (variable_length) {
+	// Wait for mode ready
+	status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, HAL_MAX_DELAY, false, sx127x_FSK_OOK_REG_3E_IRQ_FLAGS1_MODE_READY_MSK, false, values);
+	if (status != sx127x_STATUS_OK) { return status; }
+
+	// Clear FIFO by clearing FIFO Overrun flag
+	status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_OVERRUN_MSK);
+	if (status != sx127x_STATUS_OK) { return status; }
+
+	if (chip->config.packetCfg.variable_length) {
+		if (len == 0 || len > SX127X_FSK_OOK_MAX_PAYLOAD_SIZE) { return sx127x_STATUS_ERROR; }
+		// Variable length packets: first byte is length
 		max_size--;
-		// Set the first byte to length
 		status = sx127x_RegWrite(chip->base_chip, sx127x_REG_00_FIFO, (uint8_t)(len & 0xFF));
 		if (status != sx127x_STATUS_OK) { return status; }
+	} else {
+		// Fixed length packets: get length from config
+		len = chip->config.packetCfg.payload_len;
 	}
 
 	if (len > max_size) {
 		uint16_t offset = 0;
 		uint8_t fifo_half = (SX127X_FSK_OOK_FIFO_SIZE / 2);
 		uint8_t chunk_size;
-		bool fifo_threash;
 
 		// Prefilled FIFO
 		status = sx127x_RegWriteMulti(chip->base_chip, sx127x_REG_00_FIFO, data, max_size);
@@ -275,24 +306,22 @@ sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8
 		offset += max_size;
 
 		// Set FIFO threshold to half FIFO size
-		value = sx127x_FSK_OOK_REG_35_FIFO_THRESH_TX_START_COND_LEVEL
-			  | (fifo_half & sx127x_FSK_OOK_REG_35_FIFO_THRESH_FIFO_THRESH_MSK);
-		status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, value);
+		values[0] = sx127x_FSK_OOK_REG_35_FIFO_THRESH_TX_START_COND_LEVEL
+				  | (fifo_half & sx127x_FSK_OOK_REG_35_FIFO_THRESH_FIFO_THRESH_MSK);
+		status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, values[0]);
 		if (status != sx127x_STATUS_OK) { return status; }
 
 		// Set the mode to transmit
-		status = sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_TX);
+		status = __sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_TX);
 		if (status != sx127x_STATUS_OK) { return status; }
 
 		// Write data to FIFO in chunks
 		while (len > 0) {
 			// Wait until FIFO threshold is cleared
-			fifo_threash = true;
-			while (fifo_threash) {
-				status = sx127x_RegRead(chip->base_chip, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2, &value);
-				if (status != sx127x_STATUS_OK) { return status; }
-				fifo_threash = value & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK;
-			}
+			status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, HAL_MAX_DELAY, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK, true, values);
+			if (status != sx127x_STATUS_OK) { return status; }
+			// Verify overrun did not occur
+			if (values[1] & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_OVERRUN_MSK) { return sx127x_STATUS_ERROR; }
 
 			chunk_size = (len > fifo_half) ? fifo_half : (uint8_t)len;
 			status = sx127x_RegWriteMulti(chip->base_chip, sx127x_REG_00_FIFO, &data[offset], chunk_size);
@@ -303,8 +332,8 @@ sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8
 		}
 	} else {
 		// Set Tx start condition to FIFO not empty
-		value = sx127x_FSK_OOK_REG_35_FIFO_THRESH_TX_START_COND_EMPTY;
-		status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, value);
+		values[0] = sx127x_FSK_OOK_REG_35_FIFO_THRESH_TX_START_COND_EMPTY;
+		status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, values[0]);
 		if (status != sx127x_STATUS_OK) { return status; }
 
 		// Write entire data to FIFO
@@ -312,81 +341,23 @@ sx127x_status_t __sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8
 		if (status != sx127x_STATUS_OK) { return status; }
 
 		// Set the mode to transmit
-		status = sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_TX);
+		status = __sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_TX);
 		if (status != sx127x_STATUS_OK) { return status; }
 	}
 
-	// Wait for TxDone flag
-	bool tx_done = false;
-	while (!tx_done) {
-		status = sx127x_RegRead(chip->base_chip, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2, &value);
-		if (status != sx127x_STATUS_OK) { return status; }
-		tx_done = value & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_PACKET_SENT_MSK;
-	}
-
-	return sx127x_STATUS_OK;
-}
-
-sx127x_status_t sx127x_FSK_OOK_TxSendFixLen(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data) {
-	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
-
-	sx127x_status_t status;
-
-	status = __sx127x_FSK_OOK_TxSend(chip, data, chip->config.packetCfg.payload_len, false);
+	// Wait for PacketSent IRQ
+	status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, HAL_MAX_DELAY, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_PACKET_SENT_MSK, false, values);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data, uint8_t len) {
+sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *data, uint16_t *len_ptr) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
-	sx127x_status_t status;
-
-	len = (len > SX127X_FSK_OOK_MAX_PAYLOAD_SIZE) ? SX127X_FSK_OOK_MAX_PAYLOAD_SIZE : len;
-
-	status = __sx127x_FSK_OOK_TxSend(chip, data, len, true);
-	if (status != sx127x_STATUS_OK) { return status; }
-
-	return sx127x_STATUS_OK;
-}
-
-sx127x_status_t __sx127x_FSK_OOK_RxReceive_IRQ(sx127x_FSK_OOK_chip_t *chip, uint32_t RxTimeout_delay_ms,
-											   bool is_flag_2, uint8_t irq_mask, bool invert_mask) {
-	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
-
-	sx127x_status_t status;
-	uint8_t values[2];
-
-	uint32_t t0 = HAL_GetTick();
-	while (true) {
-		status = sx127x_RegReadMulti(chip->base_chip, sx127x_FSK_OOK_REG_3E_IRQ_FLAGS1, values, 2);
-		if (status != sx127x_STATUS_OK) { return status; }
-		if (values[1] & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_OVERRUN_MSK) {
+	if (chip->config.packetCfg.variable_length && len_ptr == NULL) {
 			return sx127x_STATUS_ERROR;
-		}
-		if (values[0] & sx127x_FSK_OOK_REG_3E_IRQ_FLAGS1_RX_READY_MSK) {
-			// Something happened
-			__NOP();
-		}
-
-		// Check IRQ flag
-		bool condition = values[(uint8_t)is_flag_2] & irq_mask;
-		condition = invert_mask ? !condition : condition;
-		if (condition) {
-			break;
-		}
-		// Check for timeout
-		if ((HAL_GetTick() - t0) > RxTimeout_delay_ms) {
-			return sx127x_STATUS_MODEM_TIMEOUT;
-		}
 	}
-
-	return sx127x_STATUS_OK;
-}
-
-sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *data, uint8_t *len_ptr) {
-	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
 
 	sx127x_status_t status;
 	uint8_t values[2];
@@ -415,22 +386,25 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t 
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the mode to Rx
-	status = sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_RX);
+	status = __sx127x_FSK_OOK_SetMode(chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE_RX);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Wait for FifoEmpty clear
-	status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_EMPTY_MSK, true);
+	status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_EMPTY_MSK, true, values);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// If variable length, read first byte as length
-	if (len_ptr) {
-		status = sx127x_RegRead(chip->base_chip, sx127x_REG_00_FIFO, len_ptr);
+	if (chip->config.packetCfg.variable_length) {
+		status = sx127x_RegRead(chip->base_chip, sx127x_REG_00_FIFO, values);
 		if (status != sx127x_STATUS_OK) { return status; }
+		*len_ptr = values[0];
 		len = 0;
-		len = (uint16_t)*len_ptr; // Overwrite len with received length
+		len = *len_ptr; // Overwrite len with received length
 		if (len == 0 || len > SX127X_FSK_OOK_MAX_PAYLOAD_SIZE) {
 			return sx127x_STATUS_MODEM_TIMEOUT;
 		}
+	} else {
+		*len_ptr = len;
 	}
 
 	// Calculate number of chunks to read and remaining bytes
@@ -450,8 +424,10 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t 
 	if (nb_chunks_adjusted > 0) {
 		for (uint8_t c = 0; c < nb_chunks_adjusted; c++) {
 			// Wait until FIFO threshold is reached
-			status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK, false);
+			status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK, false, values);
 			if (status != sx127x_STATUS_OK) { return status; }
+			// Verify overrun did not occur
+			if (values[1] & sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_OVERRUN_MSK) { return sx127x_STATUS_ERROR; }
 			// Read chunk from FIFO
 			status = sx127x_RegReadMulti(chip->base_chip, sx127x_REG_00_FIFO, &data[i], fifo_half);
 			if (status != sx127x_STATUS_OK) { return status; }
@@ -463,7 +439,7 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t 
 	RxTimeout_delay_ms = (uint32_t)ceil((1 + remaining_adjusted) * bytes_time);
 
 	// Wait for PayloadReady flag
-	status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_PAYLOAD_READY_MSK, false);
+	status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_PAYLOAD_READY_MSK, false, values);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Read remaining bytes
@@ -477,7 +453,7 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t 
 		if (status != sx127x_STATUS_OK) { return status; }
 
 		// Wait until FIFO threshold is reached
-		status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK, false);
+		status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK, false, values);
 		if (status != sx127x_STATUS_OK) { return status; }
 
 		// Values already available in FIFO
@@ -485,28 +461,6 @@ sx127x_status_t __sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t 
 		if (status != sx127x_STATUS_OK) { return status; }
 		i += remaining_adjusted;
 	}
-
-	return sx127x_STATUS_OK;
-}
-
-sx127x_status_t sx127x_FSK_OOK_RxReceiveFixLen(sx127x_FSK_OOK_chip_t *chip, uint8_t *data) {
-	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data) { return sx127x_STATUS_ERROR; }
-
-	sx127x_status_t status;
-
-	status = __sx127x_FSK_OOK_RxReceive(chip, data, NULL);
-	if (status != sx127x_STATUS_OK) { return status; }
-
-	return sx127x_STATUS_OK;
-}
-
-sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *data, uint8_t *len_ptr) {
-	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA || !data || !len_ptr) { return sx127x_STATUS_ERROR; }
-
-	sx127x_status_t status;
-
-	status = __sx127x_FSK_OOK_RxReceive(chip, data, len_ptr);
-	if (status != sx127x_STATUS_OK) { return status; }
 
 	return sx127x_STATUS_OK;
 }

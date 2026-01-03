@@ -809,20 +809,15 @@ typedef struct sx127x_FSK_OOK_config_t {
 
 
 typedef struct sx127x_FSK_OOK_chip_t {
-	sx127x_chip_t *base_chip;
+	sx127x_base_chip_t *base_chip;
 	sx127x_FSK_OOK_config_t config;
 } sx127x_FSK_OOK_chip_t;
 
 
-sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config);
-sx127x_status_t sx127x_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_chip_t *base_chip, sx127x_FSK_OOK_config_t config);
+sx127x_status_t sx127x_FSK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_FSK_OOK_config_t config);
+sx127x_status_t sx127x_OOK_Config(sx127x_FSK_OOK_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_FSK_OOK_config_t config);
 
-sx127x_status_t sx127x_FSK_OOK_SetMode(sx127x_FSK_OOK_chip_t *chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode);
-
-sx127x_status_t sx127x_FSK_OOK_TxSendFixLen(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data);
-sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data, uint8_t len);
-
-sx127x_status_t sx127x_FSK_OOK_RxReceiveFixLen(sx127x_FSK_OOK_chip_t *chip, uint8_t *data);
-sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *data, uint8_t *len);
+sx127x_status_t sx127x_FSK_OOK_TxSend(sx127x_FSK_OOK_chip_t *chip, const uint8_t *data, uint16_t len);
+sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *data, uint16_t *len);
 
 #endif // SX127X_FSK_OOK_H

@@ -27,6 +27,7 @@
 #include "crc.h"
 
 #include <math.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "drivers/ADXL375.h"
@@ -138,27 +139,34 @@ int main(void)
 	MX_CRC_Init();
 	MX_TIM11_Init();
 	
-	sx127x_chip_t sx127x_chip;
-	// sx127x_LORA_chip_t sx127x_lora_chip;
-	sx127x_FSK_OOK_chip_t sx127x_fsk_ook_chip;
 	BMI088 BMI088_imu;
+	
+	// #define IS_APEX1
+	// #define USE_LORA
 
+	sx127x_chip_t sx127x_chip;
 	sx127x_status_t sx127x_status;
 
-	sx127x_status = sx127x_Init(&sx127x_chip, &hspi1, CS_LORA_GPIO_Port, CS_LORA_Pin, 869500000, 240, 20.0);
-	if (sx127x_status != sx127x_STATUS_OK) { Error_Handler(); }
-	// sx127x_status = sx127x_LORA_Config(&sx127x_lora_chip, &sx127x_chip, (sx127x_LORA_config_t){
-	// 	.implicitHeader = false,
-	// 	.bandwidth = sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ,
-	// 	.codingRate = sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5,
-	// 	.spreadingFactor = sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS,
-	// 	.crcEnabled = true,
-	// });
-	// if (sx127x_status != sx127x_STATUS_OK) { Error_Handler(); }
-	sx127x_FSK_OOK_config_t fsk_config = {
+	sx127x_status = sx127x_Init(&sx127x_chip, (sx127x_base_config_t){
+		.spiHandle = &hspi1,
+		.csPinBank = CS_LORA_GPIO_Port,
+		.csPin = CS_LORA_Pin,
+		.frequency = 869500000,
+		.ocp_current_mA = 240.0,
+		.power_dBm = 20.0,
+	#ifdef USE_LORA
+	}, sx127x_MODULATION_LORA, (sx127x_mod_config_t){.lora = {
+		.implicitHeader = false,
+		.bandwidth = sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ,
+		.codingRate = sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5,
+		.spreadingFactor = sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS,
+		.crcEnabled = true,
+	}});
+	#else
+	}, sx127x_MODULATION_FSK, (sx127x_mod_config_t){.fsk_ook = {
 		.bitrate = 200000,
-		.RxBw = SX127X_FSK_OOK_RxBw_100_0kHz,
-		.modShaping = sx127x_FSK_OOK_REG_0A_PA_RAMP_MOD_SHAPING_FSK_BT_1_0,
+		.RxBw = SX127X_FSK_OOK_RxBw_125_0kHz,
+		.modShaping = sx127x_FSK_OOK_REG_0A_PA_RAMP_MOD_SHAPING_FSK_BT_0_5,
 		.paRamp = sx127x_FSK_OOK_REG_0A_PA_RAMP_PA_RAMP_40US,				// Default PA ramp time
 		.packetCfg = {
 			.preamble_len = 5,												// Default preamble length
@@ -170,145 +178,43 @@ int main(void)
 			.crc_on = true,
 		},
 		.mod_config.fsk = {
-			.fdev = 55000,
+			.fdev = 100000,
 		},
-	};
-	sx127x_status = sx127x_FSK_Config(&sx127x_fsk_ook_chip, &sx127x_chip, fsk_config);
+	}});
+	#endif
 	if (sx127x_status != sx127x_STATUS_OK) { Error_Handler(); }
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
 
-  // Initialize LED for tests GPIO
 
-  /* USER CODE BEGIN 2 */
+  	/* USER CODE BEGIN 2 */
 
 	MX_USB_DEVICE_Init();
 
 
-	// TEST TELEM ENVOI RFM96 INIT data to send
-	// char data[256] = "Hello\0";
-
-	// TEST TELEM RECEIVE RFM96 INIT
-	// char rx_buffer[256];
-
-
-	// test receive telem
-
-
-	// const osThreadAttr_t TASK_start_Led0R_attributes = {
-	// 	.name = "TASK_start_Led0R",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (osPriority_t) osPriorityNormal,
-	// };
-	// const osThreadAttr_t TASK_start_Led0G_attributes = {
-	// 	.name = "TASK_start_Led0G",
-	// 	.stack_size = 128 * 4,
-	// 	.priority = (o
-
-	// osThreadNew(TASK_start_Led0R, NULL, &TASK_start_Led0R_attributes);
-	// osThreadNew(TASK_start_Led0G, NULL, &TASK_start_Led0G_attributes);
-
-
-/* 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
-				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
-
-	// W25Q_STATE state;
-	// state = W25Q_Init(&w25q_chip, &hspi2, CS_FLASH_GPIO_Port, CS_FLASH_Pin);
-	// assert_param(state == W25Q_OK);
-
-	// uint8_t usb_watchdog[3] = {USBD_BUSY, USBD_BUSY, USBD_BUSY};
-
-	// do {
-	// 	USB_update_watchdog(usb_watchdog);
-	// } while (!USB_is_connected(usb_watchdog));
-
-	// uint32_t t0 = HAL_GetTick();
-	// while (HAL_GetTick() - t0 < 10000) { // Wait 10 seconds before starting the test
-	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
-	// 	HAL_Delay(100);
-	// 	HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
-	// 	HAL_Delay(100);
-	// }
-	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_SET);
-
-	// t0 = HAL_GetTick();
-	// bool led_state = true;
-	// uint8_t rx_data[4096];
-	// for (uint32_t i = 0; i < 4096 * 4; i++) {
-	// 	W25Q_ReadData(&w25q_chip, rx_data, i * 4096, 4096);
-	// 	CDC_Transmit_FS(rx_data, 4096);
-	// 	if (HAL_GetTick() - t0 >= 500) {
-	// 		t0 = HAL_GetTick();
-	// 		led_state = !led_state;
-	// 		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, led_state);
-	// 	} else {
-	// 		HAL_Delay(1);
-	// 	}
-	// }
-	
-	// HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, GPIO_PIN_RESET);
-	// HAL_GPIO_WritePin(LED0B_GPIO_Port, LED0B_Pin, GPIO_PIN_RESET);
-
-
-
-
-
-	
-	TASK_POOL_CREATE(TASK_Program_start);
-
-	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
-	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
-
-	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
-	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
-	TASK_POOL_CREATE(TASK_W25Q_Init);
-	TASK_POOL_CREATE(TASK_W25Q_WriteData);
-	TASK_POOL_CREATE(TASK_W25Q_ReadData);
-	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
-
-	TASK_POOL_CREATE(TASK_USB_Transmit);
-	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
-
-	Init_cleanup();
-	Init_spi_semaphores();
-	USB_Init();
-
-	osThreadAttr_t attr = {
-		.name = TASK_Program_start_name,
-	};
-	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever); */
-
-	// osThreadAttr_t attr = {
-	// 	.name = "TASK_W25Q_ReadWriteTest",
-	// 	.priority = (osPriority_t)osPriorityNormal,
-	// };
-	// TASK_W25Q_ReadWriteTest_ARGS rwtest_args = {
-	// 	.chip = &w25q_chip,
-	// };
-	// OS_THREAD_NEW_CSTM(TASK_W25Q_ReadWriteTest, rwtest_args, attr, osWaitForever);
-
-	/* USER CODE END 2 */
-
-  /* Init scheduler */
-  // osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-  // MX_FREERTOS_Init();
- 
-  /* Start scheduler */
-  // osKernelStart();
-
-	/* We should never get here as control is now taken by the scheduler */
-
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	uint32_t t0 = HAL_GetTick();
+	uint32_t t1 = HAL_GetTick();
 	char accx[10], accy[10], accz[10];
-	char buff1[256], buff2[260];
+	char buff1[256], buff2[256];
 
 	uint32_t i = 0;
-	uint8_t len;
-	
+	uint16_t len;
+
+	#ifdef USE_LORA
+	uint32_t delay = 500;
+	#else
+	uint32_t delay = 30;
+	#endif
+
+	uint32_t dt_last_rx = 0;
+
+	#ifdef IS_APEX1
+	bool sync_done = true;
+	#else
 	bool sync_done = false;
-	// sx127x_LORA_SetMode(&sx127x_lora_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
+	#endif
 
 	while (1) {
 
@@ -318,98 +224,36 @@ int main(void)
 		float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
 		float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
 
-		// /* APEX 1 LORA */
-		// sprintf(buff1, "APEX-1: ACC: %s, %s, %s", accx, accy, accz);
-		// // code émetteur
-		// if (HAL_GetTick() - t0 >= 500) {
-		// 	t0 = HAL_GetTick();
-		// 	sprintf(buff2, "%2u: %s\n", i++, buff1);
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	sx127x_LORA_TxSend(&sx127x_lora_chip, (uint8_t*)buff2, strlen(buff2));
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	sx127x_LORA_SetMode(&sx127x_lora_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
-		// }
-		// // code récepteur
-		// uint8_t len;
-		// sx127x_LORA_RxReceive(&sx127x_lora_chip, (uint8_t*)buff2, &len);
-		// if (len > 0) {
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	CDC_Transmit_FS((uint8_t*)buff2, len);
-		// }
-
-		// /* APEX 2 LORA */
-		// sprintf(buff1, "APEX-2: ACC: %s, %s, %s", accx, accy, accz);
-		// // code émetteur
-		// if (sync_done && HAL_GetTick() - t0 >= 500) {
-		// 	t0 = HAL_GetTick();
-		// 	sprintf(buff2, "%2u: %s\n", i++, buff1);
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	sx127x_LORA_TxSend(&sx127x_lora_chip, (uint8_t*)buff2, strlen(buff2));
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	sx127x_LORA_SetMode(&sx127x_lora_chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
-		// }
-		// // code récepteur
-		// uint8_t len;
-		// sx127x_LORA_RxReceive(&sx127x_lora_chip, (uint8_t*)buff2, &len);
-		// if (len > 0) {
-		// 	if (!sync_done) {
-		// 		sync_done = true;
-		// 		t0 = HAL_GetTick() + 250; // 50 ms pour un duty cycle de 50%
-		// 	}
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	CDC_Transmit_FS((uint8_t*)buff2, len);
-		// }
-
-		/* APEX 1 FSK */
-		sprintf(buff1, "APEX-1: ACC: %s, %s, %s", accx, accy, accz);
+		/* APEX FSK test */
 		// code émetteur
-		if (HAL_GetTick() - t0 >= 500) {
+		if (sync_done && HAL_GetTick() - t0 >= delay) {
 			t0 = HAL_GetTick();
-			sprintf(buff2, "%2u: %s\n", i++, buff1);
-			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			sx127x_FSK_OOK_TxSend(&sx127x_fsk_ook_chip, (uint8_t*)buff2, strlen(buff2));
-			HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+			sprintf(buff1, "%2u: APEX-1: ACC: %s, %s, %s", i++, accx, accy, accz);
+			len = strlen(buff1);
+			len = (len > 255) ? 255 : len;
+			sx127x_status = sx127x_TxSend(&sx127x_chip, (uint8_t*)buff1, 255);
+			// HAL_Delay(10);
+			// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+			// HAL_Delay(10);
+			// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
 		}
 		// code récepteur
-		sx127x_status = sx127x_FSK_OOK_RxReceive(&sx127x_fsk_ook_chip, (uint8_t*)buff2, &len);
+		dt_last_rx = HAL_GetTick() - t1;
+		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, dt_last_rx < delay * 1.5 ? GPIO_PIN_RESET : GPIO_PIN_SET);
+		sx127x_status = sx127x_RxReceive(&sx127x_chip, (uint8_t*)buff1, &len);
 		if (sx127x_status == sx127x_STATUS_OK && len > 0) {
-			HAL_Delay(10);
-			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			HAL_Delay(10);
-			HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			CDC_Transmit_FS((uint8_t*)buff2, len);
+			if (!sync_done) {
+				sync_done = true;
+				t0 = HAL_GetTick() + delay / 2; // duty cycle de 50%
+			}
+			// HAL_Delay(10);
+			// HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			// HAL_Delay(10);
+			// HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
+			sprintf(buff2, "(dt: %4u ms), %.*s\n", HAL_GetTick() - t1, len, buff1);
+			CDC_Transmit_FS((uint8_t*)buff2, strlen(buff2));
+			t1 = HAL_GetTick();
 		}
-
-		// /* APEX 2 FSK */
-		// sprintf(buff1, "APEX-2: ACC: %s, %s, %s", accx, accy, accz);
-		// // code émetteur
-		// if (sync_done && HAL_GetTick() - t0 >= 500) {
-		// 	t0 = HAL_GetTick();
-		// 	sprintf(buff2, "%2u: %s\n", i++, buff1);
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// 	sx127x_FSK_OOK_TxSend(&sx127x_fsk_ook_chip, (uint8_t*)buff2, strlen(buff2));
-		// 	HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-		// }
-		// // code récepteur
-		// uint8_t len;
-		// sx127x_status = sx127x_FSK_OOK_RxReceive(&sx127x_fsk_ook_chip, (uint8_t*)buff2, &len);
-		// if (sx127x_status == sx127x_STATUS_OK && len > 0) {
-		// 	if (!sync_done) {
-		// 		sync_done = true;
-		// 		t0 = HAL_GetTick() + 250; // 50 ms pour un duty cycle de 50%
-		// 	}
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	HAL_Delay(10);
-		// 	HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-		// 	CDC_Transmit_FS((uint8_t*)buff2, len);
-		// }
 
 		/* USER CODE END WHILE */
 
@@ -637,6 +481,8 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+
+  HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
   while (1) {
   }
   /* USER CODE END Error_Handler_Debug */

@@ -7,7 +7,51 @@
 #include <string.h>
 
 
-sx127x_status_t sx127x_LORA_Config(sx127x_LORA_chip_t *chip, sx127x_chip_t *base_chip, sx127x_LORA_config_t config) {
+
+
+
+static sx127x_status_t __sx127x_LORA_SetMode(sx127x_LORA_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode) {
+	if (!chip || chip->base_chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
+	sx127x_status_t status;
+	uint8_t value = 0x00;
+
+	// Read the current RegOpMode
+	status = sx127x_RegRead(chip->base_chip, sx127x_REG_01_OP_MODE, &value);
+	if (status != sx127x_STATUS_OK) { return status; }
+
+	// Modify only the mode bits
+	value &= ~sx127x_LORA_REG_01_OP_MODE_MODE_MSK;
+	value |= mode;
+
+	// Write back the new RegOpMode
+	status = sx127x_RegWrite(chip->base_chip, sx127x_REG_01_OP_MODE, value);
+	if (status != sx127x_STATUS_OK) { return status; }
+
+	return sx127x_STATUS_OK;
+}
+
+static sx127x_status_t __sx127x_LORA_IsTxDone(sx127x_LORA_chip_t *chip, bool *isDone) {
+	if (!chip || chip->base_chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
+	sx127x_status_t status;
+	uint8_t irq_flags;
+
+	// Read the IRQ flags
+	status = sx127x_RegRead(chip->base_chip, sx127x_LORA_REG_12_IRQ_FLAGS, &irq_flags);
+	if (status != sx127x_STATUS_OK) { return status; }
+
+	*isDone = irq_flags & sx127x_LORA_IRQ_FLAG_TX_DONE_MSK;
+
+	// Clear the TX done flag
+	if (*isDone) {
+		status = sx127x_RegWrite(chip->base_chip, sx127x_LORA_REG_12_IRQ_FLAGS, sx127x_LORA_IRQ_FLAG_TX_DONE_MSK);
+		if (status != sx127x_STATUS_OK) { return status; }
+	}
+
+	return sx127x_STATUS_OK;
+}
+
+
+sx127x_status_t sx127x_LORA_Config(sx127x_LORA_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_LORA_config_t config) {
 	sx127x_status_t status;
 	uint8_t value = 0x00;
 
@@ -22,7 +66,7 @@ sx127x_status_t sx127x_LORA_Config(sx127x_LORA_chip_t *chip, sx127x_chip_t *base
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the mode to sleep (need to be in sleep mode to set LoRa mode)
-	status = sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP);
+	status = __sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_SLEEP);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the RegOpMode
@@ -62,55 +106,14 @@ sx127x_status_t sx127x_LORA_Config(sx127x_LORA_chip_t *chip, sx127x_chip_t *base
 	return sx127x_STATUS_OK;
 }
 
-
-sx127x_status_t sx127x_LORA_SetMode(sx127x_LORA_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode) {
-	if (!chip || chip->base_chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
-	sx127x_status_t status;
-	uint8_t value = 0x00;
-
-	// Read the current RegOpMode
-	status = sx127x_RegRead(chip->base_chip, sx127x_REG_01_OP_MODE, &value);
-	if (status != sx127x_STATUS_OK) { return status; }
-
-	// Modify only the mode bits
-	value &= ~sx127x_LORA_REG_01_OP_MODE_MODE_MSK;
-	value |= mode;
-
-	// Write back the new RegOpMode
-	status = sx127x_RegWrite(chip->base_chip, sx127x_REG_01_OP_MODE, value);
-	if (status != sx127x_STATUS_OK) { return status; }
-
-	return sx127x_STATUS_OK;
-}
-
-sx127x_status_t sx127x_LORA_IsTxDone(sx127x_LORA_chip_t *chip, bool *isDone) {
-	if (!chip || chip->base_chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
-	sx127x_status_t status;
-	uint8_t irq_flags;
-
-	// Read the IRQ flags
-	status = sx127x_RegRead(chip->base_chip, sx127x_LORA_REG_12_IRQ_FLAGS, &irq_flags);
-	if (status != sx127x_STATUS_OK) { return status; }
-
-	*isDone = irq_flags & sx127x_LORA_IRQ_FLAG_TX_DONE_MSK;
-
-	// Clear the TX done flag
-	if (*isDone) {
-		status = sx127x_RegWrite(chip->base_chip, sx127x_LORA_REG_12_IRQ_FLAGS, sx127x_LORA_IRQ_FLAG_TX_DONE_MSK);
-		if (status != sx127x_STATUS_OK) { return status; }
-	}
-
-	return sx127x_STATUS_OK;
-}
-
-sx127x_status_t sx127x_LORA_TxSend(sx127x_LORA_chip_t *chip, uint8_t *data, uint8_t len) {
+sx127x_status_t sx127x_LORA_TxSend(sx127x_LORA_chip_t *chip, const uint8_t *data, uint8_t len) {
 	if (!chip || chip->base_chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 	sx127x_status_t status;
 
 	len = len > 128 ? 128 : len; // Max payload length is 128 bytes
 
 	// Set the mode to standby
-	status = sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_STDBY);
+	status = __sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_STDBY);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the fifo pointer to TxBaseAddr (0x80)
@@ -126,13 +129,13 @@ sx127x_status_t sx127x_LORA_TxSend(sx127x_LORA_chip_t *chip, uint8_t *data, uint
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Set the mode to transmit
-	status = sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_TX);
+	status = __sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_TX);
 	if (status != sx127x_STATUS_OK) { return status; }
 
 	// Check TxDone flag
 	bool isDone = false;
 	while (!isDone) {
-		status = sx127x_LORA_IsTxDone(chip, &isDone);
+		status = __sx127x_LORA_IsTxDone(chip, &isDone);
 		if (status != sx127x_STATUS_OK) { return status; }
 	}
 
@@ -145,13 +148,23 @@ sx127x_status_t sx127x_LORA_RxReceive(sx127x_LORA_chip_t *chip, uint8_t *buff, u
 	uint8_t packetLength = 0;
 	uint8_t value;
 
-	// Check for irq flags
-	status = sx127x_RegRead(chip->base_chip, sx127x_LORA_REG_12_IRQ_FLAGS, &value);
+	// Set the mode to Rx continuous
+	status = __sx127x_LORA_SetMode(chip, sx127x_LORA_REG_01_OP_MODE_MODE_RX_CONTINUOUS);
 	if (status != sx127x_STATUS_OK) { return status; }
-	if (!(value & sx127x_LORA_IRQ_FLAG_RX_DONE_MSK)) {
-		// No packet received
-		*len = 0;
-		return sx127x_STATUS_OK;
+
+	// Check for irq flags
+	uint32_t t0 = HAL_GetTick();
+	while (true) {
+		status = sx127x_RegRead(chip->base_chip, sx127x_LORA_REG_12_IRQ_FLAGS, &value);
+		if (status != sx127x_STATUS_OK) { return status; }
+		if (value & sx127x_LORA_IRQ_FLAG_RX_DONE_MSK) {
+			break;
+		}
+		if ((HAL_GetTick() - t0) > 10) {	// Timeout of 10 ms (adjustable)
+			// No packet received
+			*len = 0;
+			return sx127x_STATUS_MODEM_TIMEOUT;
+		}
 	}
 
 	// Clear the RX done flag
@@ -165,22 +178,18 @@ sx127x_status_t sx127x_LORA_RxReceive(sx127x_LORA_chip_t *chip, uint8_t *buff, u
 		return sx127x_STATUS_OK;
 	}
 
-	// read packet length
+	// Read packet length
 	status = sx127x_RegRead(chip->base_chip, sx127x_LORA_REG_13_RX_NB_BYTES, &packetLength);
 	if (status != sx127x_STATUS_OK) { return status; }
 	*len = packetLength;
 
-	// set FIFO address to current RX address
+	// Set FIFO address to current RX address
 	status = sx127x_RegRead(chip->base_chip, sx127x_LORA_REG_10_FIFO_RX_CURRENT_ADDR, &value);
 	if (status != sx127x_STATUS_OK) { return status; }
 	status = sx127x_RegWrite(chip->base_chip, sx127x_LORA_REG_0D_FIFO_ADDR_PTR, value);
 	if (status != sx127x_STATUS_OK) { return status; }
 
-	// read the data from the fifo
-	// for (uint8_t i = 0; i < packetLength; i++) {
-	// 	status = sx127x_RegRead(chip, sx127x_REG_00_FIFO, &buff[i]);
-	// 	if (status != sx127x_STATUS_OK) { return status; }
-	// }
+	// Read the data from the fifo
 	status = sx127x_RegReadMulti(chip->base_chip, sx127x_REG_00_FIFO, buff, packetLength);
 	if (status != sx127x_STATUS_OK) { return status; }
 
