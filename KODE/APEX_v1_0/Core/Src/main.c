@@ -22,6 +22,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "main.h"
+#include "FreeRTOS.h"
 #include "cmsis_os2.h"
 #include "crc.h"
 
@@ -46,6 +47,7 @@
 #include "peripherals/tim.h"
 #include "peripherals/usart.h"
 
+#include "stm32f4xx_hal.h"
 #include "utils/data_topic.h"
 #include "utils/scheduler.h"
 #include "utils/tools.h"
@@ -88,6 +90,7 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 /* USER CODE BEGIN 0 */
 ADXL375 adxl;
 bmi088_t BMI088_imu;
+sx127x_chip_t sx127x_chip;
 W25Q_t w25q_chip;
 
 data_topic_t *data_topic_acc_ptr;
@@ -134,14 +137,12 @@ int main(void)
 	MX_SPI1_Init();
 	MX_TIM3_Init();
 	MX_CRC_Init();
+	MX_TIM9_Init();
 	MX_TIM11_Init();
 	
-	BMI088 BMI088_imu;
-	
-	// #define IS_APEX1
+	#define IS_APEX1
 	// #define USE_LORA
 
-	sx127x_chip_t sx127x_chip;
 	sx127x_status_t sx127x_status;
 
 	sx127x_status = sx127x_Init(&sx127x_chip, (sx127x_base_config_t){
@@ -175,13 +176,25 @@ int main(void)
 			.crc_on = true,
 		},
 		.mod_config.fsk = {
-			.fdev = 100000,
+			.fdev = 60000,
 		},
 	}});
 	#endif
 	if (sx127x_status != sx127x_STATUS_OK) { Error_Handler(); }
+
+	const bmi_config_t bmi_cfg = {
+		.acc_range  = BMI_ACC_RANGE_24G,
+		.acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
+		.acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
+		.acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
+		.acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
+
+		.gyr_range  = BMI_GYR_RANGE_2000,
+		.gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
+		.gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+	};
 	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
-				CS_GRYO_GPIO_Port, CS_GRYO_Pin);
+				CS_GYRO_GPIO_Port, CS_GYRO_Pin, &bmi_cfg);
 
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
@@ -205,36 +218,41 @@ int main(void)
 
 	/* USER CODE BEGIN 2 */
 
-	// MX_USB_DEVICE_Init();
+	MX_USB_DEVICE_Init();
 
 
 
 	
-	TASK_POOL_CREATE(TASK_Program_start);
+	// TASK_POOL_CREATE(TASK_Program_start);
 
-	TASK_POOL_CREATE(TASK_BMI088_Init);
-	TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
-	TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
-	TASK_POOL_CREATE(TASK_BMI088_ReadTemp);
+	// TASK_POOL_CREATE(TASK_BMI088_Init);
+	// TASK_POOL_CREATE(TASK_BMI088_ReadAcc);
+	// TASK_POOL_CREATE(TASK_BMI088_ReadGyr);
+	// TASK_POOL_CREATE(TASK_BMI088_ReadTemp);
 
-	TASK_POOL_CREATE(TASK_W25Q_SendCmd);
-	TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
-	TASK_POOL_CREATE(TASK_W25Q_Init);
-	TASK_POOL_CREATE(TASK_W25Q_WriteData);
-	TASK_POOL_CREATE(TASK_W25Q_ReadData);
-	TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
+	// TASK_POOL_CREATE(TASK_sx127x_Init);
+	// TASK_POOL_CREATE(TASK_sx127x_TxSend);
+	// TASK_POOL_CREATE(TASK_sx127x_RxReceive);
+	// TASK_POOL_CREATE(TASK_sx127x_Init_TxRx);
 
-	TASK_POOL_CREATE(TASK_USB_Transmit);
-	TASK_POOL_CREATE(TASK_Data_USB_Transmit);
+	// TASK_POOL_CREATE(TASK_W25Q_SendCmd);
+	// TASK_POOL_CREATE(TASK_W25Q_SendCmdAddr);
+	// TASK_POOL_CREATE(TASK_W25Q_Init);
+	// TASK_POOL_CREATE(TASK_W25Q_WriteData);
+	// TASK_POOL_CREATE(TASK_W25Q_ReadData);
+	// TASK_POOL_CREATE(TASK_W25Q_ReadWriteTest);
 
-	Init_cleanup();
-	Init_spi_semaphores();
-	USB_Init();
+	// TASK_POOL_CREATE(TASK_USB_Transmit);
+	// TASK_POOL_CREATE(TASK_Data_USB_Transmit);
 
-	osThreadAttr_t attr = {
-		.name = TASK_Program_start_name,
-	};
-	OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
+	// Init_cleanup();
+	// Init_spi_semaphores();
+	// USB_Init();
+
+	// osThreadAttr_t attr = {
+	// 	.name = TASK_Program_start_name,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_Program_start, (TASK_Program_start_ARGS) {}, attr, osWaitForever);
 
 	// osThreadAttr_t attr = {
 	// 	.name = "TASK_W25Q_ReadWriteTest",
@@ -247,12 +265,12 @@ int main(void)
 
 	/* USER CODE END 2 */
 
-	/* Init scheduler */
-	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-	MX_FREERTOS_Init();
+	// /* Init scheduler */
+	// osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+	// MX_FREERTOS_Init();
 
-	/* Start scheduler */
-	osKernelStart();
+	// /* Start scheduler */
+	// osKernelStart();
 
 	/* We should never get here as control is now taken by the scheduler */
 
@@ -260,7 +278,9 @@ int main(void)
 	/* USER CODE BEGIN WHILE */
 	uint32_t t0 = HAL_GetTick();
 	uint32_t t1 = HAL_GetTick();
+	float3_t acc_data, gyr_data;
 	char accx[10], accy[10], accz[10];
+	char gyrx[10], gyry[10], gyrz[10];
 	char buff1[256], buff2[256];
 
 	uint32_t i = 0;
@@ -281,25 +301,32 @@ int main(void)
 	#endif
 
 	while (1) {
+		// accelerometre
+		BMI088_ReadAcc(&BMI088_imu, &acc_data);
+		float_format(accx, acc_data.x, 5, 10);
+		float_format(accy, acc_data.y, 5, 10);
+		float_format(accz, acc_data.z, 5, 10);
 
-		// test accelerometre
-		BMI088_ReadAccelerometer(&BMI088_imu);
-		float_format(accx, BMI088_imu.acc_mps2.x, 5, 10);
-		float_format(accy, BMI088_imu.acc_mps2.y, 5, 10);
-		float_format(accz, BMI088_imu.acc_mps2.z, 5, 10);
+		// gyroscope
+		BMI088_ReadGyr(&BMI088_imu, &gyr_data);
+		float_format(gyrx, gyr_data.x, 5, 10);
+		float_format(gyry, gyr_data.y, 5, 10);
+		float_format(gyrz, gyr_data.z, 5, 10);
 
 		/* APEX FSK test */
 		// code émetteur
 		if (sync_done && HAL_GetTick() - t0 >= delay) {
 			t0 = HAL_GetTick();
-			sprintf(buff1, "%2u: APEX-1: ACC: %s, %s, %s", i++, accx, accy, accz);
+#ifdef IS_APEX1
+			sprintf(buff1, "%2u: APEX-1: ACC: %10s, %10s, %10s, GYR: %10s, %10s, %10s",
+				i++, accx, accy, accz, gyrx, gyry, gyrz);
+#else
+			sprintf(buff1, "%2u: APEX-2: ACC: %10s, %10s, %10s, GYR: %10s, %10s, %10s",
+				i++, accx, accy, accz, gyrx, gyry, gyrz);
+#endif
 			len = strlen(buff1);
 			len = (len > 255) ? 255 : len;
-			sx127x_status = sx127x_TxSend(&sx127x_chip, (uint8_t*)buff1, 255);
-			// HAL_Delay(10);
-			// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
-			// HAL_Delay(10);
-			// HAL_GPIO_TogglePin(LED0B_GPIO_Port, LED0B_Pin);
+			sx127x_status = sx127x_TxSend(&sx127x_chip, (uint8_t*)buff1, len);
 		}
 		// code récepteur
 		dt_last_rx = HAL_GetTick() - t1;
@@ -310,19 +337,10 @@ int main(void)
 				sync_done = true;
 				t0 = HAL_GetTick() + delay / 2; // duty cycle de 50%
 			}
-			// HAL_Delay(10);
-			// HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
-			// HAL_Delay(10);
-			// HAL_GPIO_TogglePin(LED0G_GPIO_Port, LED0G_Pin);
 			sprintf(buff2, "(dt: %4u ms), %.*s\n", HAL_GetTick() - t1, len, buff1);
 			CDC_Transmit_FS((uint8_t*)buff2, strlen(buff2));
 			t1 = HAL_GetTick();
 		}
-
-		/* USER CODE END WHILE */
-
-
-		/* USER CODE BEGIN 3 */
 	}
 	/* USER CODE END 3 */
 }
@@ -378,110 +396,121 @@ void SystemClock_Config(void)
 
 TASK_POOL_ALLOCATE(TASK_Program_start);
 
-// void TASK_Program_start(void *argument) {
+void TASK_Program_start(void *argument) {
 
-	const bmi_config_t bmi_cfg = {
-		.acc_range  = BMI_ACC_RANGE_24G,
-		.acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
-		.acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
-		.acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
-		.acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
+	// const bmi_config_t bmi_cfg = {
+	// 	.acc_range  = BMI_ACC_RANGE_24G,
+	// 	.acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
+	// 	.acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
+	// 	.acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
+	// 	.acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
 
-		.gyr_range  = BMI_GYR_RANGE_2000,
-		.gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
-		.gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+	// 	.gyr_range  = BMI_GYR_RANGE_2000,
+	// 	.gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
+	// 	.gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+	// };
+	// BMI_STATE st;
+	// StaticEventGroup_t bmi_done_event_cb;
+	// osEventFlagsId_t bmi_done_event_id = osEventFlagsNew(&(osEventFlagsAttr_t){
+	// 	.name = "bmi_done_event",
+	// 	.cb_mem = &bmi_done_event_cb,
+	// 	.cb_size = sizeof(bmi_done_event_cb)
+	// });
+	// osEventFlagsClear(bmi_done_event_id, 0xFFFFFFFF);
+
+	// osThreadAttr_t attr_init = {
+	// 	.name = "TASK_BMI088_Init",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+
+	// TASK_BMI088_Init_ARGS args_init = {
+	// 	.imu			= &BMI088_imu,
+	// 	.hspi			= &hspi1,
+	// 	.cs_acc_bank	= CS_ACC0_GPIO_Port,
+	// 	.cs_acc_pin		= CS_ACC0_Pin,
+	// 	.cs_gyr_bank	= CS_GYRO_GPIO_Port,
+	// 	.cs_gyr_pin		= CS_GYRO_Pin,
+	// 	.cfg			= &bmi_cfg,
+	// 	.return_state	= &st,
+	// 	.done_flags		= bmi_done_event_id,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_BMI088_Init, args_init,  attr_init, osWaitForever);
+
+	// osEventFlagsWait(bmi_done_event_id, 1, osFlagsWaitAll, osWaitForever);
+
+	
+
+
+
+  	// osThreadAttr_t bmi_acc_attr = {
+	// 	.name = "TASK_BMI_ACC",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+
+	// TASK_BMI088_ReadAcc_ARGS bmi_acc_args = {
+	// 	.imu			= &BMI088_imu,
+	// 	.dt				= &data_topic_acc_ptr,
+	// 	.return_state	= &st,
+	// };
+
+	// OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, bmi_acc_args, bmi_acc_attr, osWaitForever);
+
+	
+
+
+	
+	// osThreadAttr_t bmi_gyr_attr = {
+	// 	.name = "TASK_BMI_GYR",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+
+	// TASK_BMI088_ReadGyr_ARGS bmi_gyr_args = {
+	// 	.imu			= &BMI088_imu,
+	// 	.dt				= &data_topic_gyr_ptr,
+	// 	.return_state	= &st,
+	// };
+
+	// OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, bmi_gyr_args, bmi_gyr_attr, osWaitForever);
+
+	
+
+
+	
+	// TASK_Data_USB_Transmit_ARGS usb_args = {
+	// 	.dt = &data_topic_acc_ptr,
+	// 	.delay = 10,
+	// };
+	// osThreadAttr_t usb_attr = {
+	// 	.name = "TASK_Data_USB_Transmit",
+	// 	.priority = (osPriority_t)osPriorityNormal,
+	// };
+	// OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
+
+	
+	TASK_sx127x_Init_TxRx_ARGS args = {
+		.chip = &sx127x_chip,
 	};
-	BMI_STATE st;
-	StaticEventGroup_t bmi_done_event_cb;
-	osEventFlagsId_t bmi_done_event_id = osEventFlagsNew(&(osEventFlagsAttr_t){
-		.name = "bmi_done_event",
-		.cb_mem = &bmi_done_event_cb,
-		.cb_size = sizeof(bmi_done_event_cb)
-	});
-	osEventFlagsClear(bmi_done_event_id, 0xFFFFFFFF);
-
-	osThreadAttr_t attr_init = {
-		.name = "TASK_BMI088_Init",
+	osThreadAttr_t sx127x_attr = {
+		.name = "TASK_sx127x_Init_TxRx",
 		.priority = (osPriority_t)osPriorityNormal,
 	};
 
-	TASK_BMI088_Init_ARGS args_init = {
-		.imu			= &BMI088_imu,
-		.hspi			= &hspi1,
-		.cs_acc_bank	= CS_ACC0_GPIO_Port,
-		.cs_acc_pin		= CS_ACC0_Pin,
-		.cs_gyr_bank	= CS_GYRO_GPIO_Port,
-		.cs_gyr_pin		= CS_GYRO_Pin,
-		.cfg			= &bmi_cfg,
-		.return_state	= &st,
-		.done_flags		= bmi_done_event_id,
-	};
-	OS_THREAD_NEW_CSTM(TASK_BMI088_Init, args_init,  attr_init, osWaitForever);
-
-	osEventFlagsWait(bmi_done_event_id, 1, osFlagsWaitAll, osWaitForever);
-
-	
+	OS_THREAD_NEW_CSTM(TASK_sx127x_Init_TxRx, args, sx127x_attr, osWaitForever);
 
 
+  	// osThreadExit_Cstm();
+	for (;;) {
+		osDelay(osWaitForever);
+	}
+}
 
-  	osThreadAttr_t bmi_acc_attr = {
-		.name = "TASK_BMI_ACC",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
+TASK_POOL_ALLOCATE(TASK_Data_USB_Transmit);
 
-	TASK_BMI088_ReadAcc_ARGS bmi_acc_args = {
-		.imu			= &BMI088_imu,
-		.dt				= &data_topic_acc_ptr,
-		.return_state	= &st,
-	};
+void TASK_Data_USB_Transmit(void *argument) {
+	TASK_Data_USB_Transmit_ARGS *args = (TASK_Data_USB_Transmit_ARGS *)argument;
 
-	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, bmi_acc_args, bmi_acc_attr, osWaitForever);
-
-	
-
-
-	
-	osThreadAttr_t bmi_gyr_attr = {
-		.name = "TASK_BMI_GYR",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
-
-	TASK_BMI088_ReadGyr_ARGS bmi_gyr_args = {
-		.imu			= &BMI088_imu,
-		.dt				= &data_topic_gyr_ptr,
-		.return_state	= &st,
-	};
-
-	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, bmi_gyr_args, bmi_gyr_attr, osWaitForever);
-
-	
-
-
-	
-	TASK_Data_USB_Transmit_ARGS usb_args = {
-		.dt = &data_topic_acc_ptr,
-		.delay = 10,
-	};
-	osThreadAttr_t usb_attr = {
-		.name = "TASK_Data_USB_Transmit",
-		.priority = (osPriority_t)osPriorityNormal,
-	};
-	OS_THREAD_NEW_CSTM(TASK_Data_USB_Transmit, usb_args, usb_attr, osWaitForever);
-
-
-//   	osThreadExit_Cstm();
-// 	// for (;;) {
-// 	// 	osDelay(osWaitForever);
-// 	// }
-// }
-
-// TASK_POOL_ALLOCATE(TASK_Data_USB_Transmit);
-
-// void TASK_Data_USB_Transmit(void *argument) {
-// 	TASK_Data_USB_Transmit_ARGS *args = (TASK_Data_USB_Transmit_ARGS *)argument;
-
-// 	data_topic_t **dt = args->dt;
-// 	uint32_t delay = args->delay;
+	data_topic_t **dt = args->dt;
+	uint32_t delay = args->delay;
 
 	char buffer[64];
 	char buffer_status[9];
@@ -490,70 +519,70 @@ TASK_POOL_ALLOCATE(TASK_Program_start);
 	char buffer_z[10];
 	float3_t data;
 
-// 	while (*dt == NULL) {
-// 		osDelay(10);
-// 	}
-// 	data_sub_t sub = { 0 };
-// 	data_sub_attach(&sub, *dt, DATA_ATTACH_FROM_NOW);
+	while (*dt == NULL) {
+		osDelay(10);
+	}
+	data_sub_t sub = { 0 };
+	data_sub_attach(&sub, *dt, DATA_ATTACH_FROM_NOW);
 
-// 	osThreadAttr_t usb_attr = {
-// 		.name = "TASK_USB_Transmit",
-// 		.priority = (osPriority_t)osPriorityNormal,
-// 	};
-// 	TASK_USB_Transmit_ARGS usb_args = {
-// 		.buff = (uint8_t*)buffer,
-// 		.len = 0,
-// 	};
+	osThreadAttr_t usb_attr = {
+		.name = "TASK_USB_Transmit",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	TASK_USB_Transmit_ARGS usb_args = {
+		.buff = (uint8_t*)buffer,
+		.len = 0,
+	};
 
-// 	for (;;) {
-// 		data_sub_wait_for_data(&sub, osWaitForever);
-// 		data_status_t status = data_sub_read(&sub, &data);
-// 		switch (status) {
-// 		case DT_OK:
-// 			strcpy(buffer_status, "OK");
-// 			break;
-// 		case DT_EMPTY:
-// 			strcpy(buffer_status, "EMPTY");
-// 			break;
-// 		case DT_DATA_LOSS:
-// 			strcpy(buffer_status, "LOSS");
-// 			break;
-// 		case DT_FULL:
-// 			strcpy(buffer_status, "FULL");
-// 			break;
-// 		case DT_BAD_ARG:
-// 			strcpy(buffer_status, "BAD_ARG");
-// 			break;
-// 		}
-// 		if (status == DT_OK || status == DT_DATA_LOSS) {
-// 			float_format(buffer_x, data.x, 4, 10);
-// 			float_format(buffer_y, data.y, 4, 10);
-// 			float_format(buffer_z, data.z, 4, 10);
-// 		} else {
-// 			float_format(buffer_x, +9999.9999, 4, 10);
-// 			float_format(buffer_y, +9999.9999, 4, 10);
-// 			float_format(buffer_z, +9999.9999, 4, 10);
-// 		}
+	for (;;) {
+		data_sub_wait_for_data(&sub, osWaitForever);
+		data_status_t status = data_sub_read(&sub, &data);
+		switch (status) {
+		case DT_OK:
+			strcpy(buffer_status, "OK");
+			break;
+		case DT_EMPTY:
+			strcpy(buffer_status, "EMPTY");
+			break;
+		case DT_DATA_LOSS:
+			strcpy(buffer_status, "LOSS");
+			break;
+		case DT_FULL:
+			strcpy(buffer_status, "FULL");
+			break;
+		case DT_BAD_ARG:
+			strcpy(buffer_status, "BAD_ARG");
+			break;
+		}
+		if (status == DT_OK || status == DT_DATA_LOSS) {
+			float_format(buffer_x, data.x, 4, 10);
+			float_format(buffer_y, data.y, 4, 10);
+			float_format(buffer_z, data.z, 4, 10);
+		} else {
+			float_format(buffer_x, +9999.9999, 4, 10);
+			float_format(buffer_y, +9999.9999, 4, 10);
+			float_format(buffer_z, +9999.9999, 4, 10);
+		}
 
 
-// 		// Format data into CSV string
-// 		strcpy(buffer, "Status: ");
-// 		strcat(buffer, buffer_status);
-// 		strcat(buffer, ", Acc : ");
-// 		strcat(buffer, buffer_x);
-// 		strcat(buffer, ", ");
-// 		strcat(buffer, buffer_y);
-// 		strcat(buffer, ", ");
-// 		strcat(buffer, buffer_z);
-// 		strcat(buffer, "\n");
+		// Format data into CSV string
+		strcpy(buffer, "Status: ");
+		strcat(buffer, buffer_status);
+		strcat(buffer, ", Acc : ");
+		strcat(buffer, buffer_x);
+		strcat(buffer, ", ");
+		strcat(buffer, buffer_y);
+		strcat(buffer, ", ");
+		strcat(buffer, buffer_z);
+		strcat(buffer, "\n");
 
-// 		// // Transmit data over USB
-// 		usb_args.len = strlen(buffer);
-// 		OS_THREAD_NEW_CSTM(TASK_USB_Transmit, usb_args, usb_attr, osWaitForever);
+		// // Transmit data over USB
+		usb_args.len = strlen(buffer);
+		OS_THREAD_NEW_CSTM(TASK_USB_Transmit, usb_args, usb_attr, osWaitForever);
 
-// 		osDelay(delay); // Adjust delay as needed
-// 	}
-// }
+		osDelay(delay); // Adjust delay as needed
+	}
+}
 
 
 

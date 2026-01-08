@@ -107,7 +107,7 @@ void init_all_components(COMPONENTS* components) {
 
     BMI088_Init(components->bmi, &hspi1,
         CS_ACC0_GPIO_Port, CS_ACC0_Pin,
-        CS_GRYO_GPIO_Port, CS_GRYO_Pin);
+        CS_GYRO_GPIO_Port, CS_GYRO_Pin);
 
     components->bmp->hi2c = &hi2c3;
     BMP388_Init(components->bmp);

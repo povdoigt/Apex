@@ -2,7 +2,7 @@
 #define SX127X_COMMON_H
 
 #include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_spi.h"
+#include "peripherals/spi.h"
 #include <stdint.h>
 
 
@@ -311,6 +311,7 @@ typedef enum sx127x_status_t {
 	sx127x_STATUS_SPI_TIMEOUT	= 0x02,
 	sx127x_STATUS_MODEM_TIMEOUT	= 0x03,
 	sx127x_STATUS_OVERRUN		= 0x04,
+	sx127x_STATUS_SEM_ERROR		= 0x05,
 } sx127x_status_t;
 
 typedef enum sx127x_modulation_t {
@@ -331,6 +332,8 @@ typedef struct sx127x_base_config_t {
 typedef struct sx127x_base_chip_t {
 	sx127x_base_config_t	config;			// Configuration parameters
 	sx127x_modulation_t		modulation;		// Current modulation mode
+	StaticSemaphore_t		sem;
+	osSemaphoreId_t			sem_id;
 } sx127x_base_chip_t;
 
 
@@ -358,5 +361,36 @@ sx127x_status_t sx127x_GetBand(sx127x_base_chip_t *chip, uint8_t *band);
 sx127x_status_t sx127x_SetFrequency(sx127x_base_chip_t *chip, uint32_t frequency);
 sx127x_status_t sx127x_SetTxPower(sx127x_base_chip_t *chip, float power_dBm);
 sx127x_status_t sx127x_SetOcp(sx127x_base_chip_t *chip, float ocp_current_mA);
+
+
+
+
+/* ============================== FreeRTOS ============================== */
+
+/* Level 1 : Primitives */
+
+sx127x_status_t sx127x_RegRead_RTOS_base(sx127x_base_chip_t *chip, uint8_t reg, uint8_t *val, bool lock_sem);
+sx127x_status_t sx127x_RegWrite_RTOS_base(sx127x_base_chip_t *chip, uint8_t reg, uint8_t val, bool lock_sem);
+sx127x_status_t sx127x_RegReadMulti_RTOS_base( sx127x_base_chip_t *chip, uint8_t reg, uint8_t *buf, uint8_t len, bool lock_sem);
+sx127x_status_t sx127x_RegWriteMulti_RTOS_base(sx127x_base_chip_t *chip, uint8_t reg, const uint8_t *buf, uint8_t len, bool lock_sem);
+
+#define sx127x_RegRead_RTOS_NoLock(chip, reg, val)				sx127x_RegRead_RTOS_base(chip, reg, val, false)
+#define sx127x_RegWrite_RTOS_NoLock(chip, reg, val)				sx127x_RegWrite_RTOS_base(chip, reg, val, false)
+#define sx127x_RegReadMulti_RTOS_NoLock(chip, reg, buf, len)	sx127x_RegReadMulti_RTOS_base(chip, reg, buf, len, false)
+#define sx127x_RegWriteMulti_RTOS_NoLock(chip, reg, buf, len)	sx127x_RegWriteMulti_RTOS_base(chip, reg, buf, len, false)
+
+#define sx127x_RegRead_RTOS(chip, reg, val)						sx127x_RegRead_RTOS_base(chip, reg, val, true)
+#define sx127x_RegWrite_RTOS(chip, reg, val)					sx127x_RegWrite_RTOS_base(chip, reg, val, true)
+#define sx127x_RegReadMulti_RTOS(chip, reg, buf, len)			sx127x_RegReadMulti_RTOS_base(chip, reg, buf, len, true)
+#define sx127x_RegWriteMulti_RTOS(chip, reg, buf, len)			sx127x_RegWriteMulti_RTOS_base(chip, reg, buf, len, true)
+
+/* Level 2 : High level function */
+
+sx127x_status_t sx127x_InitBase_RTOS(sx127x_base_chip_t *chip, sx127x_base_config_t config);
+
+sx127x_status_t sx127x_SetFrequency_RTOS(sx127x_base_chip_t *chip, uint32_t frequency);
+sx127x_status_t sx127x_SetTxPower_RTOS(sx127x_base_chip_t *chip, float power_dBm);
+sx127x_status_t sx127x_SetOcp_RTOS(sx127x_base_chip_t *chip, float ocp_current_mA);
+
 
 #endif // SX127X_COMMON_H

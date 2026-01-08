@@ -302,6 +302,16 @@ typedef struct sx127x_LORA_chip_t {
 sx127x_status_t	sx127x_LORA_Config(sx127x_LORA_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_LORA_config_t config);
 
 sx127x_status_t sx127x_LORA_TxSend(sx127x_LORA_chip_t *chip, const uint8_t *data, uint8_t len);
-sx127x_status_t sx127x_LORA_RxReceive(sx127x_LORA_chip_t *chip, uint8_t *buffer, uint8_t *len);
+sx127x_status_t sx127x_LORA_RxReceive(sx127x_LORA_chip_t *chip, uint8_t *data, uint8_t *len);
+
+
+
+
+/* ============================== FreeRTOS ============================== */
+
+sx127x_status_t	sx127x_LORA_Config_RTOS(sx127x_LORA_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_LORA_config_t config);
+
+sx127x_status_t sx127x_LORA_TxSend_RTOS(sx127x_LORA_chip_t *chip, const uint8_t *data, uint8_t len);
+sx127x_status_t sx127x_LORA_RxReceive_RTOS(sx127x_LORA_chip_t *chip, uint8_t *data, uint8_t *len);
 
 #endif // SX127X_LORA_H
