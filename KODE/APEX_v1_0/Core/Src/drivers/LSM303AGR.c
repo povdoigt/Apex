@@ -1,7 +1,7 @@
 #include "drivers/LSM303AGR.h"
 #include "stdbool.h"
 
-void LSM303AGR_Init(LSM303AGR *lsm, I2C_HandleTypeDef *hi2c) {
+void LSM303AGR_Init(lsm303agr_t *lsm, I2C_HandleTypeDef *hi2c) {
     lsm->hi2c = hi2c;
 
     uint8_t data;
@@ -78,7 +78,7 @@ void LSM303AGR_Init(LSM303AGR *lsm, I2C_HandleTypeDef *hi2c) {
 
 
 
-void LSM303AGR_SelfTestAcc(LSM303AGR *lsm) {
+void LSM303AGR_SelfTestAcc(lsm303agr_t *lsm) {
 
 //     // Read current accelerometer configuration and store it
 //     uint8_t data_reg_1, data_reg_2, data_reg_3, data_reg_4;
@@ -170,7 +170,7 @@ void LSM303AGR_SelfTestAcc(LSM303AGR *lsm) {
 
 
 
-void LSM303AGR_ReadAccRaw(LSM303AGR *lsm, int16_t *acc_x, int16_t *acc_y, int16_t *acc_z) {
+void LSM303AGR_ReadAccRaw(lsm303agr_t *lsm, int16_t *acc_x, int16_t *acc_y, int16_t *acc_z) {
     uint8_t data[6];
     HAL_I2C_Mem_Read(lsm->hi2c, LSM303AGR_SAD_A << 1,
         LSM303AGR_REG_OUT_X_L_A | LSM303AGR_AUTO_INCREMENT,
@@ -181,7 +181,7 @@ void LSM303AGR_ReadAccRaw(LSM303AGR *lsm, int16_t *acc_x, int16_t *acc_y, int16_
     *acc_z = (int16_t)((data[5] << 8) | data[4]);
 }
 
-void LSM303AGR_ReadAcc(LSM303AGR *lsm, float *acc_x, float *acc_y, float *acc_z) {
+void LSM303AGR_ReadAcc(lsm303agr_t *lsm, float *acc_x, float *acc_y, float *acc_z) {
     int16_t raw_acc_x, raw_acc_y, raw_acc_z;
     LSM303AGR_ReadAccRaw(lsm, &raw_acc_x, &raw_acc_y, &raw_acc_z);
 
@@ -190,7 +190,7 @@ void LSM303AGR_ReadAcc(LSM303AGR *lsm, float *acc_x, float *acc_y, float *acc_z)
     *acc_z = raw_acc_z * lsm->acc_conv; // Convert to m/s^2
 }
 
-void LSM303AGR_ReadMagRaw(LSM303AGR *lsm, int16_t *mag_x, int16_t *mag_y, int16_t *mag_z) {
+void LSM303AGR_ReadMagRaw(lsm303agr_t *lsm, int16_t *mag_x, int16_t *mag_y, int16_t *mag_z) {
     uint8_t data[6];
     HAL_I2C_Mem_Read(lsm->hi2c, LSM303AGR_SAD_M << 1,
         LSM303AGR_REG_OUTX_L_M | LSM303AGR_AUTO_INCREMENT,
@@ -201,7 +201,7 @@ void LSM303AGR_ReadMagRaw(LSM303AGR *lsm, int16_t *mag_x, int16_t *mag_y, int16_
     *mag_z = (int16_t)((data[5] << 8) | data[4]);
 }
 
-void LSM303AGR_ReadMag(LSM303AGR *lsm, float *mag_x, float *mag_y, float *mag_z) {
+void LSM303AGR_ReadMag(lsm303agr_t *lsm, float *mag_x, float *mag_y, float *mag_z) {
     int16_t raw_mag_x, raw_mag_y, raw_mag_z;
     LSM303AGR_ReadMagRaw(lsm, &raw_mag_x, &raw_mag_y, &raw_mag_z);
 

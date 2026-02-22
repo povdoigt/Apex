@@ -59,7 +59,7 @@ void BUZZER_set_song_bank(BUZZER_SONG_BANK *song_bank) {
 }
 
 
-void BUZZER_Init(BUZZER *buzzer, TIM_HandleTypeDef *htim, uint32_t channel) {
+void BUZZER_Init(buzzer_t *buzzer, TIM_HandleTypeDef *htim, uint32_t channel) {
     buzzer->htim = htim;
     buzzer->channel = channel;
     buzzer->ASYNC_busy = false;
@@ -70,7 +70,7 @@ void BUZZER_Init(BUZZER *buzzer, TIM_HandleTypeDef *htim, uint32_t channel) {
 }
 
 #if BUZZER_ACTIVE
-void BUZZER_play_note(BUZZER *buzzer, float* freqs, uint32_t* duration, int size) {
+void BUZZER_play_note(buzzer_t *buzzer, float* freqs, uint32_t* duration, int size) {
     TIM_set_frequency(buzzer->htim, 0);
     HAL_TIM_PWM_Start(buzzer->htim, buzzer->channel);
     for (int i = 0; i < size; i++) {
@@ -81,7 +81,7 @@ void BUZZER_play_note(BUZZER *buzzer, float* freqs, uint32_t* duration, int size
     HAL_TIM_PWM_Stop(buzzer->htim, buzzer->channel);
 }
 #else
-void BUZZER_play_note(BUZZER *buzzer, float* freqs, uint32_t* duration, int size) {
+void BUZZER_play_note(buzzer_t *buzzer, float* freqs, uint32_t* duration, int size) {
     // Do nothing
 }
 #endif // BUZZER_ACTIVE

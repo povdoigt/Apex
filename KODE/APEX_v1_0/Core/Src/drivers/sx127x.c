@@ -4,7 +4,7 @@
 #include "stm32f4xx_hal.h"
 #include <string.h>
 
-sx127x_status_t sx127x_Init(sx127x_chip_t *chip, sx127x_base_config_t base_config, sx127x_modulation_t modulation, sx127x_mod_config_t config) {
+sx127x_status_t sx127x_Init(sx127x_t *chip, sx127x_base_config_t base_config, sx127x_modulation_t modulation, sx127x_mod_config_t config) {
     if (!chip) { return sx127x_STATUS_ERROR; }
     
     sx127x_status_t status;
@@ -33,7 +33,7 @@ sx127x_status_t sx127x_Init(sx127x_chip_t *chip, sx127x_base_config_t base_confi
     return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_TxSend(sx127x_chip_t *chip, const uint8_t *data, uint16_t len) {
+sx127x_status_t sx127x_TxSend(sx127x_t *chip, const uint8_t *data, uint16_t len) {
     if (!chip || !data) { return sx127x_STATUS_ERROR; }
 
     sx127x_status_t status;
@@ -55,7 +55,7 @@ sx127x_status_t sx127x_TxSend(sx127x_chip_t *chip, const uint8_t *data, uint16_t
     return sx127x_STATUS_OK;
 }
 
-sx127x_status_t sx127x_RxReceive(sx127x_chip_t *chip, uint8_t *data, uint16_t *len) {
+sx127x_status_t sx127x_RxReceive(sx127x_t *chip, uint8_t *data, uint16_t *len) {
     if (!chip || !data || !len) { return sx127x_STATUS_ERROR; }
 
     sx127x_status_t status;
@@ -84,7 +84,7 @@ sx127x_status_t sx127x_RxReceive(sx127x_chip_t *chip, uint8_t *data, uint16_t *l
 
 
 
-sx127x_status_t sx127x_Init_RTOS(sx127x_chip_t *chip, sx127x_base_config_t base_config, sx127x_modulation_t modulation, sx127x_mod_config_t config) {
+sx127x_status_t sx127x_Init_RTOS(sx127x_t *chip, sx127x_base_config_t base_config, sx127x_modulation_t modulation, sx127x_mod_config_t config) {
     if (!chip) { return sx127x_STATUS_ERROR; }
     
     sx127x_status_t status;
@@ -110,7 +110,7 @@ sx127x_status_t sx127x_Init_RTOS(sx127x_chip_t *chip, sx127x_base_config_t base_
     return status;
 }
 
-sx127x_status_t sx127x_TxSend_RTOS(sx127x_chip_t *chip, const uint8_t *data, uint16_t len) {
+sx127x_status_t sx127x_TxSend_RTOS(sx127x_t *chip, const uint8_t *data, uint16_t len) {
     if (!chip || !data) { return sx127x_STATUS_ERROR; }
 
     sx127x_status_t status;
@@ -130,7 +130,7 @@ sx127x_status_t sx127x_TxSend_RTOS(sx127x_chip_t *chip, const uint8_t *data, uin
     return status;
 }
 
-sx127x_status_t sx127x_RxReceive_RTOS(sx127x_chip_t *chip, uint8_t *data, uint16_t *len) {
+sx127x_status_t sx127x_RxReceive_RTOS(sx127x_t *chip, uint8_t *data, uint16_t *len) {
     if (!chip || !data || !len) { return sx127x_STATUS_ERROR; }
 
     sx127x_status_t status;

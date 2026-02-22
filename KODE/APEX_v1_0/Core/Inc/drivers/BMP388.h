@@ -160,6 +160,7 @@ typedef struct{
     Calib_data          calib_data; // Device calibration data
 }BMP388_HandleTypeDef;
 
+// TODO: bmp388 lib is to entirely rewritten...
 
 /* Public functions -----------------------------------------------------------------*/
 HAL_StatusTypeDef    BMP388_Init(BMP388_HandleTypeDef *bmp);

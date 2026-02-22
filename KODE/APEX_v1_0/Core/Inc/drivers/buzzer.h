@@ -15,12 +15,12 @@
 #define BUZZER_ACTIVE 1
 
 
-typedef struct BUZZER {
+typedef struct buzzer_t {
     TIM_HandleTypeDef *htim;
     uint32_t channel;
 
     bool ASYNC_busy;
-} BUZZER;
+} buzzer_t;
 
 typedef struct BUZZER_SONG_BANK {
     float nggyu_freqs[BUZZER_NGGYU_SONG_SIZE];
@@ -47,9 +47,9 @@ extern BUZZER_SONG_BANK buzzer_song_bank;
 
 void BUZZER_set_song_bank(BUZZER_SONG_BANK *song_bank);
 
-void BUZZER_Init(BUZZER *buzzer, TIM_HandleTypeDef *htim, uint32_t channel);
+void BUZZER_Init(buzzer_t *buzzer, TIM_HandleTypeDef *htim, uint32_t channel);
 
-void BUZZER_play_note(BUZZER *buzzer, float *freqs, uint32_t *duration, int size);
+void BUZZER_play_note(buzzer_t *buzzer, float *freqs, uint32_t *duration, int size);
 
 
 // #define ASYNC_BUZZER_play_note_NUMBER 10

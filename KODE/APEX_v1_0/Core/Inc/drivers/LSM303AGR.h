@@ -262,7 +262,7 @@
 
 // ================================================
 
-typedef struct LSM303AGR {
+typedef struct lsm303agr_t {
     I2C_HandleTypeDef *hi2c; // I2C handle
 
     // float acc_data[3]; // Accelerometer data
@@ -274,13 +274,13 @@ typedef struct LSM303AGR {
     bool busy; // Flag to indicate if the sensor is busy
     // TODO: Need to include the busy flag in all methods that read data from the sensor
 
-} LSM303AGR;
+} lsm303agr_t;
 
 
-void LSM303AGR_Init(LSM303AGR *lsm, I2C_HandleTypeDef *hi2c);
+void LSM303AGR_Init(lsm303agr_t *lsm, I2C_HandleTypeDef *hi2c);
 
-void LSM303AGR_ReadAcc(LSM303AGR *lsm, float *acc_x, float *acc_y, float *acc_z);
-void LSM303AGR_ReadMag(LSM303AGR *lsm, float *mag_x, float *mag_y, float *mag_z);
+void LSM303AGR_ReadAcc(lsm303agr_t *lsm, float *acc_x, float *acc_y, float *acc_z);
+void LSM303AGR_ReadMag(lsm303agr_t *lsm, float *mag_x, float *mag_y, float *mag_z);
 
 
 

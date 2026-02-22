@@ -1,6 +1,9 @@
 // driver_config.h
 // This file contains the configuration for the hardware drivers used in the APEX project.
 
+#ifndef DRIVERS_CONFIG_H
+#define DRIVERS_CONFIG_H
+
 #include "config/main_config.h"
 
 
@@ -10,12 +13,7 @@
 #if (APEX_ENABLE_ADXL345 == 1)
 
 #include "drivers/ADXL375.h"
-#define ADXL375_SPI_HANDLE		hspi1
-#define ADXL375_CS_PIN			GPIO_PIN_3
-#define ADXL375_CS_PORT			GPIOA
 extern adxl375_t ADXL375;
-
-// ... add any additional configuration or definitions for the ADXL345 here
 
 #endif
 
@@ -25,15 +23,7 @@ extern adxl375_t ADXL375;
 #if (APEX_ENABLE_BMI088 == 1)
 
 #include "drivers/BMI088.h"
-extern const bmi_config_t BMI088_CONFIG;
-#define BMI088_SPI_HANDLE		hspi1
-#define BMI088_ACC_CS_PIN		GPIO_PIN_4
-#define BMI088_ACC_CS_PORT		GPIOA
-#define BMI088_GYR_CS_PIN		GPIO_PIN_2
-#define BMI088_GYR_CS_PORT		GPIOB
-extern bmi088_t BMI088;
-
-// ... add any additional configuration or definitions for the BMI088 here
+extern bmi088_t bmi088;
 
 #endif
 
@@ -46,41 +36,100 @@ extern bmi088_t BMI088;
 #include "drivers/BMP388.h"
 extern BMP388_HandleTypeDef bmp388;
 
-// ... add any additional configuration or definitions for the BMP388 here
-
 #endif
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+// =======================================================================
+// Buzzer configuration
+// =======================================================================
 #if (APEX_ENABLE_BUZZER == 1)
+
 #include "drivers/buzzer.h"
+extern buzzer_t buzzer;
+
 #endif
+
+
+// =======================================================================
+// GPS configuration
+// =======================================================================
 #if (APEX_ENABLE_GPS == 1)
+
 #include "drivers/gps.h"
+
 #endif
+
+
+// =======================================================================
+// LED configuration
+// =======================================================================
 #if (APEX_ENABLE_LED == 1)
+
 #include "drivers/led.h"
+
 #endif
+
+
+// =======================================================================
+// LSM303AGR configuration
+// =======================================================================
 #if (APEX_ENABLE_LSM303AGR == 1)
+
 #include "drivers/LSM303AGR.h"
+extern lsm303agr_t lsm303agr;
+
 #endif
-#if (APEX_ENABLE_SX127X_1 == 1 || APEX_ENABLE_SX127X_2 == 1)
-#include "drivers/rfm96w.h"
+
+
+// =======================================================================
+// SX127x 1 configuration
+// =======================================================================
+#if (APEX_ENABLE_SX127X_1 == 1)
+
+#include "drivers/sx127x.h"
+extern sx127x_t sx127x_1;
+
 #endif
+
+// =======================================================================
+// SX127x 2 configuration
+// =======================================================================
+#if (APEX_ENABLE_SX127X_2 == 1)
+
+#include "drivers/sx127x.h"
+extern sx127x_t sx127x_2;
+
+#endif
+
+
+// =======================================================================
+// W25Q512 configuration
+// =======================================================================
 #if (APEX_ENABLE_W25Q512 == 1)
+
 #include "drivers/w25q_mem.h"
+extern W25Q_t w25q;
+
 #endif
+
+
+// =======================================================================
+// WT901B configuration
+// =======================================================================
 #if (APEX_ENABLE_WT901B == 1)
+
 #include "drivers/WT901B.h"
+
 #endif
+
+
+
+
+
+// =======================================================================
+// Initialization functions prototypes
+// =======================================================================
+void Drivers_Init(void);
+
+
+#endif // DRIVERS_CONFIG_H

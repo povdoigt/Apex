@@ -30,14 +30,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "drivers/ADXL375.h"
-#include "drivers/BMI088.h"
-#include "drivers/sx127x.h"
-#include "drivers/led.h"
-#include "drivers/sx127x/sx127x_common.h"
-#include "drivers/sx127x/sx127x_fsk_ook.h"
-#include "drivers/sx127x/sx127x_lora.h"
-#include "drivers/w25q_mem.h"
+#include "config/main_config.h"
+#include "config/drivers_config.h"
 
 #include "peripherals/adc.h"
 #include "peripherals/dma.h"
@@ -88,10 +82,6 @@ const char TASK_Program_start_name[19] = "TASK_Program_start";
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-ADXL375 adxl;
-bmi088_t BMI088_imu;
-sx127x_chip_t sx127x_chip;
-W25Q_t w25q_chip;
 
 data_topic_t *data_topic_acc_ptr;
 data_topic_t *data_topic_gyr_ptr;
@@ -145,7 +135,7 @@ int main(void)
 
 	sx127x_status_t sx127x_status;
 
-	sx127x_status = sx127x_Init(&sx127x_chip, (sx127x_base_config_t){
+	sx127x_status = sx127x_Init(&sx127x_1, (sx127x_base_config_t){
 		.spiHandle = &hspi1,
 		.csPinBank = CS_LORA_GPIO_Port,
 		.csPin = CS_LORA_Pin,
@@ -193,7 +183,7 @@ int main(void)
 		.gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
 		.gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
 	};
-	BMI088_Init(&BMI088_imu, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
+	BMI088_Init(&bmi088, &hspi1, CS_ACC0_GPIO_Port, CS_ACC0_Pin,
 				CS_GYRO_GPIO_Port, CS_GYRO_Pin, &bmi_cfg);
 
 	/* Initialize all configured peripherals */
@@ -302,13 +292,13 @@ int main(void)
 
 	while (1) {
 		// accelerometre
-		BMI088_ReadAcc(&BMI088_imu, &acc_data);
+		BMI088_ReadAcc(&bmi088, &acc_data);
 		float_format(accx, acc_data.x, 5, 10);
 		float_format(accy, acc_data.y, 5, 10);
 		float_format(accz, acc_data.z, 5, 10);
 
 		// gyroscope
-		BMI088_ReadGyr(&BMI088_imu, &gyr_data);
+		BMI088_ReadGyr(&bmi088, &gyr_data);
 		float_format(gyrx, gyr_data.x, 5, 10);
 		float_format(gyry, gyr_data.y, 5, 10);
 		float_format(gyrz, gyr_data.z, 5, 10);
@@ -326,12 +316,12 @@ int main(void)
 #endif
 			len = strlen(buff1);
 			len = (len > 255) ? 255 : len;
-			sx127x_status = sx127x_TxSend(&sx127x_chip, (uint8_t*)buff1, len);
+			sx127x_status = sx127x_TxSend(&sx127x_1, (uint8_t*)buff1, len);
 		}
 		// code récepteur
 		dt_last_rx = HAL_GetTick() - t1;
 		HAL_GPIO_WritePin(LED0G_GPIO_Port, LED0G_Pin, dt_last_rx < delay * 1.5 ? GPIO_PIN_RESET : GPIO_PIN_SET);
-		sx127x_status = sx127x_RxReceive(&sx127x_chip, (uint8_t*)buff1, &len);
+		sx127x_status = sx127x_RxReceive(&sx127x_1, (uint8_t*)buff1, &len);
 		if (sx127x_status == sx127x_STATUS_OK && len > 0) {
 			if (!sync_done) {
 				sync_done = true;
@@ -488,7 +478,7 @@ void TASK_Program_start(void *argument) {
 
 	
 	TASK_sx127x_Init_TxRx_ARGS args = {
-		.chip = &sx127x_chip,
+		.chip = &sx127x_1,
 	};
 	osThreadAttr_t sx127x_attr = {
 		.name = "TASK_sx127x_Init_TxRx",
