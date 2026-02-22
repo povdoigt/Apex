@@ -34,16 +34,16 @@
 //========================================================================
 // Modules enable/disable (set to 1 to enable, 0 to disable)
 //========================================================================
-#define APEX_ENABLE_ADXL345			0
-#define APEX_ENABLE_BMI088			0
-#define APEX_ENABLE_BMP388			0
-#define APEX_ENABLE_BUZZER			0
-#define APEX_ENABLE_GPS				0
-#define APEX_ENABLE_LED				0
-#define APEX_ENABLE_LSM303AGR		0
-#define APEX_ENABLE_SX127X_1		0
-#define APEX_ENABLE_SX127X_2		0
-#define APEX_ENABLE_W25Q512			0
+#define APEX_ENABLE_ADXL345			1
+#define APEX_ENABLE_BMI088			1
+#define APEX_ENABLE_BMP388			1
+#define APEX_ENABLE_BUZZER			1
+#define APEX_ENABLE_GPS				1
+#define APEX_ENABLE_LED				1
+#define APEX_ENABLE_LSM303AGR		1
+#define APEX_ENABLE_SX127X_1		1
+#define APEX_ENABLE_SX127X_2		1
+#define APEX_ENABLE_W25Q512			1
 #define APEX_ENABLE_WT901B			0
 
 

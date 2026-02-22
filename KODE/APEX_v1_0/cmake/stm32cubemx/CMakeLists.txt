@@ -32,6 +32,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../USB_DEVICE/App/usbd_cdc_if.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/config/main_config.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/config/drivers_config.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/ADXL375.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/BMI088.c

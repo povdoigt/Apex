@@ -5,7 +5,7 @@
 
 
 
-void ADXL375_Init(ADXL375 *adxl375,
+void ADXL375_Init(adxl375_t *adxl375,
                   SPI_HandleTypeDef *spiHandle,
                   GPIO_TypeDef *csPinBank,
                   uint16_t csPin) {
@@ -40,7 +40,7 @@ void ADXL375_Init(ADXL375 *adxl375,
 }
 
 
-void ADXL375_ReadRegister(ADXL375 *adxl375, uint8_t reg, uint8_t *value) {
+void ADXL375_ReadRegister(adxl375_t *adxl375, uint8_t reg, uint8_t *value) {
     uint8_t cmd = ADXL375_READ_REG | reg;
 
     // Configure SPI settings
@@ -59,7 +59,7 @@ void ADXL375_ReadRegister(ADXL375 *adxl375, uint8_t reg, uint8_t *value) {
     HAL_SPI_Init(adxl375->spiHandle);
 }
 
-void ADXL375_WriteRegister(ADXL375 *adxl375, uint8_t reg, uint8_t value) {
+void ADXL375_WriteRegister(adxl375_t *adxl375, uint8_t reg, uint8_t value) {
     uint8_t txBuf[2] = {ADXL375_WRITE_REG | reg, value};
 
     HAL_GPIO_WritePin(adxl375->csPinBank, adxl375->csPin, GPIO_PIN_RESET);

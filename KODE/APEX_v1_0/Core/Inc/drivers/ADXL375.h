@@ -43,7 +43,7 @@
 #define ADXL375_MULTIPLE_BYTE           0b01000000 // Multiple byte read command
 #define ADXL375_SINGLE_BYTE             0b00000000 // Single byte read command
 
-typedef struct ADXL375 {
+typedef struct adxl375_t {
     SPI_HandleTypeDef *spiHandle;
     GPIO_TypeDef *csPinBank;
     uint16_t csPin;
@@ -52,19 +52,19 @@ typedef struct ADXL375 {
     float accel_mps2_offset[3];
 
     bool new_data;
-} ADXL375;
+} adxl375_t;
 
 
 
 
 
-void ADXL375_Init(ADXL375 *adxl375,
+void ADXL375_Init(adxl375_t *adxl375,
                   SPI_HandleTypeDef *spiHandle,
                   GPIO_TypeDef *csPinBank,
                   uint16_t csPin);
 
-void ADXL375_ReadRegister(ADXL375 *adxl375, uint8_t reg, uint8_t *value);
-void ADXL375_WriteRegister(ADXL375 *adxl375, uint8_t reg, uint8_t value);
+void ADXL375_ReadRegister(adxl375_t *adxl375, uint8_t reg, uint8_t *value);
+void ADXL375_WriteRegister(adxl375_t *adxl375, uint8_t reg, uint8_t value);
 
 
 
