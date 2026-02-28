@@ -1,5 +1,15 @@
-/* bmi088.c — Niveaux 0 & 1
- * APEX avionics — Bosch BMI088 (ACC + GYR)
+/**
+ * @file BMI088.c
+ * @brief Bosch BMI088 dual IMU driver — implementation (Levels 0, 1, 2 + RTOS).
+ *
+ * @details
+ * Three abstraction layers:
+ *  - **Level 0** – raw SPI primitives (blocking HAL polling / DMA+semaphore for RTOS).
+ *  - **Level 1** – register-level read/write helpers (single + burst).
+ *  - **Level 2** – sensor logic: init, configuration, data read, RTOS tasks.
+ *
+ * @note Only SPI mode is supported; the BMI088 I²C interface is not used.
+ *       Two independent chip-selects are required (ACC and GYR).
  */
 
 #include "stm32f4xx_hal.h"
@@ -20,12 +30,24 @@
 /*                           Niveau 0 : SPI Primitives                        */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * @brief Assert (pull low) the chip-select for ACC or GYR.
+ * @param imu    Pointer to the BMI088 handle.
+ * @param is_gyr @c true → gyroscope CS, @c false → accelerometer CS.
+ */
 static inline void BMI088_SPI_Begin(bmi088_t *imu, bool is_gyr) {
     HAL_GPIO_WritePin(is_gyr ? imu->cs_gyr_bank : imu->cs_acc_bank,
                       is_gyr ? imu->cs_gyr_pin  : imu->cs_acc_pin,
                       GPIO_PIN_RESET);
 }
 
+/**
+ * @brief Blocking SPI transmit (polling, HAL).
+ * @param imu    Pointer to the BMI088 handle.
+ * @param tx_buf Buffer to send.
+ * @param tx_len Number of bytes to transmit.
+ * @retval BMI_STATE @c BMI_OK on success, @c BMI_SPI_ERR on HAL error.
+ */
 static inline BMI_STATE BMI088_SPI_Tx(bmi088_t *imu, uint8_t *tx_buf, uint16_t tx_len) {
     if (!imu || !imu->spi || (!tx_buf && tx_len)) { return BMI_INVALID_ARG; }
     BMI_STATE state = (HAL_SPI_Transmit(imu->spi, tx_buf, tx_len, HAL_MAX_DELAY) == HAL_OK) ? BMI_OK : BMI_SPI_ERR;
@@ -33,6 +55,13 @@ static inline BMI_STATE BMI088_SPI_Tx(bmi088_t *imu, uint8_t *tx_buf, uint16_t t
     return state;
 }
 
+/**
+ * @brief Blocking SPI receive (polling, HAL).
+ * @param imu    Pointer to the BMI088 handle.
+ * @param rx_buf Buffer that will receive the incoming bytes.
+ * @param rx_len Number of bytes to receive.
+ * @retval BMI_STATE @c BMI_OK on success, @c BMI_SPI_ERR on HAL error.
+ */
 static inline BMI_STATE BMI088_SPI_Rx(bmi088_t *imu, uint8_t *rx_buf, uint16_t rx_len) {
     if (!imu || !imu->spi || (!rx_buf && rx_len)) { return BMI_INVALID_ARG; }
     BMI_STATE state = (HAL_SPI_Receive(imu->spi, rx_buf, rx_len, HAL_MAX_DELAY) == HAL_OK) ? BMI_OK : BMI_SPI_ERR;
@@ -40,6 +69,11 @@ static inline BMI_STATE BMI088_SPI_Rx(bmi088_t *imu, uint8_t *rx_buf, uint16_t r
     return state;
 }
 
+/**
+ * @brief De-assert (pull high) the chip-select for ACC or GYR.
+ * @param imu    Pointer to the BMI088 handle.
+ * @param is_gyr @c true → gyroscope CS, @c false → accelerometer CS.
+ */
 static inline void BMI088_SPI_End(bmi088_t *imu, bool is_gyr) {
     HAL_GPIO_WritePin(is_gyr ? imu->cs_gyr_bank : imu->cs_acc_bank,
                       is_gyr ? imu->cs_gyr_pin  : imu->cs_acc_pin,
