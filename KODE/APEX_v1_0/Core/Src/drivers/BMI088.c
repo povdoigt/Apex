@@ -664,30 +664,6 @@ BMI_STATE BMI088_ReadMultiple_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t star
     return st; 
 }
 
-// BMI_STATE BMI088_ReadMultiple_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t start_reg, uint8_t *data, uint16_t len, bool lock_sem) {
-
-//     uint8_t addr = start_reg | BMI_READ_MASK;
-
-//     osSemaphoreAcquire(imu->sem_id, osWaitForever);
-
-//     BMI088_SPI_Begin_RTOS(imu, is_gyr);
-//     BMI088_SPI_Tx_RTOS(imu, &addr, 1);
-//     if (!is_gyr) {
-//         /* Pour l'accéléromètre, lire 1 octet dummy avant les vraies données */
-//         BMI088_SPI_Rx_RTOS(imu, data, 1);
-//     }
-//     BMI088_SPI_Rx_RTOS(imu, data, len);
-//     BMI088_SPI_End_RTOS(imu, is_gyr);
-
-
-//     /* Respecter tIDLE_wacc ≥ 2 µs avant une autre lecture/écriture (datasheet) */
-//     TIM_Delay_Micro(2);
-
-//     osSemaphoreRelease(imu->sem_id);
-
-//     return BMI_OK; 
-// }
-
 BMI_STATE BMI088_ReadID_RTOS_base(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id, bool lock_sem) {
     if (!imu || !acc_id || !gyr_id) {
         return BMI_INVALID_ARG;

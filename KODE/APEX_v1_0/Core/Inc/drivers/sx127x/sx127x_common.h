@@ -2,8 +2,11 @@
 #define SX127X_COMMON_H
 
 #include "stm32f4xx_hal.h"
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
 #include "peripherals/spi.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 
 // Max number of octets the LORA Rx/Tx FIFO can hold

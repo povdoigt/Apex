@@ -4,7 +4,7 @@
 #ifndef DRIVERS_CONFIG_H
 #define DRIVERS_CONFIG_H
 
-#include "config/main_config.h"
+#include "main_config.h"
 
 
 // =======================================================================
@@ -24,6 +24,7 @@ extern adxl375_t ADXL375;
 
 #include "drivers/BMI088.h"
 extern bmi088_t bmi088;
+extern const bmi_config_t bmi088_config;
 
 #endif
 
@@ -129,7 +130,40 @@ extern W25Q_t w25q;
 // =======================================================================
 // Initialization functions prototypes
 // =======================================================================
-void Drivers_Init(void);
+
+typedef struct DRIVERS_CONFIG_init_result_t {
+#if (APEX_ENABLE_ADXL345 == 1)
+    // No specific initialization result for ADXL375 for now, but will add here later
+#endif
+#if (APEX_ENABLE_BMI088 == 1)
+    BMI_STATE bmi088_init_res;
+#endif
+#if (APEX_ENABLE_BMP388 == 1)
+    // No specific initialization result for BMP388 for now, but will add here later
+#endif
+#if (APEX_ENABLE_BUZZER == 1)
+    // No specific initialization result for buzzer for now, but will add here later
+#endif
+#if (APEX_ENABLE_GPS == 1)
+    // GPS initialization result here
+#endif
+#if (APEX_ENABLE_LED == 1)
+    // LED initialization result here
+#endif
+#if (APEX_ENABLE_LSM303AGR == 1)
+    // No specific initialization result for LSM303AGR for now, but will add here later
+#endif
+#if (APEX_ENABLE_SX127X_1 == 1)
+    sx127x_status_t sx127x_1_init_res;
+#endif
+#if (APEX_ENABLE_SX127X_2 == 1)
+    sx127x_status_t sx127x_2_init_res;
+#endif
+#if (APEX_ENABLE_W25Q512 == 1)
+    W25Q_STATE w25q_init_res;
+#endif
+} DRIVERS_CONFIG_init_result_t;
+void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result);
 
 
 #endif // DRIVERS_CONFIG_H

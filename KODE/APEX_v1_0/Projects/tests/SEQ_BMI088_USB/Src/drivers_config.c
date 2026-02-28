@@ -1,7 +1,4 @@
-#include "config/drivers_config.h"
-#include "drivers/BMP388.h"
-#include "drivers/buzzer.h"
-#include "drivers/sx127x/sx127x_common.h"
+#include "drivers_config.h"
 
 // =======================================================================
 // ADXL345 configuration
@@ -185,67 +182,79 @@ W25Q_t w25q;
 
 
 // =======================================================================
-// Initialization functions prototypes
+// Initialization functions
 // =======================================================================
-void Drivers_Init(void) {
+void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
+	// This function initializes all enabled drivers in a sequential manner. It returns a struct with the status of each initialization.
+	// The implementation can be done in a way that it stops at the first failure and returns the error code, or it can attempt to initialize all drivers and return a comprehensive result struct. For simplicity, we will stop at the first failure and return a generic error code.
 #if (APEX_ENABLE_ADXL345 == 1)
 	ADXL375_Init(&ADXL375, &DRIVERS_CONFIG_ADXL375_SPI_HANDLE, DRIVERS_CONFIG_ADXL375_CS_PORT,
 		DRIVERS_CONFIG_ADXL375_CS_PIN);
 #endif
+
 #if (APEX_ENABLE_BMI088 == 1)
-	BMI088_Init(&bmi088, &DRIVERS_CONFIG_BMI088_SPI_HANDLE, DRIVERS_CONFIG_BMI088_ACC_CS_PORT,
+	result->bmi088_init_res = BMI088_Init(&bmi088, &DRIVERS_CONFIG_BMI088_SPI_HANDLE, DRIVERS_CONFIG_BMI088_ACC_CS_PORT,
 		DRIVERS_CONFIG_BMI088_ACC_CS_PIN, DRIVERS_CONFIG_BMI088_GYR_CS_PORT,
 		DRIVERS_CONFIG_BMI088_GYR_CS_PIN, &bmi088_config);
 #endif
+
 #if (APEX_ENABLE_BMP388 == 1)
 	BMP388_Init(&bmp388);
 #endif
+
 #if (APEX_ENABLE_BUZZER == 1)
 	BUZZER_Init(&buzzer, &DRIVERS_CONFIG_BUZZER_TIM_HANDLE, DRIVERS_CONFIG_BUZZER_CHANNEL);
 #endif
+
 #if (GPS_ENABLE_GPS == 1)
 	// GPS initialization code here
 #endif
+
 #if (APEX_ENABLE_LED == 1)
 	// LED initialization code here
 #endif
+
 #if (APEX_ENABLE_LSM303AGR == 1)
 	// LSM303AGR initialization code here
 #endif
+
 #if (APEX_ENABLE_SX127X_1 == 1)
 	switch (sx127x_modulation_1) {
 		case sx127x_MODULATION_LORA:
-			sx127x_Init(&sx127x_1, sx127x_base_config_1, sx127x_modulation_1,
+			result->sx127x_1_init_res = sx127x_Init(&sx127x_1, sx127x_base_config_1, sx127x_modulation_1,
 				(sx127x_mod_config_t){.lora = sx127x_LORA_config});
 			break;
 		case sx127x_MODULATION_FSK:
 		case sx127x_MODULATION_OOK:
-			sx127x_Init(&sx127x_1, sx127x_base_config_1, sx127x_modulation_1,
+			result->sx127x_1_init_res = sx127x_Init(&sx127x_1, sx127x_base_config_1, sx127x_modulation_1,
 				(sx127x_mod_config_t){.fsk_ook = sx127x_FSK_OOK_config});
 			break;
 		default:
-			Error_Handler();
+			result->sx127x_1_init_res = sx127x_STATUS_ERROR;
 	}
 #endif
+
 #if (APEX_ENABLE_SX127X_2 == 1)
 	switch (sx127x_modulation_2) {
 		case sx127x_MODULATION_LORA:
-			sx127x_Init(&sx127x_2, sx127x_base_config_2, sx127x_modulation_2,
+			result->sx127x_2_init_res = sx127x_Init(&sx127x_2, sx127x_base_config_2, sx127x_modulation_2,
 				(sx127x_mod_config_t){.lora = sx127x_LORA_config});
 			break;
 		case sx127x_MODULATION_FSK:
 		case sx127x_MODULATION_OOK:
-			sx127x_Init(&sx127x_2, sx127x_base_config_2, sx127x_modulation_2,
+			result->sx127x_2_init_res = sx127x_Init(&sx127x_2, sx127x_base_config_2, sx127x_modulation_2,
 				(sx127x_mod_config_t){.fsk_ook = sx127x_FSK_OOK_config});
 			break;
 		default:
-			Error_Handler();
+			result->sx127x_2_init_res = sx127x_STATUS_ERROR;
 	}
 #endif
+
 #if (APEX_ENABLE_W25Q512 == 1)
-	W25Q_Init(&w25q, &DRIVERS_CONFIG_W25Q512_SPI_HANDLE, DRIVERS_CONFIG_W25Q512_CS_PORT,
-		DRIVERS_CONFIG_W25Q512_CS_PIN);
+	result->w25q_init_res = W25Q_Init(&w25q, &DRIVERS_CONFIG_W25Q512_SPI_HANDLE,
+		DRIVERS_CONFIG_W25Q512_CS_PORT, DRIVERS_CONFIG_W25Q512_CS_PIN);
 #endif
+
 #if (APEX_ENABLE_WT901B == 1)
 	// WT901B initialization code here
 #endif
