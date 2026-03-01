@@ -828,13 +828,16 @@ void setup(void) {
     t12_multi_sector_rw();
     t13_end_of_flash_clamp();
     t14_write_zero_size();
-}
 
-/* ========================================================================
- * loop() – rapport periodique via USB CDC (toutes les 3 s)
- * ======================================================================== */
-void loop(void) {
-    uint32_t n_pass = 0, n_fail = 0;
+    /* Attend que le serial monitor soit ouvert cote PC (DTR=1).
+     * Sans ca, les premiers caracteres seraient perdus avant
+     * que le terminal ne soit pret a les recevoir.            */
+    while (!cdc_port_open) {
+        HAL_Delay(10);
+    }
+    HAL_Delay(50); /* stabilisation du terminal */
+
+        uint32_t n_pass = 0, n_fail = 0;
     for (int i = 0; i < N_TESTS; i++) {
         if      (tc[i].result == R_PASS) n_pass++;
         else if (tc[i].result == R_FAIL) n_fail++;
@@ -865,6 +868,11 @@ void loop(void) {
              "\r\n%s  %lu/%d PASS   %lu FAIL  " VT100_RESET "\r\n",
              vcol, (unsigned long)n_pass, N_TESTS, (unsigned long)n_fail);
     usb_print(log_buf);
+}
 
-    HAL_Delay(3000);
+/* ========================================================================
+ * loop() – Do nothing more as tests are done in setup() and results printed there.
+ * ======================================================================== */
+void loop(void) {
+
 }
