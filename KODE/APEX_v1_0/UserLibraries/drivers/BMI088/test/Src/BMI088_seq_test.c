@@ -66,31 +66,18 @@ static const char *bmi_str(BMI_STATE s) {
 void BMI088_seq_test_t0_chip_ids(TEST_case_t *tc) {
     uint8_t acc_id = 0, gyr_id = 0;
     BMI_STATE st = BMI088_ReadID(bmi088, &acc_id, &gyr_id);
-    if (st != BMI_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadID: %s", bmi_str(st));
-        return;
-    }
-    if (acc_id != BMI_ACC_CHIP_ID_EXP || gyr_id != BMI_GYR_CHIP_ID_EXP) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "ACC=0x%02X(exp:0x%02X) GYR=0x%02X(exp:0x%02X)",
-                 acc_id, BMI_ACC_CHIP_ID_EXP, gyr_id, BMI_GYR_CHIP_ID_EXP);
-        return;
-    }
+    TEST_ASSERT(st == BMI_OK, "ReadID: %s", bmi_str(st));
+    TEST_ASSERT(acc_id == BMI_ACC_CHIP_ID_EXP && gyr_id == BMI_GYR_CHIP_ID_EXP,
+                "ACC=0x%02X(exp:0x%02X) GYR=0x%02X(exp:0x%02X)",
+                acc_id, BMI_ACC_CHIP_ID_EXP, gyr_id, BMI_GYR_CHIP_ID_EXP);
     tc->result = R_PASS;
-    snprintf(tc->detail, sizeof(tc->detail),
-             "ACC_ID=0x%02X GYR_ID=0x%02X", acc_id, gyr_id);
+    snprintf(tc->detail, sizeof(tc->detail), "ACC_ID=0x%02X GYR_ID=0x%02X", acc_id, gyr_id);
 }
 
 
 void BMI088_seq_test_t1_acc_soft_reset(TEST_case_t *tc) {
     BMI_STATE st = BMI088_SoftReset(bmi088, false /* ACC */);
-    if (st != BMI_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "SoftReset: %s", bmi_str(st));
-        return;
-    }
+    TEST_ASSERT(st == BMI_OK, "SoftReset: %s", bmi_str(st));
     HAL_Delay(50);
 
     /* Apres reset : ACC est en SUSPEND ; il faut le remettre en ACTIVE    */
@@ -101,17 +88,8 @@ void BMI088_seq_test_t1_acc_soft_reset(TEST_case_t *tc) {
 
     uint8_t id = 0;
     st = BMI088_ReadRegister(bmi088, false, BMI_ACC_CHIP_ID, &id);
-    if (st != BMI_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadID post-reset: %s", bmi_str(st));
-        return;
-    }
-    if (id != BMI_ACC_CHIP_ID_EXP) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "ID=0x%02X apres reset (exp:0x%02X)", id, BMI_ACC_CHIP_ID_EXP);
-        return;
-    }
+    TEST_ASSERT(st == BMI_OK, "ReadID post-reset: %s", bmi_str(st));
+    TEST_ASSERT(id == BMI_ACC_CHIP_ID_EXP, "ID=0x%02X apres reset (exp:0x%02X)", id, BMI_ACC_CHIP_ID_EXP);
     tc->result = R_PASS;
     snprintf(tc->detail, sizeof(tc->detail), "ID=0x%02X intact apres reset", id);
 }
@@ -119,26 +97,13 @@ void BMI088_seq_test_t1_acc_soft_reset(TEST_case_t *tc) {
 
 void BMI088_seq_test_t2_gyr_soft_reset(TEST_case_t *tc) {
     BMI_STATE st = BMI088_SoftReset(bmi088, true /* GYR */);
-    if (st != BMI_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "SoftReset: %s", bmi_str(st));
-        return;
-    }
+    TEST_ASSERT(st == BMI_OK, "SoftReset: %s", bmi_str(st));
     HAL_Delay(30);
 
     uint8_t id = 0;
     st = BMI088_ReadRegister(bmi088, true, BMI_GYR_CHIP_ID, &id);
-    if (st != BMI_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadID post-reset: %s", bmi_str(st));
-        return;
-    }
-    if (id != BMI_GYR_CHIP_ID_EXP) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "ID=0x%02X apres reset (exp:0x%02X)", id, BMI_GYR_CHIP_ID_EXP);
-        return;
-    }
+    TEST_ASSERT(st == BMI_OK, "ReadID post-reset: %s", bmi_str(st));
+    TEST_ASSERT(id == BMI_GYR_CHIP_ID_EXP, "ID=0x%02X apres reset (exp:0x%02X)", id, BMI_GYR_CHIP_ID_EXP);
     tc->result = R_PASS;
     snprintf(tc->detail, sizeof(tc->detail), "ID=0x%02X intact apres reset", id);
 }
@@ -349,59 +314,33 @@ t5_cleanup:
 
 void BMI088_seq_test_t6_gyr_bist(TEST_case_t *tc) {
     BMI_STATE st = BMI088_WriteRegister(bmi088, true, BMI_GYR_SELF_TEST, GYR_BIST_TRIG);
-    if (st != BMI_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "TriggerBIST: %s", bmi_str(st));
-        return;
-    }
+    TEST_ASSERT(st == BMI_OK, "TriggerBIST: %s", bmi_str(st));
 
     uint32_t t_start = HAL_GetTick();
     uint8_t bist_reg = 0;
     do {
         HAL_Delay(5);
         st = BMI088_ReadRegister(bmi088, true, BMI_GYR_SELF_TEST, &bist_reg);
-        if (st != BMI_OK) {
-            tc->result = R_FAIL;
-            snprintf(tc->detail, sizeof(tc->detail), "PollBIST: %s", bmi_str(st));
-            return;
-        }
+        TEST_ASSERT(st == BMI_OK, "PollBIST: %s", bmi_str(st));
     } while (!(bist_reg & GYR_BIST_RDY) && (HAL_GetTick() - t_start) < GYR_BIST_TIMEOUT);
 
-    if (!(bist_reg & GYR_BIST_RDY)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "Timeout %u ms, reg=0x%02X", GYR_BIST_TIMEOUT, bist_reg);
-        return;
-    }
-    if ((bist_reg & GYR_BIST_FAIL) || !(bist_reg & GYR_BIST_OK)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "rate_ok=%d bist_fail=%d (reg=0x%02X)",
-                 (bist_reg & GYR_BIST_OK)   ? 1 : 0,
-                 (bist_reg & GYR_BIST_FAIL)  ? 1 : 0,
-                 bist_reg);
-        return;
-    }
+    TEST_ASSERT(bist_reg & GYR_BIST_RDY, "Timeout %u ms, reg=0x%02X", GYR_BIST_TIMEOUT, bist_reg);
+    TEST_ASSERT(!(bist_reg & GYR_BIST_FAIL) && (bist_reg & GYR_BIST_OK),
+                "rate_ok=%d bist_fail=%d (reg=0x%02X)",
+                (bist_reg & GYR_BIST_OK)  ? 1 : 0,
+                (bist_reg & GYR_BIST_FAIL) ? 1 : 0,
+                bist_reg);
     tc->result = R_PASS;
-    snprintf(tc->detail, sizeof(tc->detail),
-             "rate_ok=1 bist_fail=0 (reg=0x%02X)", bist_reg);
+    snprintf(tc->detail, sizeof(tc->detail), "rate_ok=1 bist_fail=0 (reg=0x%02X)", bist_reg);
 }
 
 
 void BMI088_seq_test_t7_acc_temperature(TEST_case_t *tc) {
     float temp_c = 0.0f;
     BMI_STATE st = BMI088_ReadTemp(bmi088, &temp_c);
-    if (st != BMI_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadTemp: %s", bmi_str(st));
-        return;
-    }
-    if (temp_c < TEMP_MIN_C || temp_c > TEMP_MAX_C) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "T=%.1f C hors plage [%.0f, %.0f]", temp_c, TEMP_MIN_C, TEMP_MAX_C);
-        return;
-    }
+    TEST_ASSERT(st == BMI_OK, "ReadTemp: %s", bmi_str(st));
+    TEST_ASSERT(temp_c >= TEMP_MIN_C && temp_c <= TEMP_MAX_C,
+                "T=%.1f C hors plage [%.0f, %.0f]", temp_c, TEMP_MIN_C, TEMP_MAX_C);
     tc->result = R_PASS;
     /* evite -u _printf_float : conversion entiere */
     int32_t ti = (int32_t)temp_c;

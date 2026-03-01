@@ -3,6 +3,8 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
+#include "vt100.h"
+
 #include <string.h>
 #include <stdbool.h>
 
@@ -41,6 +43,8 @@ void setup(void) {
         HAL_Delay(10);
     }
     HAL_Delay(50); /* stabilisation du terminal */
+
+    usb_print(VT100_SCREEN_CLEAR);
 
     /* Print the results via USB CDC. */
     const char suite_name[32]   = "DT Sequential Tests";

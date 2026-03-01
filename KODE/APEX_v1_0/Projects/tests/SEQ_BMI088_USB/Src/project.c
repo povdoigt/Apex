@@ -51,6 +51,8 @@ void setup(void) {
     }
     HAL_Delay(50); /* stabilisation du terminal */
 
+    usb_print(VT100_SCREEN_CLEAR);
+
 	const char title[32] = "BMI088 Sequential Driver Test";
 	const char desc[128] = "IDs, reset, config R/W, self-test, temperature";
 

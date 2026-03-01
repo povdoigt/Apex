@@ -135,155 +135,81 @@ static bool verify_uniform(const uint8_t *buf, uint32_t n,
 void W25Q_seq_test_t0_id_check(TEST_case_t *tc) {
     uint8_t id[3] = {0};
     W25Q_STATE st = W25Q_ReadID(w25q, id);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadID: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ReadID: %s", state_str(st));
+
     uint16_t dev = (uint16_t)((id[1] << 8) | id[2]);
-    if (id[0] != W25Q_MANUFACTURER_ID || dev != W25Q_V_FULL_DEVICE_ID) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "Manuf=0x%02X(exp:0x%02X) Dev=0x%04X(exp:0x%04X)",
-                 id[0], W25Q_MANUFACTURER_ID, dev, W25Q_V_FULL_DEVICE_ID);
-        return;
-    }
+    TEST_ASSERT(id[0] == W25Q_MANUFACTURER_ID, "Manuf=0x%02X != 0x%02X", id[0], W25Q_MANUFACTURER_ID);
+    TEST_ASSERT(dev == W25Q_V_FULL_DEVICE_ID, "Dev=0x%04X != 0x%04X", dev, W25Q_V_FULL_DEVICE_ID);
+
     tc->result = R_PASS;
     snprintf(tc->detail, 80, "Manuf=0x%02X DevID=0x%04X", id[0], dev);
 }
 
 void W25Q_seq_test_t1_erase_verify(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC0);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "SectorErase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "SectorErase: %s", state_str(st));
     st = W25Q_ReadData(w25q, buf_a, ADDR_SEC0, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadData: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ReadData: %s", state_str(st));
     uint32_t first_addr; uint8_t first_got;
-    if (!verify_uniform(buf_a, PAGE_BYTES, 0xFF, ADDR_SEC0, &first_addr, &first_got)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "Non-0xFF @0x%06lX got=0x%02X", (unsigned long)first_addr, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "%uB=0xFF apres erase @0x%06lX",
-                 (unsigned)PAGE_BYTES, (unsigned long)ADDR_SEC0);
-    }
+    TEST_ASSERT(verify_uniform(buf_a, PAGE_BYTES, 0xFF, ADDR_SEC0, &first_addr, &first_got),
+                "Non-0xFF @0x%06lX got=0x%02X", (unsigned long)first_addr, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "%uB=0xFF apres erase @0x%06lX",
+             (unsigned)PAGE_BYTES, (unsigned long)ADDR_SEC0);
 }
 
 void W25Q_seq_test_t2_aligned_rw(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC1);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase: %s", state_str(st));
     for (uint32_t i = 0; i < PAGE_BYTES; i++) buf_a[i] = (uint8_t)(0xA5 ^ i);
     st = W25Q_WriteData(w25q, buf_a, ADDR_SEC1, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write: %s", state_str(st));
     st = W25Q_ReadData(w25q, buf_b, ADDR_SEC1, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_exp, first_got;
     uint32_t mm = count_mm(buf_a, buf_b, PAGE_BYTES, ADDR_SEC1, &first_addr, &first_exp, &first_got);
-    if (mm) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
-                 (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "256B @0x%06lX motif 0xA5^i OK",
-                 (unsigned long)ADDR_SEC1);
-    }
+    TEST_ASSERT(mm == 0, "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
+                (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "256B @0x%06lX motif 0xA5^i OK",
+             (unsigned long)ADDR_SEC1);
 }
 
 void W25Q_seq_test_t3_cross_page_rw(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC2);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase: %s", state_str(st));
     for (uint32_t i = 0; i < SIZE_CROSS_PAGE; i++) buf_a[i] = (uint8_t)(0xC3 ^ i);
     st = W25Q_WriteData(w25q, buf_a, ADDR_CROSS_PAGE, SIZE_CROSS_PAGE);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write: %s", state_str(st));
     st = W25Q_ReadData(w25q, buf_b, ADDR_CROSS_PAGE, SIZE_CROSS_PAGE);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_exp, first_got;
     uint32_t mm = count_mm(buf_a, buf_b, SIZE_CROSS_PAGE, ADDR_CROSS_PAGE, &first_addr, &first_exp, &first_got);
-    if (mm) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
-                 (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "128B @0x%06lX cheval page7/8 OK",
-                 (unsigned long)ADDR_CROSS_PAGE);
-    }
+    TEST_ASSERT(mm == 0, "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
+                (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "128B @0x%06lX cheval page7/8 OK",
+             (unsigned long)ADDR_CROSS_PAGE);
 }
 
 void W25Q_seq_test_t4_cross_sector_rw(TEST_case_t *tc) {
     W25Q_STATE st;
     st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC3);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase sec3: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase sec3: %s", state_str(st));
     st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC4);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase sec4: %s", state_str(st));
-        return;
-    }
-
+    TEST_ASSERT(st == W25Q_OK, "Erase sec4: %s", state_str(st));
     for (uint32_t i = 0; i < SIZE_CROSS_SECTOR; i++) buf_a[i] = (uint8_t)(0x55 ^ i);
     st = W25Q_WriteData(w25q, buf_a, ADDR_CROSS_SECTOR, SIZE_CROSS_SECTOR);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write: %s", state_str(st));
     st = W25Q_ReadData(w25q, buf_b, ADDR_CROSS_SECTOR, SIZE_CROSS_SECTOR);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
-
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_exp, first_got;
     uint32_t mm = count_mm(buf_a, buf_b, SIZE_CROSS_SECTOR, ADDR_CROSS_SECTOR, &first_addr, &first_exp, &first_got);
-    if (mm) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
-                 (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "32B @0x%06lX cheval sec3/4 OK",
-                 (unsigned long)ADDR_CROSS_SECTOR);
-    }
+    TEST_ASSERT(mm == 0, "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
+                (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "32B @0x%06lX cheval sec3/4 OK",
+             (unsigned long)ADDR_CROSS_SECTOR);
 }
 
 void W25Q_seq_test_t5_sector_isolation(TEST_case_t *tc) {
@@ -291,158 +217,76 @@ void W25Q_seq_test_t5_sector_isolation(TEST_case_t *tc) {
 
     W25Q_STATE st;
     st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC5);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase sec5: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase sec5: %s", state_str(st));
     st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC6);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase sec6: %s", state_str(st));
-        return;
-    }
-
+    TEST_ASSERT(st == W25Q_OK, "Erase sec6: %s", state_str(st));
     st = W25Q_WriteData(w25q, buf_isol_a, ADDR_ISOL_END5, SIZE_ISOL);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write 0xAA: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write 0xAA: %s", state_str(st));
     st = W25Q_WriteData(w25q, buf_isol_b, ADDR_ISOL_BEG6, SIZE_ISOL);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write 0x55: %s", state_str(st));
-        return;
-    }
-
+    TEST_ASSERT(st == W25Q_OK, "Write 0x55: %s", state_str(st));
     st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC5);  /* re-efface sec5 seul */
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Re-erase sec5: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Re-erase sec5: %s", state_str(st));
 
     st = W25Q_ReadData(w25q, buf_isol_rx, ADDR_ISOL_END5, SIZE_ISOL);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read sec5: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read sec5: %s", state_str(st));
     uint32_t first_addr; uint8_t first_got;
-    if (!verify_uniform(buf_isol_rx, SIZE_ISOL, 0xFF, ADDR_ISOL_END5, &first_addr, &first_got)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Sec5 non efface @0x%06lX got=0x%02X",
-                 (unsigned long)first_addr, first_got);
-        return;
-    }
+    TEST_ASSERT(verify_uniform(buf_isol_rx, SIZE_ISOL, 0xFF, ADDR_ISOL_END5, &first_addr, &first_got),
+                "Sec5 non efface @0x%06lX got=0x%02X", (unsigned long)first_addr, first_got);
 
     st = W25Q_ReadData(w25q, buf_isol_rx, ADDR_ISOL_BEG6, SIZE_ISOL);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read sec6: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read sec6: %s", state_str(st));
     uint32_t first_addr2; uint8_t first_exp2, first_got2;
     uint32_t mm = count_mm(buf_isol_b, buf_isol_rx, SIZE_ISOL, ADDR_ISOL_BEG6, &first_addr2, &first_exp2, &first_got2);
-    if (mm) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Sec6 corrompu: %lu mm @0x%06lX exp=0x%02X got=0x%02X",
-                 (unsigned long)mm, (unsigned long)first_addr2, first_exp2, first_got2);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "Sec5=0xFF efface, sec6=0x55 intact");
-    }
+    TEST_ASSERT(mm == 0, "Sec6 corrompu: %lu mm @0x%06lX exp=0x%02X got=0x%02X",
+                (unsigned long)mm, (unsigned long)first_addr2, first_exp2, first_got2);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "Sec5=0xFF efface, sec6=0x55 intact");
 }
 
 void W25Q_seq_test_t6_and_behavior(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC7);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase: %s", state_str(st));
 
     uint8_t val = 0x0F;
     st = W25Q_WriteData(w25q, &val, ADDR_SEC7, 1);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write 0x0F: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write 0x0F: %s", state_str(st));
 
     val = 0xF0;
     st = W25Q_WriteData(w25q, &val, ADDR_SEC7, 1);   /* pas d'effacement */
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write 0xF0: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write 0xF0: %s", state_str(st));
 
     uint8_t got = 0xFF;
     st = W25Q_ReadData(w25q, &got, ADDR_SEC7, 1);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
 
     const uint8_t expected = 0x0F & 0xF0;  /* = 0x00 */
-    if (got != expected) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "exp=0x%02X got=0x%02X (devrait etre AND)", expected, got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "0xFF->0x0F->0x00 (0x0F & 0xF0) OK");
-    }
+    TEST_ASSERT(got == expected, "exp=0x%02X got=0x%02X (devrait etre AND)", expected, got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "0xFF->0x0F->0x00 (0x0F & 0xF0) OK");
 }
 
 void W25Q_seq_test_t7_unaligned_rw(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_SEC8);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase: %s", state_str(st));
 
     for (uint32_t i = 0; i < SIZE_UNALIGNED; i++) buf_a[i] = (uint8_t)(0x3C ^ i);
     st = W25Q_WriteData(w25q, buf_a, ADDR_UNALIGNED, SIZE_UNALIGNED);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write: %s", state_str(st));
 
     st = W25Q_ReadData(w25q, buf_b, ADDR_SEC8, 200U);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
 
     uint32_t first_addr; uint8_t first_got;
-    if (!verify_uniform(buf_b, 50U, 0xFF, ADDR_SEC8, &first_addr, &first_got)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Zone avant corrompue @0x%06lX got=0x%02X",
-                 (unsigned long)first_addr, first_got);
-        return;
-    }
+    TEST_ASSERT(verify_uniform(buf_b, 50U, 0xFF, ADDR_SEC8, &first_addr, &first_got),
+                "Zone avant corrompue @0x%06lX got=0x%02X", (unsigned long)first_addr, first_got);
 
     uint32_t first_addr2; uint8_t first_exp2, first_got2;
     uint32_t mm = count_mm(buf_a, buf_b + 50U, SIZE_UNALIGNED, ADDR_UNALIGNED, &first_addr2, &first_exp2, &first_got2);
-    if (mm) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "%lu mm @0x%06lX exp=0x%02X got=0x%02X",
-                 (unsigned long)mm, (unsigned long)first_addr2, first_exp2, first_got2);
-        return;
-    }
+    TEST_ASSERT(mm == 0, "%lu mm @0x%06lX exp=0x%02X got=0x%02X",
+                (unsigned long)mm, (unsigned long)first_addr2, first_exp2, first_got2);
 
-    if (!verify_uniform(buf_b + 150U, 50U, 0xFF, ADDR_UNALIGNED + SIZE_UNALIGNED, &first_addr, &first_got)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Zone apres corrompue @0x%06lX got=0x%02X",
-                 (unsigned long)first_addr, first_got);
-        return;
-    }
+    TEST_ASSERT(verify_uniform(buf_b + 150U, 50U, 0xFF, ADDR_UNALIGNED + SIZE_UNALIGNED, &first_addr, &first_got),
+                "Zone apres corrompue @0x%06lX got=0x%02X", (unsigned long)first_addr, first_got);
 
     tc->result = R_PASS;
     snprintf(tc->detail, sizeof(tc->detail), "100B @0x%06lX (offset+50), pre/post=0xFF OK",
@@ -452,30 +296,13 @@ void W25Q_seq_test_t7_unaligned_rw(TEST_case_t *tc) {
 void W25Q_seq_test_t8_read_status(TEST_case_t *tc) {
     W25Q_STATE st;
     st = W25Q_ReadStatus(w25q, 1);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadSR1: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ReadSR1: %s", state_str(st));
     st = W25Q_ReadStatus(w25q, 2);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadSR2: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ReadSR2: %s", state_str(st));
     st = W25Q_ReadStatus(w25q, 3);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadSR3: %s", state_str(st));
-        return;
-    }
-    if (!W25Q_STATUS_REG(w25q, W25Q_SR3_ADS_BIT)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "ADS=0 (mode 3-byte), status_reg=0x%06lX",
-                 (unsigned long)w25q->status_reg);
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ReadSR3: %s", state_str(st));
+    TEST_ASSERT(W25Q_STATUS_REG(w25q, W25Q_SR3_ADS_BIT),
+                "ADS=0 (mode 3-byte), status_reg=0x%06lX", (unsigned long)w25q->status_reg);
     tc->result = R_PASS;
     snprintf(tc->detail, sizeof(tc->detail),
              "SR1=0x%02X SR2=0x%02X SR3=0x%02X ADS=1",
@@ -487,119 +314,59 @@ void W25Q_seq_test_t8_read_status(TEST_case_t *tc) {
 void W25Q_seq_test_t9_erase_32kb(TEST_case_t *tc) {
     /* Pre-condition : s'assure que la zone n'est pas deja vierge */
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_BLK32);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Pre-erase sector: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Pre-erase sector: %s", state_str(st));
     for (uint32_t i = 0; i < PAGE_BYTES; i++) {
         buf_a[i] = (uint8_t)(0xAB ^ i);
     }
     st = W25Q_WriteData(w25q, buf_a, ADDR_BLK32, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write motif: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write motif: %s", state_str(st));
     /* Efface tout le bloc 32 KB (0x010000-0x017FFF) */
     st = W25Q_SendCmdAddr(w25q, W25Q_32KB_BLOCK_ERASE, ADDR_BLK32);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "32KB Erase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "32KB Erase: %s", state_str(st));
     st = W25Q_ReadData(w25q, buf_b, ADDR_BLK32, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_got;
-    if (!verify_uniform(buf_b, PAGE_BYTES, 0xFF, ADDR_BLK32, &first_addr, &first_got)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Non-0xFF @0x%06lX got=0x%02X",
-                 (unsigned long)first_addr, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "256B=0xFF apres 32KB erase @0x%06lX",
-                 (unsigned long)ADDR_BLK32);
-    }
+    TEST_ASSERT(verify_uniform(buf_b, PAGE_BYTES, 0xFF, ADDR_BLK32, &first_addr, &first_got),
+                "Non-0xFF @0x%06lX got=0x%02X", (unsigned long)first_addr, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "256B=0xFF apres 32KB erase @0x%06lX",
+             (unsigned long)ADDR_BLK32);
 }
 
 void W25Q_seq_test_t10_erase_64kb(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_BLK64);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Pre-erase sector: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Pre-erase sector: %s", state_str(st));
     for (uint32_t i = 0; i < PAGE_BYTES; i++) buf_a[i] = (uint8_t)(0xDE ^ i);
     st = W25Q_WriteData(w25q, buf_a, ADDR_BLK64, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write motif: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write motif: %s", state_str(st));
     st = W25Q_SendCmdAddr(w25q, W25Q_64KB_BLOCK_ERASE_4B, ADDR_BLK64);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "64KB Erase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "64KB Erase: %s", state_str(st));
     st = W25Q_ReadData(w25q, buf_b, ADDR_BLK64, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_got;
-    if (!verify_uniform(buf_b, PAGE_BYTES, 0xFF, ADDR_BLK64, &first_addr, &first_got)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Non-0xFF @0x%06lX got=0x%02X",
-                 (unsigned long)first_addr, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "256B=0xFF apres 64KB erase @0x%06lX",
-                 (unsigned long)ADDR_BLK64);
-    }
+    TEST_ASSERT(verify_uniform(buf_b, PAGE_BYTES, 0xFF, ADDR_BLK64, &first_addr, &first_got),
+                "Non-0xFF @0x%06lX got=0x%02X", (unsigned long)first_addr, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "256B=0xFF apres 64KB erase @0x%06lX",
+             (unsigned long)ADDR_BLK64);
 }
 
 void W25Q_seq_test_t11_soft_reset(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmd(w25q, W25Q_ENABLE_RESET);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ENABLE_RESET: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ENABLE_RESET: %s", state_str(st));
     st = W25Q_SendCmd(w25q, W25Q_RESET);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "RESET: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "RESET: %s", state_str(st));
     /* Rafraichit status_reg local (stale apres reset interne du chip) */
     if (W25Q_ReadStatus(w25q, 1) == W25Q_OK)
         W25Q_ReadStatus(w25q, 2);
     st = W25Q_ReadStatus(w25q, 3);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadStatus post-reset: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ReadStatus post-reset: %s", state_str(st));
     uint8_t id[3] = {0};
     st = W25Q_ReadID(w25q, id);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "ReadID post-reset: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "ReadID post-reset: %s", state_str(st));
     uint16_t dev = (uint16_t)((id[1] << 8) | id[2]);
-    if (id[0] != W25Q_MANUFACTURER_ID || dev != W25Q_V_FULL_DEVICE_ID) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "Post-reset: Manuf=0x%02X Dev=0x%04X", id[0], dev);
-        return;
-    }
+    TEST_ASSERT(id[0] == W25Q_MANUFACTURER_ID && dev == W25Q_V_FULL_DEVICE_ID,
+                "Post-reset: Manuf=0x%02X Dev=0x%04X", id[0], dev);
     tc->result = R_PASS;
     snprintf(tc->detail, sizeof(tc->detail),
              "ID OK post-reset, ADS=%d", W25Q_STATUS_REG(w25q, W25Q_SR3_ADS_BIT));
@@ -608,103 +375,54 @@ void W25Q_seq_test_t11_soft_reset(TEST_case_t *tc) {
 void W25Q_seq_test_t12_multi_sector_rw(TEST_case_t *tc) {
     W25Q_STATE st;
     st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_MULTI);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase sec0: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase sec0: %s", state_str(st));
     st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_MULTI + SECTOR_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase sec1: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase sec1: %s", state_str(st));
     for (uint32_t i = 0; i < SIZE_LARGE; i++) {
         buf_large[i] = (uint8_t)(i & 0xFFU);
     }
     st = W25Q_WriteData(w25q, buf_large, ADDR_MULTI, SIZE_LARGE);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write: %s", state_str(st));
     st = W25Q_ReadData(w25q, buf_large_rx, ADDR_MULTI, SIZE_LARGE);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_exp, first_got;
     uint32_t mm = count_mm(buf_large, buf_large_rx, SIZE_LARGE, ADDR_MULTI,
                             &first_addr, &first_exp, &first_got);
-    if (mm) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
-                 (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "%uB @0x%06lX (17 pages, 2 sec) OK",
-                 (unsigned)SIZE_LARGE, (unsigned long)ADDR_MULTI);
-    }
+    TEST_ASSERT(mm == 0, "%lu mm, 1er @0x%06lX exp=0x%02X got=0x%02X",
+                (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "%uB @0x%06lX (17 pages, 2 sec) OK",
+             (unsigned)SIZE_LARGE, (unsigned long)ADDR_MULTI);
 }
 
 void W25Q_seq_test_t13_end_of_flash_clamp(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_SendCmdAddr(w25q, W25Q_SECTOR_ERASE_4B, ADDR_NEAR_END);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Erase: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Erase: %s", state_str(st));
     for (uint32_t i = 0; i < PAGE_BYTES; i++) buf_a[i] = (uint8_t)(0x7E ^ i);
     /* Tente d'ecrire 256 B alors qu'il ne reste que 128 B disponibles */
     st = W25Q_WriteData(w25q, buf_a, ADDR_NEAR_END, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write: %s (attendu OK)", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write: %s (attendu OK)", state_str(st));
     st = W25Q_ReadData(w25q, buf_b, ADDR_NEAR_END, 128U);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_exp, first_got;
     uint32_t mm = count_mm(buf_a, buf_b, 128U, ADDR_NEAR_END,
                             &first_addr, &first_exp, &first_got);
-    if (mm) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "%lu mm @0x%06lX exp=0x%02X got=0x%02X",
-                 (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "128/256B clampees @0x%06lX OK", (unsigned long)ADDR_NEAR_END);
-    }
+    TEST_ASSERT(mm == 0, "%lu mm @0x%06lX exp=0x%02X got=0x%02X",
+                (unsigned long)mm, (unsigned long)first_addr, first_exp, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail),
+             "128/256B clampees @0x%06lX OK", (unsigned long)ADDR_NEAR_END);
 }
 
 void W25Q_seq_test_t14_write_zero_size(TEST_case_t *tc) {
     W25Q_STATE st = W25Q_WriteData(w25q, buf_a, ADDR_SEC0, 0U);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Write(size=0): %s (attendu OK)",
-                 state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Write(size=0): %s (attendu OK)", state_str(st));
     st = W25Q_ReadData(w25q, buf_b, ADDR_SEC0, PAGE_BYTES);
-    if (st != W25Q_OK) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail), "Read: %s", state_str(st));
-        return;
-    }
+    TEST_ASSERT(st == W25Q_OK, "Read: %s", state_str(st));
     uint32_t first_addr; uint8_t first_got;
-    if (!verify_uniform(buf_b, PAGE_BYTES, 0xFF, ADDR_SEC0, &first_addr, &first_got)) {
-        tc->result = R_FAIL;
-        snprintf(tc->detail, sizeof(tc->detail),
-                 "Zone modifiee @0x%06lX got=0x%02X (attendu 0xFF)",
-                 (unsigned long)first_addr, first_got);
-    } else {
-        tc->result = R_PASS;
-        snprintf(tc->detail, sizeof(tc->detail), "W25Q_OK, zone intacte (0xFF)");
-    }
+    TEST_ASSERT(verify_uniform(buf_b, PAGE_BYTES, 0xFF, ADDR_SEC0, &first_addr, &first_got),
+                "Zone modifiee @0x%06lX got=0x%02X (attendu 0xFF)",
+                (unsigned long)first_addr, first_got);
+    tc->result = R_PASS;
+    snprintf(tc->detail, sizeof(tc->detail), "W25Q_OK, zone intacte (0xFF)");
 }

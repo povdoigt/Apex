@@ -3,14 +3,14 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
+#include "vt100.h"
+
 
 
 static void usb_print(const char *s) {
     CDC_Transmit_FS((uint8_t *)s, strlen(s));
     HAL_Delay(1);
 }
-
-
 
 /* ========================================================================
  * setup() – execution unique apres init des peripheriques
@@ -46,6 +46,8 @@ void setup(void) {
         HAL_Delay(10);
     }
     HAL_Delay(50); /* stabilisation du terminal */
+
+    usb_print(VT100_SCREEN_CLEAR);
 
 	// Print the results of all test cases using the usb_print function.
 	const char suite_name[32] = "W25Q Sequential Tests";

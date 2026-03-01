@@ -21,20 +21,25 @@ void TEST_perform_cases(TEST_case_table_t table[], size_t n_cases) {
     }
 }
 
+void TEST_get_pass_fail_count(const TEST_case_table_t table[], size_t n_cases, uint32_t *n_pass, uint32_t *n_fail) {
+    uint32_t pass = 0, fail = 0;
+    for (size_t i = 0; i < n_cases; i++) {
+        if (table[i].case_info.result == R_PASS) {
+            pass++;
+        } else if (table[i].case_info.result == R_FAIL) {
+            fail++;
+        }
+    }
+    if (n_pass) *n_pass += pass;
+    if (n_fail) *n_fail += fail;
+}
+
 void TEST_print_case_result(const TEST_case_table_t *table, size_t n_cases, void (*print_func)(const char *),
                             const char suite_name[32], const char suite_desc[128]) {
     char log_buf[256];
 
     uint32_t n_pass = 0, n_fail = 0;
-    for (size_t i = 0; i < n_cases; i++) {
-        if (table[i].case_info.result == R_PASS) {
-            n_pass++;
-        } else if (table[i].case_info.result == R_FAIL) {
-            n_fail++;
-        }
-    }
-
-    print_func(VT100_SCREEN_CLEAR);
+    TEST_get_pass_fail_count(table, n_cases, &n_pass, &n_fail);
 
     snprintf(log_buf, sizeof(log_buf), VT100_FG_CYAN "===== %s Test Suite =====" VT100_RESET "\r\n"
                                                      "%s (%d test cases)\r\n\r\n",
