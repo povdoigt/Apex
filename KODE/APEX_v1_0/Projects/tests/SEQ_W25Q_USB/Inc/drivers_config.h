@@ -12,7 +12,7 @@
 // =======================================================================
 #if (APEX_ENABLE_ADXL345 == 1)
 
-#include "drivers/ADXL375.h"
+#include "ADXL375.h"
 extern adxl375_t ADXL375;
 
 #endif
@@ -22,7 +22,7 @@ extern adxl375_t ADXL375;
 // =======================================================================
 #if (APEX_ENABLE_BMI088 == 1)
 
-#include "drivers/BMI088.h"
+#include "BMI088.h"
 extern bmi088_t bmi088;
 
 #endif
@@ -33,7 +33,7 @@ extern bmi088_t bmi088;
 // =======================================================================
 #if (APEX_ENABLE_BMP388 == 1)
 
-#include "drivers/BMP388.h"
+#include "BMP388.h"
 extern BMP388_HandleTypeDef bmp388;
 
 #endif
@@ -44,7 +44,7 @@ extern BMP388_HandleTypeDef bmp388;
 // =======================================================================
 #if (APEX_ENABLE_BUZZER == 1)
 
-#include "drivers/buzzer.h"
+#include "buzzer.h"
 extern buzzer_t buzzer;
 
 #endif
@@ -55,7 +55,7 @@ extern buzzer_t buzzer;
 // =======================================================================
 #if (APEX_ENABLE_GPS == 1)
 
-#include "drivers/gps.h"
+#include "gps.h"
 
 #endif
 
@@ -65,7 +65,7 @@ extern buzzer_t buzzer;
 // =======================================================================
 #if (APEX_ENABLE_LED == 1)
 
-#include "drivers/led.h"
+#include "led.h"
 
 #endif
 
@@ -75,7 +75,7 @@ extern buzzer_t buzzer;
 // =======================================================================
 #if (APEX_ENABLE_LSM303AGR == 1)
 
-#include "drivers/LSM303AGR.h"
+#include "LSM303AGR.h"
 extern lsm303agr_t lsm303agr;
 
 #endif
@@ -86,7 +86,7 @@ extern lsm303agr_t lsm303agr;
 // =======================================================================
 #if (APEX_ENABLE_SX127X_1 == 1)
 
-#include "drivers/sx127x.h"
+#include "sx127x.h"
 extern sx127x_t sx127x_1;
 
 #endif
@@ -96,7 +96,7 @@ extern sx127x_t sx127x_1;
 // =======================================================================
 #if (APEX_ENABLE_SX127X_2 == 1)
 
-#include "drivers/sx127x.h"
+#include "sx127x.h"
 extern sx127x_t sx127x_2;
 
 #endif
@@ -107,7 +107,7 @@ extern sx127x_t sx127x_2;
 // =======================================================================
 #if (APEX_ENABLE_W25Q512 == 1)
 
-#include "drivers/w25q_mem.h"
+#include "w25q.h"
 extern W25Q_t w25q;
 
 #endif
@@ -118,7 +118,7 @@ extern W25Q_t w25q;
 // =======================================================================
 #if (APEX_ENABLE_WT901B == 1)
 
-#include "drivers/WT901B.h"
+#include "WT901B.h"
 
 #endif
 

@@ -4,6 +4,8 @@
 #include "main_config.h"
 #include "drivers_config.h"
 
+#include "w25q_seq_test.h"
+
 // Setup fonction is used any additional execution that needs to be done once at
 // the start of the program, after all initializations. It is called once in the main function
 // after all peripheral and driver initializations, and before the main loop starts.
