@@ -15,21 +15,25 @@ static inline size_t wrap_add(size_t base, int offset, size_t mod) {
 }
 
 static inline void cb_lock(circular_buffer_t *cb) {
+#if (APEX_CFG_SCHED_RTOS == 1)
     osMutexAcquire(cb->mutex_id, osWaitForever);
+#endif
 }
 
 static inline void cb_unlock(circular_buffer_t *cb) {
+#if (APEX_CFG_SCHED_RTOS == 1)
     osMutexRelease(cb->mutex_id);
+#endif
 }
 
 /* --------------------------------------------------------------------------
  *   Initialisation / reset
  * -------------------------------------------------------------------------- */
 
-void cb_init(circular_buffer_t *cb,
-             void *storage, size_t elem_size, size_t capacity,
-             cb_overflow_policy_t policy) {
-    if (!cb || !storage || elem_size == 0u || capacity == 0u) return;
+cb_status_t cb_init(circular_buffer_t *cb,
+                    void *storage, size_t elem_size, size_t capacity,
+                    cb_overflow_policy_t policy) {
+    if (!cb || !storage || elem_size == 0u || capacity == 0u) return CB_BAD_ARG ;
 
     cb->storage = (uint8_t *)storage;
     cb->elem_size = elem_size;
@@ -39,6 +43,7 @@ void cb_init(circular_buffer_t *cb,
     cb->count = 0u;
     cb->policy = policy;
 
+#if (APEX_CFG_SCHED_RTOS == 1)
     // Initialisation du mutex
     const osMutexAttr_t mutex_attr = {
         // .name = "CB_Mutex",
@@ -48,24 +53,33 @@ void cb_init(circular_buffer_t *cb,
     cb->mutex_id = osMutexNew(&mutex_attr);
     if (!(cb->mutex_id)) {
         // Échec de la création du mutex
-        return;
+        return CB_BAD_ARG;
     }
+#endif
+
+    return CB_OK;
 }
 
-void cb_reset(circular_buffer_t *cb) {
+cb_status_t cb_reset(circular_buffer_t *cb) {
+    if (!cb) return CB_BAD_ARG;
     cb_lock(cb);
     cb->head = 0u;
     cb->tail = 0u;
     cb->count = 0u;
     cb_unlock(cb);
+    return CB_OK;
 }
 
-void cb_free(circular_buffer_t *cb) {
-    if (!cb) return;
+cb_status_t cb_free(circular_buffer_t *cb) {
+#if (APEX_CFG_SCHED_RTOS == 1)
+    if (!cb) return CB_BAD_ARG;
     if (cb->mutex_id) {
         osMutexDelete(cb->mutex_id);
         cb->mutex_id = NULL;
     }
+#endif
+    return CB_OK;
+
 }
 
 /* --------------------------------------------------------------------------
@@ -80,6 +94,7 @@ cb_status_t cb_push(circular_buffer_t *cb, const void *elem) {
     /* Cas plein */
     if (cb->count == cb->capacity) {
         if (cb->policy == CB_REJECT_NEW) {
+            cb_unlock(cb);  /* libère le mutex avant de retourner */
             return CB_FULL;
         }
         /* Overwrite oldest: on avance le tail */

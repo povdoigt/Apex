@@ -23,9 +23,9 @@ static char log_buf[256];
  * setup() — execution unique apres init des peripheriques
  * ======================================================================== */
 void setup(void) {
-	BMI088_test_set_context(&bmi088, &bmi088_config);
+	BMI088_seq_test_set_context(&bmi088, &bmi088_config);
 
-    TEST_configure_cases(BMI088_test_cases, BMI088_test_N_TESTS, (const bool[]) {
+    TEST_configure_cases(BMI088_seq_test_cases, BMI088_seq_test_N_TESTS, (const bool[]) {
         true,	/* T0  chip IDs */
         true,	/* T1  ACC soft reset */
         true,	/* T2  GYR soft reset */
@@ -33,13 +33,13 @@ void setup(void) {
         true,	/* T4  GYR config R/W */
         true,	/* T5  ACC self-test */
         true,	/* T6  GYR BIST */
-        false	/* T7  ACC temperature */
+        true	/* T7  ACC temperature */
     });
 
     // Execute all tests sequentially and fill the results in the test cases.
-    for (int i = 0; i < BMI088_test_N_TESTS; i++) {
-        if (BMI088_test_cases[i].case_info.result != R_SKIP) {
-            BMI088_test_cases[i].func(&BMI088_test_cases[i].case_info);
+    for (int i = 0; i < BMI088_seq_test_N_TESTS; i++) {
+        if (BMI088_seq_test_cases[i].case_info.result != R_SKIP) {
+            BMI088_seq_test_cases[i].func(&BMI088_seq_test_cases[i].case_info);
         }
     }
 
@@ -54,7 +54,7 @@ void setup(void) {
 	const char title[32] = "BMI088 Sequential Driver Test";
 	const char desc[128] = "IDs, reset, config R/W, self-test, temperature";
 
-	TEST_print_case_result(BMI088_test_cases, BMI088_test_N_TESTS, usb_print, title, desc);
+	TEST_print_case_result(BMI088_seq_test_cases, BMI088_seq_test_N_TESTS, usb_print, title, desc);
     
 	/* En-tete fixe de la section live (imprime une seule fois) */
 	usb_print("\r\n" VT100_FG_CYAN "--- Mesures live ---" VT100_RESET "\r\n");

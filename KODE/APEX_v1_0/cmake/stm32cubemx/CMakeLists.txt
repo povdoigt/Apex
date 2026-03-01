@@ -10,7 +10,7 @@ set(MX_Defines_Syms
 
 # Configure project path
 set(CMAKE_APEX_PROJECT_PATH
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/tests/SEQ_W25Q_USB
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/tests/SEQ_DT_USB
 )
 
 # STM32CubeMX generated include paths
@@ -117,8 +117,8 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Src/usb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Src/vt100.c
 
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Src/circular_buffer_test.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/data_topic_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Src/cb_seq_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_seq_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/test/Src/flash_stream_test.c
     # # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/test/Src/iir_filter_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/test/Src/scheduler_test.c

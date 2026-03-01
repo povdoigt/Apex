@@ -3,8 +3,11 @@
 
 #include <stdint.h>
 #include <stddef.h>
+
+#if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,9 +51,11 @@ typedef struct circular_buffer_t {
     size_t   tail;                  /**< Position du plus ancien élément. */
     size_t   count;                 /**< Nombre d’éléments actuellement stockés. */
     cb_overflow_policy_t policy;    /**< Politique en cas de dépassement. */
+#if (APEX_CFG_SCHED_RTOS == 1)
     // Verouillage par mutex
     osMutexId_t mutex_id;           /**< ID du mutex pour accès thread-safe. */
     StaticSemaphore_t mutex_cm;     /**< Mémoire statique pour le mutex. */
+#endif
 } circular_buffer_t;
 
 /**
@@ -70,16 +75,16 @@ typedef struct circular_buffer_t {
  * @param capacity  Nombre maximal d’éléments.
  * @param policy    Politique en cas de dépassement.
  */
-void cb_init(circular_buffer_t *cb,
-             void *storage, size_t elem_size, size_t capacity,
-             cb_overflow_policy_t policy);
+cb_status_t cb_init(circular_buffer_t *cb,
+                    void *storage, size_t elem_size, size_t capacity,
+                    cb_overflow_policy_t policy);
 
 /**
  * @brief Vide le buffer sans modifier la mémoire de stockage.
  */
-void cb_reset(circular_buffer_t *cb);
+cb_status_t cb_reset(circular_buffer_t *cb);
 
-void cb_free(circular_buffer_t *cb);
+cb_status_t cb_free(circular_buffer_t *cb);
 
 /* --------------------------------------------------------------------------
  *   Écriture / lecture destructive

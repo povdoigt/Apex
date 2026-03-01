@@ -44,7 +44,6 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
-
 #include "project.h"
 
 /* USER CODE END Includes */

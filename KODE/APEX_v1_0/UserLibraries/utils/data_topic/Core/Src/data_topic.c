@@ -17,11 +17,15 @@ static inline size_t wrap_add(size_t base, int offset, size_t mod) {
 }
 
 static inline void dt_lock(data_topic_t *dt) {
+#if (APEX_CFG_SCHED_RTOS == 1)
     osMutexAcquire(dt->cb.mutex_id, osWaitForever);
+#endif
 }
 
 static inline void dt_unlock(data_topic_t *dt) {
+#if (APEX_CFG_SCHED_RTOS == 1)
     osMutexRelease(dt->cb.mutex_id);
+#endif
 }
 
 /* --------------------------------------------------------------------------
@@ -56,9 +60,11 @@ data_status_t data_topic_publish(data_topic_t *topic, const void *elem) {
     cb_status_t s = cb_push(&(topic->cb), elem);
     if (s == CB_FULL) return DT_FULL;
 
+#if (APEX_CFG_SCHED_RTOS == 1)
     for (data_sub_t *sub = topic->subs; sub != NULL; sub = sub->next) {
         osSemaphoreRelease(sub->sem_id);
     }
+#endif
 
     /* Publication validée */
     topic->pub_seq++;
@@ -87,6 +93,7 @@ data_status_t data_sub_attach(data_sub_t *sub,
         sub->tail = topic->cb.head;
     }
 
+#if (APEX_CFG_SCHED_RTOS == 1)
     const osSemaphoreAttr_t sem_attr = {
         // .name = "DataSub_Sem",
         .cb_mem = &sub->sem_cm,
@@ -95,7 +102,7 @@ data_status_t data_sub_attach(data_sub_t *sub,
 
     uint32_t initial_count = data_sub_num_to_read(sub) > 0 ? 1 : 0;
     sub->sem_id = osSemaphoreNew(1, initial_count, &sem_attr);
-
+#endif
 
     dt_lock(topic);
 
@@ -143,10 +150,12 @@ data_status_t data_sub_detach(data_sub_t *sub) {
     sub->tail = 0u;
     sub->last_seq = 0u;
 
+#if (APEX_CFG_SCHED_RTOS == 1)
     if (sub->sem_id) {
         osSemaphoreDelete(sub->sem_id);
         sub->sem_id = NULL;
     }
+#endif
 
     return DT_OK;
 }
@@ -242,6 +251,8 @@ data_status_t data_sub_read(data_sub_t *sub, void *out_elem) {
     return status;
 }
 
+#if (APEX_CFG_SCHED_RTOS == 1)
+
 /* --------------------------------------------------------------------------
  *   API Subscriber : Fonctions avec callback
  * -------------------------------------------------------------------------- */
@@ -258,3 +269,5 @@ void data_sub_wait_for_data(data_sub_t *sub, uint32_t timeout_ms) {
     osStatus_t status = osSemaphoreAcquire(sub->sem_id, timeout_ms);
     (void)status; // Ignorer le statut pour l'instant
 }
+
+#endif
