@@ -275,6 +275,10 @@ static void t4_gyr_config_rw(void) {
     {
         const uint8_t range_exp = (uint8_t)BMI_GYR_RANGE_500;
         const uint8_t bw_exp    = (uint8_t)BMI_GYR_BANDWIDTH_BW_47_HZ;
+
+        range_r &= BMI_GYR_RANGE_MASK;
+        bw_r    &= BMI_GYR_BANDWIDTH_BW_MASK;
+
         if (range_r != range_exp || bw_r != bw_exp) {
             tc[4].result = R_FAIL;
             snprintf(tc[4].detail, sizeof(tc[4].detail),

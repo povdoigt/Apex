@@ -546,6 +546,8 @@ typedef enum {
 } bmi_gyr_bandwidth_bw_t;
 #define BMI_GYR_BANDWIDTH_BW_MASK (0b00000111)
 
+/* [3] read only and always 1 */
+
 /* -------------------------------------------------------------------------- */
 /* 0x11 — GYR_LPM1 : Power mode control (RW, reset = 0x00)                     */
 /* -------------------------------------------------------------------------- */
