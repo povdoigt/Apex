@@ -348,6 +348,9 @@ void __sx127x_SetPwrvalue(sx127x_base_chip_t *chip, float Pout, uint8_t *pMaxPow
 
 /* ============================== FreeRTOS ============================== */
 
+#if (APEX_CFG_SCHED_RTOS == 1)
+
+
 /* Niveau 0: Primitives SPI */
 
 static inline sx127x_status_t sx127x_SPI_Begin_RTOS(sx127x_base_chip_t *chip) {
@@ -583,3 +586,5 @@ sx127x_status_t sx127x_SetOcp_RTOS(sx127x_base_chip_t *chip, float ocp_current_m
 
     return sx127x_RegWrite_RTOS_NoLock(chip, sx127x_REG_0B_OCP, ocp_trim);
 }
+
+#endif

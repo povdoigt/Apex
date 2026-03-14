@@ -490,7 +490,7 @@ W25Q_STATE W25Q_ReadData(W25Q_t *chip, uint8_t *data_buf, uint32_t addr, uint32_
 
 /* ============================== FreeRTOS ============================== */
 
-
+#if (APEX_CFG_SCHED_RTOS == 1)
 
 
 /* -------------------------------------------------------------------------- */
@@ -1142,3 +1142,5 @@ Thank you for your attention and happy coding!";
 
 	osThreadExit_Cstm();
 }
+
+#endif

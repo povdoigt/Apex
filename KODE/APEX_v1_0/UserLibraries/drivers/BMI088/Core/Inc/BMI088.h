@@ -39,7 +39,7 @@
 #include "scheduler.h"
 #endif
 
-
+#include "stm32f4xx_hal.h"
 #include "data_topic.h"
 #include "types.h"
 
@@ -782,9 +782,10 @@ typedef struct bmi088_t {
     float                gyr_conv;      /**< LSB → °/s (or rad/s) conversion factor, computed at init */
 
     bmi_config_t         config;        /**< Active register configuration snapshot */
-
+#if (APEX_CFG_SCHED_RTOS == 1)
     StaticSemaphore_t    sem;           /**< Static semaphore control block (FreeRTOS) */
     osSemaphoreId_t      sem_id;        /**< CMSIS-RTOS semaphore handle (binary, init=1) */
+#endif
 } bmi088_t;
 
 /* -------------------------------------------------------------------------- */
