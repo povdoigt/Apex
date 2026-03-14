@@ -274,6 +274,8 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *spiHandle) {
 
 /* USER CODE BEGIN 1 */
 
+#if (APEX_CFG_SCHED_RTOS == 1)
+
 typedef struct spi_semaphores_t {
 #ifdef SPI1
 	osSemaphoreId_t spi1_use_semaphore_id;
@@ -425,5 +427,6 @@ HAL_StatusTypeDef SPI_End_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinB
 	return osSemaphoreRelease(use_sem) == osOK ? HAL_OK : HAL_ERROR;
 }
 
+#endif /* APEX_CFG_SCHED_RTOS */
 
 /* USER CODE END 1 */

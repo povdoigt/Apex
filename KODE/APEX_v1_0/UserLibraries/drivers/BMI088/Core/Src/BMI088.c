@@ -13,16 +13,14 @@
  */
 
 #include "stm32f4xx_hal.h"
-#include "cmsis_os2.h"
 
 #include "BMI088.h"
 
-#include "peripherals/spi.h"
-
 #include "data_topic.h"
-#include "scheduler.h"
 #include "tools.h"
 #include "types.h"
+
+#include "peripherals/spi.h"
 
 #include <stdint.h>
 
@@ -473,7 +471,7 @@ BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c) {
 
 
 
-
+#if (APEX_CFG_SCHED_RTOS == 1)
 
 
 /* -------------------------------------------------------------------------- */
@@ -1037,3 +1035,5 @@ void TASK_BMI088_ReadTemp(void *argument) {
         osDelay(10);
     }
 }
+
+#endif /* APEX_CFG_SCHED_RTOS == 1 */

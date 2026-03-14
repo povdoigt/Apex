@@ -125,7 +125,7 @@ int main(void)
 
 	/* USER CODE BEGIN 2 */
 
-	MX_USB_DEVICE_Init();
+	// MX_USB_DEVICE_Init();
 
 
 #if (APEX_CFG_SCHED_SEQ == 1)
@@ -146,6 +146,8 @@ int main(void)
 	/* Init scheduler */
 	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
 	MX_FREERTOS_Init();
+
+	setup();
 
 	/* Start scheduler */
 	osKernelStart();

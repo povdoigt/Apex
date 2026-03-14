@@ -32,13 +32,16 @@
 
 
 #include <stdbool.h>
+
+#if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
-#include "peripherals/spi.h"
+#include "scheduler.h"
+#endif
+
 
 #include "data_topic.h"
 #include "types.h"
-#include "scheduler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -827,6 +830,7 @@ BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyro);
 BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c);
 
 
+#if (APEX_CFG_SCHED_RTOS == 1)
 
 /* -------------------------------------------------------------------------- */
 /*                       Niveau 1 : Primitives capteur RTOS                   */
@@ -896,11 +900,11 @@ typedef struct TASK_BMI088_ReadTemp_ARGS {
 TASK_POOL_CONFIGURE(TASK_BMI088_ReadTemp, 1, 1024);
 void TASK_BMI088_ReadTemp(void *arguments);
 
+#endif /* APEX_CFG_SCHED_RTOS */
 
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif /* BMI088_H */
 
