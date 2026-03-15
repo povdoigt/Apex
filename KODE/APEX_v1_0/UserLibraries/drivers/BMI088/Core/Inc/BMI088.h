@@ -41,7 +41,7 @@
 
 #include "stm32f4xx_hal.h"
 #include "data_topic.h"
-#include "float3.h"
+#include "tools.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -818,17 +818,17 @@ BMI_STATE BMI088_ApplyConfig(bmi088_t *imu, const bmi_config_t *cfg);
 /**
  * @brief Lecture des données d'accélération (en m/s²).
  */
-BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_t *accel);
+BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_ts_t *accel);
 
 /**
  * @brief Lecture des données de gyroscope (en °/s).
  */
-BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyro);
+BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_ts_t *gyro);
 
 /**
  * @brief Lecture de la température interne (en °C).
  */
-BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c);
+BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float_ts_t *temp_c);
 
 
 #if (APEX_CFG_SCHED_RTOS == 1)

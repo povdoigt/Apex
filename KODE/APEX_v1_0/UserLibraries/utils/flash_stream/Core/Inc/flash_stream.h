@@ -36,26 +36,6 @@ void flash_stream_init(FLASH_STREAM* stream, W25Q_t* flash_chip, size_t data_siz
 
 void flash_stream_write(FLASH_STREAM* stream, uint8_t* data, uint16_t len);
 void flash_stream_read(FLASH_STREAM* stream, uint8_t* data, uint16_t len);
-void flash_stream_write_float(FLASH_STREAM* stream, float data);
-void flash_stream_read_float(FLASH_STREAM* stream, float* data);
-void flash_stream_write_floats(FLASH_STREAM* stream, float* data, uint16_t len);
-void flash_stream_read_floats(FLASH_STREAM* stream, float* data, uint16_t len);
 
-
-// #define ASYNC_fs_read_write_NUMBER 10
-
-// typedef struct ASYNC_fs_read_write_CONTEXT {
-//     FLASH_STREAM    *stream;
-//     uint8_t         *data;
-//     size_t           data_size;
-// } ASYNC_fs_read_write_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_fs_read_write);
-
-// void ASYNC_fs_read_write_init(TASK *self,
-//                               FLASH_STREAM *stream, uint8_t *data,
-//                               size_t data_size);
-// TASK_RETURN ASYNC_fs_write(SCHEDULER *scheduler, TASK *self);
-// TASK_RETURN ASYNC_fs_read(SCHEDULER *scheduler, TASK *self);
 
 #endif      // FLASH_STREAM_H

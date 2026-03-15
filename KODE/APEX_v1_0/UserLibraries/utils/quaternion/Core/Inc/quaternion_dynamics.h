@@ -20,8 +20,8 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-#include "utils/quaternion.h"
-#include "utils/float3.h"
+#include "quaternion.h"
+#include "float3.h"
 
 /* Build delta quaternion dq from body angular rate ω (rad/s) and dt (s)
  * dq = exp( 0.5*dt*Omega(ω) )

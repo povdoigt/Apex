@@ -71,18 +71,19 @@ void setup(void) {
 void loop(void) {
 
     /* --- Mesures live (mises a jour a chaque appel) --- */
-    float3_t acc = {0}, gyr = {0};
-	float temp = 0.0f;
+    float3_ts_t acc = {0}, gyr = {0};
+	float_ts_t temp = {0};
     BMI088_ReadAcc(&bmi088, &acc);
     BMI088_ReadGyr(&bmi088, &gyr);
 	BMI088_ReadTemp(&bmi088, &temp);
 
     snprintf(log_buf, sizeof(log_buf),
-             "  ACC  X=%+10.3f  Y=%+10.3f  Z=%+10.3f  m/s2\r\n"
-             "  GYR  X=%+10.3f  Y=%+10.3f  Z=%+10.3f  deg/s\r\n"
-			 "  TEMP %+6.2f °C\r\n",
-             acc.x, acc.y, acc.z,
-             gyr.x, gyr.y, gyr.z, temp);
+             "  ACC  t=%10lu X=%+10.3f  Y=%+10.3f  Z=%+10.3f  m/s2\r\n"
+             "  GYR  t=%10lu X=%+10.3f  Y=%+10.3f  Z=%+10.3f  deg/s\r\n"
+			 "  TEMP t=%10lu %+6.2f °C\r\n",
+             acc.ts, acc.data.x, acc.data.y, acc.data.z,
+             gyr.ts, gyr.data.x, gyr.data.y, gyr.data.z,
+             temp.ts, temp.data);
     usb_print(log_buf);
 
     HAL_Delay(10);

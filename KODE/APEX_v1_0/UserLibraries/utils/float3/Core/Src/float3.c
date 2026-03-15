@@ -2,7 +2,7 @@
  * 3D vector math library (C99) — implementation.
  */
 
-#include "utils/float3.h"
+#include "float3.h"
 #include <math.h>
 #include <stdbool.h>
 

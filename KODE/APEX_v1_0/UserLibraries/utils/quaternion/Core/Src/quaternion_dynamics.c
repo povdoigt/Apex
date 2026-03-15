@@ -2,9 +2,8 @@
  * Quaternion dynamics (C99) — implementation.
  */
 
-#include "utils/quaternion_dynamics.h"
-#include "utils/float3.h"
-#include "utils/quaternion.h"
+#include "quaternion_dynamics.h"
+
 #include <math.h> /* sqrtf, sinf, cosf, isfinite */
 
 bool quatdyn_delta_from_omega(float3_t omega_body_rad_s, float dt_s, quatf_t *out_dq) {

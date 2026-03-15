@@ -1,5 +1,6 @@
 #include "BMI088_seq_test.h"
 #include "test.h"
+#include "tools.h"
 
 #include <stdio.h>
 
@@ -336,15 +337,15 @@ void BMI088_seq_test_t6_gyr_bist(TEST_case_t *tc) {
 
 
 void BMI088_seq_test_t7_acc_temperature(TEST_case_t *tc) {
-    float temp_c = 0.0f;
+    float_ts_t temp_c = { 0 };
     BMI_STATE st = BMI088_ReadTemp(bmi088, &temp_c);
     TEST_ASSERT(st == BMI_OK, "ReadTemp: %s", bmi_str(st));
-    TEST_ASSERT(temp_c >= TEMP_MIN_C && temp_c <= TEMP_MAX_C,
-                "T=%.1f C hors plage [%.0f, %.0f]", temp_c, TEMP_MIN_C, TEMP_MAX_C);
+    TEST_ASSERT(temp_c.data >= TEMP_MIN_C && temp_c.data <= TEMP_MAX_C,
+                "T=%.1f C hors plage [%.0f, %.0f]", temp_c.data, TEMP_MIN_C, TEMP_MAX_C);
     tc->result = R_PASS;
     /* evite -u _printf_float : conversion entiere */
-    int32_t ti = (int32_t)temp_c;
-    int32_t tf = (int32_t)((temp_c - (float)ti) * 10.0f);
+    int32_t ti = (int32_t)temp_c.data;
+    int32_t tf = (int32_t)((temp_c.data - (float)ti) * 10.0f);
     if (tf < 0) tf = -tf;
     snprintf(tc->detail, sizeof(tc->detail),
              "T=%ld.%ld C dans [%.0f, %.0f] OK",

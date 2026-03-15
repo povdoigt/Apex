@@ -383,7 +383,7 @@ BMI_STATE BMI088_ApplyConfig(bmi088_t *imu, const bmi_config_t *cfg) {
  * @param accel Pointeur vers la structure de sortie des données d’accélération.
  * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
  */
-BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_t *accel) {
+BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_ts_t *accel) {
     if (!imu || !accel) { return BMI_INVALID_ARG; }
 
     uint8_t raw[6];
@@ -394,9 +394,10 @@ BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_t *accel) {
     int16_t ry = (int16_t)((raw[3] << 8) | raw[2]);
     int16_t rz = (int16_t)((raw[5] << 8) | raw[4]);
 
-    accel->x = rx * imu->acc_conv;
-    accel->y = ry * imu->acc_conv;
-    accel->z = rz * imu->acc_conv;
+    accel->ts = HAL_GetTick();  // Timestamp en ms (HAL)
+    accel->data.x = rx * imu->acc_conv;
+    accel->data.y = ry * imu->acc_conv;
+    accel->data.z = rz * imu->acc_conv;
 
     return BMI_OK;
 }
@@ -411,7 +412,7 @@ BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_t *accel) {
  * @param gyr Pointeur vers la structure de sortie des données de rotation.
  * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
  */
-BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyr) {
+BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_ts_t *gyr) {
     if (!imu || !gyr) { return BMI_INVALID_ARG; }
 
     uint8_t raw[6];
@@ -422,9 +423,10 @@ BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyr) {
     int16_t ry = (int16_t)((raw[3] << 8) | raw[2]);
     int16_t rz = (int16_t)((raw[5] << 8) | raw[4]);
 
-    gyr->x = rx * imu->gyr_conv;
-    gyr->y = ry * imu->gyr_conv;
-    gyr->z = rz * imu->gyr_conv;
+    gyr->ts = HAL_GetTick();  // Timestamp en ms (HAL)
+    gyr->data.x = rx * imu->gyr_conv;
+    gyr->data.y = ry * imu->gyr_conv;
+    gyr->data.z = rz * imu->gyr_conv;
 
     return BMI_OK;
 }
@@ -439,7 +441,7 @@ BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyr) {
  * @param temp_c Pointeur vers la température convertie.
  * @retval BMI_STATE  BMI_OK si succès, code d’erreur sinon.
  */
-BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c) {
+BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float_ts_t *temp_c) {
     if (!imu || !temp_c) { return BMI_INVALID_ARG; }
 
     uint8_t raw[2];
@@ -460,7 +462,8 @@ BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c) {
     }
 
     // Convert to °C using formula from datasheet (section 5.3.7 page 28)
-    *temp_c = (float)t_raw * 0.125f + 23.0f;
+    temp_c->ts = HAL_GetTick();  // Timestamp en ms (HAL)
+    temp_c->data = (float)t_raw * 0.125f + 23.0f;
     return BMI_OK;
 }
 

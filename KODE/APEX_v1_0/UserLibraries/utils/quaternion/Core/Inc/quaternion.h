@@ -17,7 +17,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "utils/float3.h"
+#include "float3.h"
 
 /* ----------------------------- Types ----------------------------------- */
 

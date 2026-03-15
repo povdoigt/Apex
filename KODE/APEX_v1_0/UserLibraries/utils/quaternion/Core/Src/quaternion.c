@@ -2,7 +2,7 @@
  * Quaternion math library (C99) — implementation.
  */
 
-#include "utils/quaternion.h"
+#include "quaternion.h"
 #include <math.h>   /* sqrtf, isfinite, fabsf */
 
 #define QUATF_EPS_NORM (1e-20f)

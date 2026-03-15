@@ -1,11 +1,22 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
+#include "float3.h"
 #include "stm32f4xx_hal.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <math.h> 
+
+typedef struct float_ts_t {
+    uint32_t ts;
+    float data;
+} float_ts_t;
+
+typedef struct float3_ts_t {
+    uint32_t ts;
+    float3_t data;
+} float3_ts_t;
 
 
 void float_format(char* buff, float num, int precision, int width);
