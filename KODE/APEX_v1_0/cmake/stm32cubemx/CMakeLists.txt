@@ -51,12 +51,13 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Inc
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/Core/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/types/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Inc
 
@@ -68,7 +69,6 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/test/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/types/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/test/Inc
 
@@ -108,12 +108,14 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Src/circular_buffer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Src/data_topic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Src/flash_stream.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Src/float3.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/Core/Src/iir_filter.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Src/quaternion.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Src/quaternion_dynamics.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/Core/Src/scheduler.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/Core/Src/telem_format.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/Core/Src/test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/Core/Src/tools.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/types/Core/Src/types.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Src/usb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Src/vt100.c
 

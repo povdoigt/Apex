@@ -1,26 +1,11 @@
-
 #ifndef TOOLS_H
 #define TOOLS_H
 
 #include "stm32f4xx_hal.h"
-#include "scheduler.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <math.h> 
-
-// #define MAX_LENGTH_SPI_BUF 1024
-
-typedef union FLOAT_U32_UNION {
-    float    float_type;
-    uint32_t uint32_type;
-} FLOAT_U32_UNION;
-
-typedef struct SPI_HandleTypeDef_flag {
-    SPI_HandleTypeDef   *hspi;
-    bool                 is_used;
-} SPI_HandleTypeDef_flag;
-
 
 
 void float_format(char* buff, float num, int precision, int width);
@@ -40,20 +25,6 @@ void set_line_to_csv(char **elems, char buffer[], char sep, int nbr_elems);
 HAL_StatusTypeDef TIM_Delay_Micro(uint32_t delay);
 
 // uint32_t GetMicros(void);
-
-// #define ASYNC_Delay_NUMBER 10
-
-// typedef struct ASYNC_Delay_CONTEXT {
-//     uint32_t stop_time; // Temps d'arret de la tache
-// } ASYNC_Delay_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_Delay);
-
-// void ASYNC_Delay_ms_init(TASK *self, uint32_t delay);
-// void ASYNC_Delay_us_init(TASK *self, uint32_t delay);
-// TASK_RETURN ASYNC_Delay_ms(SCHEDULER *scheduler, TASK *self);
-// TASK_RETURN ASYNC_Delay_us(SCHEDULER *scheduler, TASK *self);
-
 
 
 #endif // TOOLS_H

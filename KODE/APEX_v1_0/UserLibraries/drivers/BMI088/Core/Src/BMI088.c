@@ -18,7 +18,7 @@
 
 #include "data_topic.h"
 #include "tools.h"
-#include "types.h"
+#include "float3.h"
 
 #include "peripherals/spi.h"
 

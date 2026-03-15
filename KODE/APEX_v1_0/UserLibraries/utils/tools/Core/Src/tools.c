@@ -72,12 +72,6 @@ HAL_StatusTypeDef TIM_Delay_Micro(uint32_t delay) {
     return status;  
 }
 
-// void SPI_HandleTypeDef_flag_init(SPI_HandleTypeDef_flag *hspi_flag, SPI_HandleTypeDef* hspi) {
-//     hspi_flag->hspi = hspi;
-//     hspi_flag->is_used = false;
-// }
-
-
 // SysTick does not decrement on microseconds, due to lack of prescaler and limited divider.
 // Scale is adjusted in the return formula.
 // The unmodified example for this code can be found on:
@@ -99,44 +93,4 @@ HAL_StatusTypeDef TIM_Delay_Micro(uint32_t delay) {
 //     range = (SysTick->LOAD + 1);
 //     return (ms * 1000) + ((range - st) / (range / 1000));
 // }
-
-
-// TASK_POOL_CREATE(ASYNC_Delay);
-
-// void ASYNC_Delay_ms_init(TASK *self, uint32_t delay) {
-//     ASYNC_Delay_CONTEXT *context = (ASYNC_Delay_CONTEXT*)self->context;
-//     context->stop_time = HAL_GetTick() + delay;
-// }
-
-// TASK_RETURN ASYNC_Delay_ms(SCHEDULER *scheduler, TASK *self) {
-//     ASYNC_Delay_CONTEXT *context = (ASYNC_Delay_CONTEXT*)self->context;
-//     UNUSED(scheduler);
-
-//     // uint32_t current_tick = HAL_GetTick();
-
-//     if (HAL_GetTick() >= context->stop_time) {
-//         return TASK_RETURN_STOP;
-//     }
-//     return TASK_RETURN_IDLE;
-// }
-
-// void ASYNC_Delay_us_init(TASK *self, uint32_t delay) {
-//     ASYNC_Delay_CONTEXT *context = (ASYNC_Delay_CONTEXT*)self->context;
-//     context->stop_time = GetMicros() + delay;
-// }
-
-// TASK_RETURN ASYNC_Delay_us(SCHEDULER *scheduler, TASK *self) {
-//     ASYNC_Delay_CONTEXT *context = (ASYNC_Delay_CONTEXT*)self->context;
-//     UNUSED(scheduler);
-
-//     // uint32_t current_tick = GetMicros();
-
-//     if (GetMicros() >= context->stop_time) {
-//         return TASK_RETURN_STOP;
-//     }
-//     return TASK_RETURN_IDLE;
-// }
-
-
-
 

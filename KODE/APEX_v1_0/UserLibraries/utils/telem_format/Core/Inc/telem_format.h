@@ -4,7 +4,7 @@
 #include "stm32f4xx_hal.h"
 
 #include "data_topic.h"
-#include "types.h"
+#include "float3.h"
 
 typedef struct TELEM_FORMAT_MSG {
     uint8_t sender_id;      // ID of the sender
