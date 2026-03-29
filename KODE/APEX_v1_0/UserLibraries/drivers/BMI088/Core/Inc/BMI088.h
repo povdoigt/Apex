@@ -33,6 +33,8 @@
 
 #include <stdbool.h>
 
+#include "data_topic.h"
+
 #if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
@@ -40,7 +42,6 @@
 #endif
 
 #include "stm32f4xx_hal.h"
-#include "data_topic.h"
 #include "tools.h"
 
 #ifdef __cplusplus
@@ -880,25 +881,28 @@ BMI_STATE BMI088_ApplyConfig_RTOS(bmi088_t *imu, const bmi_config_t *cfg);
 typedef struct TASK_BMI088_ReadAcc_ARGS {
     bmi088_t        *imu;           /**< Initialised BMI088 handle */
     data_topic_t   **dt;            /**< Set to the internal data topic on first iteration */
+    uint32_t         delay_ms;      /**< Delay between reads; if 0xffffffff then not periodic */
     BMI_STATE       *return_state;  /**< Updated each iteration with the latest status code */
 } TASK_BMI088_ReadAcc_ARGS;
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 1, 1024);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 1, 2048);
 void TASK_BMI088_ReadAcc(void *arguments);
 
 typedef struct TASK_BMI088_ReadGyr_ARGS {
     bmi088_t        *imu;           /**< Initialised BMI088 handle */
     data_topic_t   **dt;            /**< Set to the internal data topic on first iteration */
+    uint32_t         delay_ms;      /**< Delay between reads; if 0xffffffff then not periodic */
     BMI_STATE       *return_state;  /**< Updated each iteration with the latest status code */
 } TASK_BMI088_ReadGyr_ARGS;
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 1, 1024);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 1, 2048);
 void TASK_BMI088_ReadGyr(void *arguments);
 
 typedef struct TASK_BMI088_ReadTemp_ARGS {
     bmi088_t        *imu;           /**< Initialised BMI088 handle */
     data_topic_t   **dt;            /**< Set to the internal data topic on first iteration */
+    uint32_t         delay_ms;      /**< Delay between reads; if 0xffffffff then not periodic */
     BMI_STATE       *return_state;  /**< Updated each iteration with the latest status code */
 } TASK_BMI088_ReadTemp_ARGS;
-TASK_POOL_CONFIGURE(TASK_BMI088_ReadTemp, 1, 1024);
+TASK_POOL_CONFIGURE(TASK_BMI088_ReadTemp, 1, 2048);
 void TASK_BMI088_ReadTemp(void *arguments);
 
 #endif /* APEX_CFG_SCHED_RTOS */

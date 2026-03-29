@@ -2,6 +2,8 @@
 #define DATA_TOPIC_H
 
 #include "circular_buffer.h"
+#include "cmsis_os.h"
+#include "cmsis_os2.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -204,8 +206,7 @@ data_status_t data_sub_read(data_sub_t *sub, void *out_elem);
  *   API Subscriber : Fonctions avec callback
  * -------------------------------------------------------------------------- */
 
-void data_sub_wait_for_data(data_sub_t *sub, uint32_t timeout_ms);
-void data_sub_clear_data_waiting(data_sub_t *sub);
+osStatus_t data_sub_wait_for_data(data_sub_t *sub, uint32_t timeout_ms);
 
 #endif
 

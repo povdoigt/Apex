@@ -19,8 +19,15 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "peripherals/spi.h"
+
+#include "main_config.h"
+
+#if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+#endif
+
+
 #include "stm32f4xx_hal_gpio.h"
 #include "stm32f4xx_hal_spi.h"
 #include <stdint.h>

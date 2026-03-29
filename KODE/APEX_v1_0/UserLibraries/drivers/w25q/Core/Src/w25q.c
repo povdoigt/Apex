@@ -518,12 +518,12 @@ static inline W25Q_STATE W25Q_SPI_End_RTOS(W25Q_t *chip) {
 /*                          Niveau 1 : Command primitives                     */
 /* -------------------------------------------------------------------------- */
 
-static inline W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_t *chip, bool lock_sem) {
+W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_t *chip, bool lock_sem) {
 	W25Q_STATE st;
 	do {
 		st = W25Q_ReadStatus_RTOS_base(chip, 1, lock_sem);
 		if (st != W25Q_OK) return st;
-		osDelay(1);
+		// osDelay(1);		// Added before but have trouble with FreeRTOS scheduler, seems to cause some deadlocks.
 	} while (W25Q_STATUS_REG(chip, W25Q_SR1_BUSY_BIT));
 	return W25Q_OK;
 }
@@ -818,7 +818,7 @@ void TASK_W25Q_Init(void *argument) {
 	*(args->result) = W25Q_ReadID_RTOS(args->chip, id_buf);
 	if (*(args->result) != W25Q_OK) { goto exit_flag; }
 	if (id_buf[0] != W25Q_MANUFACTURER_ID) { *(args->result) = W25Q_CHIP_ERR; goto exit_flag; }
-	if (W25Q_V_FULL_DEVICE_ID != (uint32_t)((id_buf[1] << 8) | id_buf[2])) { *(args->result) = W25Q_PARAM_ERR; osThreadExit_Cstm();}
+	if (W25Q_V_FULL_DEVICE_ID != (uint32_t)((id_buf[1] << 8) | id_buf[2])) { *(args->result) = W25Q_PARAM_ERR; goto exit_flag; }
 
 	// Load configuration
 	uint32_t status_reg = 0; // Initialize status register to 0
@@ -928,10 +928,6 @@ void TASK_W25Q_ReadData(void *argument) {
 
 	*(args->result) = W25Q_WaitForReady_RTOS_NoLock(args->chip);
 	if (*(args->result) != W25Q_OK) { goto exit_release; }
-	if (!W25Q_STATUS_REG(args->chip, W25Q_SR1_WEL_BIT)) {
-		*(args->result) = W25Q_SendCmd_RTOS_NoLock(args->chip, W25Q_WRITE_ENABLE);
-		if (*(args->result) != W25Q_OK) { goto exit_release; }
-	}
 
 	args->buf_size = args->buf_size > flash_size ? flash_size : args->buf_size;
 	uint8_t cmd[5] = {

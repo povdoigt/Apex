@@ -10,7 +10,7 @@ set(MX_Defines_Syms
 
 # Configure project path
 set(CMAKE_APEX_PROJECT_PATH
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/tests/sequential/SEQ_BMI088_USB
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/missions/RTOS_BMI088_W25Q_1
 )
 
 # STM32CubeMX generated include paths

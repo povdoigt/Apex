@@ -257,17 +257,20 @@ data_status_t data_sub_read(data_sub_t *sub, void *out_elem) {
  *   API Subscriber : Fonctions avec callback
  * -------------------------------------------------------------------------- */
 
-void data_sub_wait_for_data(data_sub_t *sub, uint32_t timeout_ms) {
-    if (!sub || !sub->attached) return;
+osStatus_t data_sub_wait_for_data(data_sub_t *sub, uint32_t timeout_ms) {
+    if (!sub || !sub->attached) return osErrorParameter;
+    if (!sub->sem_id) return osErrorResource;
 
     // Vérifie s'il y a déjà des données à lire
     if (data_sub_num_to_read(sub) > 0) {
-        return;
+        return osOK;
     }
 
     // Attente avec timeout
     osStatus_t status = osSemaphoreAcquire(sub->sem_id, timeout_ms);
-    (void)status; // Ignorer le statut pour l'instant
+    // (void)status; // Ignorer le statut pour l'instant
+    return status;
+
 }
 
 #endif

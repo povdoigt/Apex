@@ -17,6 +17,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "main_config.h"
+
 #include "stm32f4xx_hal.h"
 
 #include "peripherals/spi.h"
@@ -227,7 +230,11 @@ W25Q_STATE W25Q_ReadData(W25Q_t *chip, uint8_t *data, uint32_t addr, uint32_t da
 
 /* ============================== FreeRTOS ============================== */
 
+#if (APEX_CFG_SCHED_RTOS == 1)
+
+
 /* Niveau 1 : Primitives */
+W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_t *chip, bool lock_sem);
 W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_t *chip, uint8_t cmd, bool lock_sem);
 W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_t *chip, uint8_t cmd, uint32_t addr, bool lock_sem);
 W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, bool lock_sem);
@@ -256,7 +263,7 @@ typedef struct TASK_W25Q_SendCmd_ARGS {
 	W25Q_STATE *result;
 	osEventFlagsId_t done_flags;
 } TASK_W25Q_SendCmd_ARGS;
-TASK_POOL_CONFIGURE(TASK_W25Q_SendCmd, 5, 384);
+TASK_POOL_CONFIGURE(TASK_W25Q_SendCmd, 5, 512);
 void TASK_W25Q_SendCmd(void *argument);
 
 typedef struct TASK_W25Q_SendCmdAddr_ARGS {
@@ -266,7 +273,7 @@ typedef struct TASK_W25Q_SendCmdAddr_ARGS {
 	W25Q_STATE *result;
 	osEventFlagsId_t done_flags;
 } TASK_W25Q_SendCmdAddr_ARGS;
-TASK_POOL_CONFIGURE(TASK_W25Q_SendCmdAddr, 5, 384);
+TASK_POOL_CONFIGURE(TASK_W25Q_SendCmdAddr, 5, 512);
 void TASK_W25Q_SendCmdAddr(void *argument);
 
 /* Niveau 2 : Logique périphérique */
@@ -275,7 +282,7 @@ typedef struct TASK_W25Q_Init_ARGS {
 	SPI_HandleTypeDef *hspi;
 	GPIO_TypeDef *cs_bank;
 	uint16_t cs_pin;
-	W25Q_STATE *result;
+	W25Q_STATE *result; 
 	osEventFlagsId_t done_flags;
 } TASK_W25Q_Init_ARGS;
 TASK_POOL_CONFIGURE(TASK_W25Q_Init, 1, 512);
@@ -305,6 +312,7 @@ void TASK_W25Q_ReadData(void *argument);
 
 
 
+#endif /* APEX_CFG_SCHED_RTOS == 1 */
 
 
 
@@ -313,6 +321,7 @@ void TASK_W25Q_ReadData(void *argument);
 void W25Q_ReadWriteTest(W25Q_t *W25Q_t);
 
 
+#if (APEX_CFG_SCHED_RTOS == 1)
 
 
 // A enlevé plus tard pour gagner de la place
@@ -323,6 +332,7 @@ TASK_POOL_CONFIGURE(TASK_W25Q_ReadWriteTest, 1, 8192);
 void TASK_W25Q_ReadWriteTest(void *argument);
 
 
+#endif /* APEX_CFG_SCHED_RTOS == 1 */
 
 
 #ifdef __cplusplus

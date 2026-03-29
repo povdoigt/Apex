@@ -12,6 +12,8 @@
  *       Two independent chip-selects are required (ACC and GYR).
  */
 
+#include "cmsis_os2.h"
+#include "scheduler.h"
 #include "stm32f4xx_hal.h"
 
 #include "BMI088.h"
@@ -910,12 +912,12 @@ void TASK_BMI088_ReadAcc(void *argument) {
         osThreadExit_Cstm();
     }
 
-	uint8_t storage[CIRCULAR_BUFFER_BYTES(float3_t, 16)];
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(float3_ts_t, 16)];
 	data_topic_t dt;
+	data_topic_init(&dt, storage, sizeof(float3_ts_t), 16, CB_OVERWRITE_OLDEST);
 	*(args->dt) = &dt;
-	data_topic_init(&dt, storage, sizeof(float3_t), 16, CB_OVERWRITE_OLDEST);
 
-    float3_t acc;
+    float3_ts_t acc;
     uint8_t raw[6];
     int16_t rx, ry, rz;
 
@@ -927,15 +929,20 @@ void TASK_BMI088_ReadAcc(void *argument) {
         ry = (int16_t)((raw[3] << 8) | raw[2]);
         rz = (int16_t)((raw[5] << 8) | raw[4]);
 
-        acc.x = rx * args->imu->acc_conv;
-        acc.y = ry * args->imu->acc_conv;
-        acc.z = rz * args->imu->acc_conv;
+        acc.ts = osKernelGetTickCount();
+        acc.data.x = rx * args->imu->acc_conv;
+        acc.data.y = ry * args->imu->acc_conv;
+        acc.data.z = rz * args->imu->acc_conv;
 
         *args->return_state = BMI_OK;
 
         data_topic_publish(&dt, &acc);
 
-        osDelay(10);
+        if (args->delay_ms != 0xffffffff) {
+            osDelay(args->delay_ms);
+        } else {
+            osThreadExit_Cstm();
+        }
     }
 }
 
@@ -957,12 +964,12 @@ void TASK_BMI088_ReadGyr(void *argument) {
         osThreadExit_Cstm();
     }
 
-	uint8_t storage[CIRCULAR_BUFFER_BYTES(float3_t, 16)];
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(float3_ts_t, 16)];
 	data_topic_t dt;
-	*args->dt = &dt;
-	data_topic_init(&dt, storage, sizeof(float3_t), 16, CB_OVERWRITE_OLDEST);
+	data_topic_init(&dt, storage, sizeof(float3_ts_t), 16, CB_OVERWRITE_OLDEST);
+	*(args->dt) = &dt;
 
-    float3_t gyr;
+    float3_ts_t gyr;
 
     for (;;) {
         uint8_t raw[6];
@@ -973,15 +980,20 @@ void TASK_BMI088_ReadGyr(void *argument) {
         int16_t ry = (int16_t)((raw[3] << 8) | raw[2]);
         int16_t rz = (int16_t)((raw[5] << 8) | raw[4]);
 
-        gyr.x = rx * args->imu->gyr_conv;
-        gyr.y = ry * args->imu->gyr_conv;
-        gyr.z = rz * args->imu->gyr_conv;
+        gyr.ts = osKernelGetTickCount();
+        gyr.data.x = rx * args->imu->gyr_conv;
+        gyr.data.y = ry * args->imu->gyr_conv;
+        gyr.data.z = rz * args->imu->gyr_conv;
 
         *args->return_state = BMI_OK;
 
         data_topic_publish(&dt, &gyr);
 
-        osDelay(10);
+        if (args->delay_ms != 0xffffffff) {
+            osDelay(args->delay_ms);
+        } else {
+            osThreadExit_Cstm();
+        }
     }
 }
 
@@ -1004,12 +1016,12 @@ void TASK_BMI088_ReadTemp(void *argument) {
         osThreadExit_Cstm();
     }
 
-	uint8_t storage[CIRCULAR_BUFFER_BYTES(float, 16)];
+	uint8_t storage[CIRCULAR_BUFFER_BYTES(float_ts_t, 16)];
 	data_topic_t dt;
-	*args->dt = &dt;
-	data_topic_init(&dt, storage, sizeof(float), 16, CB_OVERWRITE_OLDEST);
+	data_topic_init(&dt, storage, sizeof(float_ts_t), 16, CB_OVERWRITE_OLDEST);
+	*(args->dt) = &dt;
 
-    float temp_c;
+    float_ts_t temp_c;
 
     for (;;) {
         uint8_t raw[2];
@@ -1025,17 +1037,22 @@ void TASK_BMI088_ReadTemp(void *argument) {
             if (t_msb_raw < 0xC1) {
                 t_raw -= 2048;  // two's complement adjustment for negative values
             } else {
+                t_raw = 0;  // Will result in temp_c = 23.0°C, which is a safe fallback value
                 *args->return_state = BMI_UNKNOWN_ERR;  // invalid temperature reading
-                continue;
             }
         }
 
         // Convert to °C using formula from datasheet (section 5.3.7 page 28)
-        temp_c = (float)t_raw * 0.125f + 23.0f;
+        temp_c.ts = osKernelGetTickCount();
+        temp_c.data = (float)t_raw * 0.125f + 23.0f;
         *args->return_state = BMI_OK;
         data_topic_publish(&dt, &temp_c);
 
-        osDelay(10);
+        if (args->delay_ms != 0xffffffff) {
+            osDelay(args->delay_ms);
+        } else {
+            osThreadExit_Cstm();
+        }
     }
 }
 

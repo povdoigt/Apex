@@ -30,6 +30,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "scheduler.h"
 #include "stm32f4xx_hal.h"
 
 #include "usb_device.h"
@@ -137,6 +138,9 @@ int main(void)
 	/* Init scheduler */
 	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
 	MX_FREERTOS_Init();
+
+  Init_spi_semaphores();
+  Init_cleanup();
 
 	setup();
 

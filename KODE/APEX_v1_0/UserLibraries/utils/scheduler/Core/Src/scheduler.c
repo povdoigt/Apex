@@ -83,7 +83,6 @@ void osThreadExit_Cstm() {
 }
 
 TASK_POOL_ALLOCATE(TASK_Idle);
-
 void TASK_Idle(void *argument) {
     osThreadId_t task_id;
     KEY_TASK_POOL_OBJ *key;
@@ -187,7 +186,7 @@ void Init_cleanup(void) {
 
     osThreadAttr_t attr = {
         .name = "TASK_Idle",
-        .priority = (osPriority_t)osPriorityLow,
+        .priority = (osPriority_t)osPriorityNormal,
     };
     OS_THREAD_NEW_CSTM(TASK_Idle, (TASK_Idle_ARGS) {}, attr, osWaitForever);
 }

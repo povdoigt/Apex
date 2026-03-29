@@ -1,6 +1,8 @@
 #ifndef CIRCULAR_BUFFER_H
 #define CIRCULAR_BUFFER_H
 
+#include "main_config.h"
+
 #include <stdint.h>
 #include <stddef.h>
 
