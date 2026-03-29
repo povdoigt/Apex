@@ -22,8 +22,17 @@
 /* USER CODE BEGIN Includes */
 
 #include "main.h"
+
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+
+#include "peripherals/adc.h"
+#include "peripherals/dma.h"
+#include "peripherals/gpio.h"
+#include "peripherals/i2c.h"
+#include "peripherals/spi.h"
+#include "peripherals/tim.h"
+#include "peripherals/usart.h"
 #include "crc.h"
 
 #include <math.h>
@@ -117,7 +126,7 @@ int main(void)
 
 	/* USER CODE BEGIN 2 */
 
-	MX_USB_DEVICE_Init();
+	// MX_USB_DEVICE_Init();
 
 
 #if (APEX_CFG_SCHED_SEQ == 1)
