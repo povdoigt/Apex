@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "peripherals/adc.h"
-#include <stdint.h>
 
 /* USER CODE BEGIN 0 */
 
@@ -147,19 +146,5 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 }
 
 /* USER CODE BEGIN 1 */
-
-uint32_t adc_value = 0;
-bool adc_ready = false;
-
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
-  if (hadc->Instance == ADC1) {
-    // Handle the ADC conversion complete event
-    // For example, you can read the converted value here
-    if (!adc_ready) {
-      adc_ready = true; // Set the flag to indicate that ADC value is ready
-    }
-    // Process adc_value as needed
-  }
-}
 
 /* USER CODE END 1 */

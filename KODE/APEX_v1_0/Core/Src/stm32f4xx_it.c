@@ -244,9 +244,6 @@ void TIM1_UP_TIM10_IRQHandler(void)
 /**
   * @brief This function handles TIM1 trigger and commutation interrupts and TIM11 global interrupt.
   */
-
-volatile unsigned long ulHighFrequencyTimerTicks = 0;
-
 void TIM1_TRG_COM_TIM11_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_TRG_COM_TIM11_IRQn 0 */

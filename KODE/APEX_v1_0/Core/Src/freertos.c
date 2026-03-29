@@ -29,6 +29,9 @@
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+typedef StaticTask_t osStaticThreadDef_t;
+typedef StaticSemaphore_t osStaticMutexDef_t;
+typedef StaticEventGroup_t osStaticEventGroupDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -55,7 +58,6 @@
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
-extern void ledTaskFnc(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -77,6 +79,15 @@ __weak unsigned long getRunTimeCounterValue(void)
 return ulHighFrequencyTimerTicks;
 }
 /* USER CODE END 1 */
+
+/* USER CODE BEGIN VPORT_SUPPORT_TICKS_AND_SLEEP */
+__weak void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime )
+{
+  // Generated when configUSE_TICKLESS_IDLE == 2.
+  // Function called in tasks.c (in portTASK_FUNCTION).
+  // TO BE COMPLETED or TO BE REPLACED by a user one, overriding that weak one.
+}
+/* USER CODE END VPORT_SUPPORT_TICKS_AND_SLEEP */
 
 /**
   * @brief  FreeRTOS initialization

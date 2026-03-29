@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2025 STMicroelectronics.
+  * Copyright (c) 2026 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -57,11 +57,10 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, RESET_GPS_Pin|CS_FLASH_Pin|CS_LORA_Pin|RESET_LORA_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LED0G_Pin|LED0B_Pin|LED0R_Pin|CS_ACC1_Pin
-                          |CS_ACC0_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOA, CS_ACC1_Pin|CS_ACC0_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(CS_GYRO_GPIO_Port, CS_GYRO_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(CS_GRYO_GPIO_Port, CS_GRYO_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : PC13 PC6 PC7 PC8
                            PC10 PC11 PC12 */
@@ -78,26 +77,24 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED0G_Pin LED0B_Pin LED0R_Pin CS_ACC1_Pin
-                           CS_ACC0_Pin */
-  GPIO_InitStruct.Pin = LED0G_Pin|LED0B_Pin|LED0R_Pin|CS_ACC1_Pin
-                          |CS_ACC0_Pin;
+  /*Configure GPIO pins : CS_ACC1_Pin CS_ACC0_Pin */
+  GPIO_InitStruct.Pin = CS_ACC1_Pin|CS_ACC0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CS_GRYO_Pin */
-  GPIO_InitStruct.Pin = CS_GYRO_Pin;
+  GPIO_InitStruct.Pin = CS_GRYO_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(CS_GYRO_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(CS_GRYO_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB12 PB13 PB14 PB15
-                           PB3 PB4 PB5 PB9 */
+                           PB4 PB5 PB9 */
   GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
-                          |GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_9;
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
