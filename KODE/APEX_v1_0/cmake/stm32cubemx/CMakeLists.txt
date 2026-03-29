@@ -60,6 +60,7 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Inc
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Inc
@@ -71,6 +72,7 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/test/Inc
 
     ${CMAKE_APEX_PROJECT_PATH}/Inc
 )
@@ -118,6 +120,8 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/Core/Src/tools.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Src/usb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Src/vt100.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_built_in.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Src/cb_seq_test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_seq_test.c
