@@ -1,11 +1,15 @@
 #ifndef PROJECT_H
 #define PROJECT_H
 
-#include "cmsis_os2.h"
-#include "data_topic.h"
+#include "FreeRTOS.h"
 #include "main_config.h"
 #include "drivers_config.h"
+
+#include "data_topic.h"
+#include "waveform.h"
 #include "tools.h"
+
+#include <stdint.h>
 
 
 // Setup fonction is used any additional execution that needs to be done once at
@@ -45,12 +49,12 @@ typedef struct flash_data_t {
 } flash_data_t;
 
 
-typedef struct TASK_InitProject_ARGS {
+typedef struct TASK_Main_ARGS {
 	void *dummy; // dummy arg to avoid empty struct
-} TASK_InitProject_ARGS;
+} TASK_Main_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_InitProject, 1, 4096)
-void TASK_InitProject(void *argument);
+TASK_POOL_CONFIGURE(TASK_Main, 1, 4096)
+void TASK_Main(void *argument);
 
 
 typedef struct TASK_SaveData_ARGS {
@@ -60,6 +64,17 @@ typedef struct TASK_SaveData_ARGS {
 } TASK_SaveData_ARGS;
 TASK_POOL_CONFIGURE(TASK_SaveData, 3, 2048)
 void TASK_SaveData(void *argument);
+
+
+typedef struct TASK_led_rgb_wave_ARGS {
+    led_rgb_t			 *led;
+    waveform_space_t	**waveform;
+	StaticSemaphore_t	 *sem_cd;
+	osSemaphoreId_t		 *sem;
+	uint32_t			  update_delay_ms;
+} TASK_led_rgb_wave_ARGS;
+TASK_POOL_CONFIGURE(TASK_led_rgb_wave, 1, 512);
+void TASK_led_rgb_wave(void *args);
 
 
 

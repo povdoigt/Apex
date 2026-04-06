@@ -3,6 +3,7 @@
 
 #include "main_config.h"
 #include "drivers_config.h"
+#include "scheduler.h"
 
 // Setup fonction is used any additional execution that needs to be done once at
 // the start of the program, after all initializations. It is called once in the main function

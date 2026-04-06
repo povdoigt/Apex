@@ -84,7 +84,7 @@ buzzer_t buzzer;
 // =======================================================================
 #if (APEX_ENABLE_LED == 1)
 
-// ... add any additional configuration or definitions for the LEDs here
+led_rgb_t led0, led1;
 
 #endif
 
@@ -211,7 +211,12 @@ void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
 #endif
 
 #if (APEX_ENABLE_LED == 1)
-	// LED initialization code here
+	LED_Init(&led0.red  , &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_R_CHANNEL);
+	LED_Init(&led0.green, &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_G_CHANNEL);
+	LED_Init(&led0.blue , &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_B_CHANNEL);
+	LED_Init(&led1.red  , &DRIVERS_CONFIG_LED1_TIMER_HANDLE, DRIVERS_CONFIG_LED1_R_CHANNEL);
+	LED_Init(&led1.green, &DRIVERS_CONFIG_LED1_TIMER_HANDLE, DRIVERS_CONFIG_LED1_G_CHANNEL);
+	LED_Init(&led1.blue , &DRIVERS_CONFIG_LED1_TIMER_HANDLE, DRIVERS_CONFIG_LED1_B_CHANNEL);
 #endif
 
 #if (APEX_ENABLE_LSM303AGR == 1)

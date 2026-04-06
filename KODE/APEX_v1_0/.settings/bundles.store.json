@@ -26,7 +26,7 @@
     },
     {
       "name": "cube-code-doc",
-      "version": "0.0.7+st.2"
+      "version": "1.0.0+st.1"
     },
     {
       "name": "cube-code-manifest",
@@ -42,7 +42,7 @@
     },
     {
       "name": "st-arm-clang",
-      "version": "21.1.1+st.6"
+      "version": "21.1.1+st.7"
     },
     {
       "name": "st-arm-clang-hybrid",
@@ -54,7 +54,7 @@
     },
     {
       "name": "pack-manager-snapshot",
-      "version": "2026.2.27"
+      "version": "2026.3.13"
     },
     {
       "name": "st-arm-clang-19_1_6-description",

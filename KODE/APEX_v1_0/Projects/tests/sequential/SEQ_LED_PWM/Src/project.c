@@ -3,11 +3,10 @@
 
 #include "float3.h"
 #include "waveform.h"
-#include "waveform_built_in.h"
 
 
-led_rgb_t led0;
-waveform_t waveform0;
+// led_rgb_t led0;
+waveform_space_t waveform0;
 
 float3_t waveform_test_fct(float t, const void *ctx) {
     float red = waveform_sine(t, &(waveform_sine_t){
@@ -28,9 +27,6 @@ float3_t waveform_test_fct(float t, const void *ctx) {
 
 void setup(void) {
     // Initialize LED driver
-    LED_Init(&led0.red, &htim2, TIM_CHANNEL_3);
-    LED_Init(&led0.green, &htim2, TIM_CHANNEL_1);
-    LED_Init(&led0.blue, &htim2, TIM_CHANNEL_2);
 
     LED_RGB_SetColor(&led0, (float3_t){.x = 0.0f, .y = 0.0f, .z = 0.0f}); // Set LED to red
 

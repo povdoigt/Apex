@@ -10,7 +10,8 @@ set(MX_Defines_Syms
 
 # Configure project path
 set(CMAKE_APEX_PROJECT_PATH
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/tests/sequential/SEQ_LED_PWM
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/missions/RTOS_BMI088_W25Q_1
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/tests/sequential/SEQ_LED_PWM
 )
 
 # STM32CubeMX generated include paths
@@ -121,7 +122,10 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Src/usb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Src/vt100.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_def.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_built_in.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_scalar_arithmetic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_space_arithmetic.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Src/cb_seq_test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_seq_test.c

@@ -25,7 +25,7 @@
 #define APEX_ENABLE_BMP388				0
 #define APEX_ENABLE_BUZZER				0
 #define APEX_ENABLE_GPS					0
-#define APEX_ENABLE_LED					0
+#define APEX_ENABLE_LED					1
 #define APEX_ENABLE_LSM303AGR			0
 #define APEX_ENABLE_SX127X_1			0
 #define APEX_ENABLE_SX127X_2			0

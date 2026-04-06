@@ -17,15 +17,15 @@ extern "C" {
 
 /* 3D vector */
 typedef struct {
-    float x;
-    float y;
-    float z;
+	float x;
+	float y;
+	float z;
 } float3_t;
 
-#define FLOAT3_ZERO (float3_t){ .x = 0.0f, .y = 0.0f, .z = 0.0f }
-#define FLOAT3_UNIT_X (float3_t){ .x = 1.0f, .y = 0.0f, .z = 0.0f }
-#define FLOAT3_UNIT_Y (float3_t){ .x = 0.0f, .y = 1.0f, .z = 0.0f }
-#define FLOAT3_UNIT_Z (float3_t){ .x = 0.0f, .y = 0.0f, .z = 1.0f }
+#define FLOAT3_ZERO		(float3_t){ .x = 0.0f, .y = 0.0f, .z = 0.0f }
+#define FLOAT3_UNIT_X	(float3_t){ .x = 1.0f, .y = 0.0f, .z = 0.0f }
+#define FLOAT3_UNIT_Y	(float3_t){ .x = 0.0f, .y = 1.0f, .z = 0.0f }
+#define FLOAT3_UNIT_Z	(float3_t){ .x = 0.0f, .y = 0.0f, .z = 1.0f }
 
 /* ---- Constructors ---- */
 float3_t float3_make(float x, float y, float z);
