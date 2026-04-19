@@ -88,7 +88,7 @@ void TASK_Idle(void *argument) {
     KEY_TASK_POOL_OBJ *key;
     osStatus_t status;
     osThreadState_t state;
-    for (;;) {
+    while (1) {
         status = osMessageQueueGet(msg_queue_cleanup_id, &task_id, NULL, osWaitForever);
         if (status == osOK) {
             if (task_id != NULL) {

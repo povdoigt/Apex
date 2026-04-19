@@ -111,7 +111,7 @@ void TASK_POOL_OBJ_TABLE_remove(TASK_POOL_OBJ_TABLE *table, KEY_TASK_POOL_OBJ *k
 
 typedef struct TASK_Idle_ARGS { } TASK_Idle_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_Idle, 1, 512);
+TASK_POOL_CONFIGURE(TASK_Idle, 1, 576);
 void TASK_Idle(void *argument);
 
 void Init_cleanup(void);

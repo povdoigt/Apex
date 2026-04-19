@@ -10,8 +10,10 @@ set(MX_Defines_Syms
 
 # Configure project path
 set(CMAKE_APEX_PROJECT_PATH
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/missions/RTOS_BMI088_W25Q_1
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../Projects/tests/sequential/SEQ_LED_PWM
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_BMI088_W25Q_1
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_BMI088_USB
 )
 
 # STM32CubeMX generated include paths
@@ -53,6 +55,7 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_chunk/Core/Inc
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/Core/Inc
@@ -112,6 +115,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Src/data_topic.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Src/flash_stream.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Src/float3.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_chunk/Core/Src/flash_chunk.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/Core/Src/iir_filter.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Src/quaternion.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Src/quaternion_dynamics.c

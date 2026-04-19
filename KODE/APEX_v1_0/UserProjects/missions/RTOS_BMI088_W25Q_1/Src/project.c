@@ -35,12 +35,12 @@ data_topic_t *data_topic_temp_ptr = NULL;
 
 #define EVENT_FLAGS_CLEAR_MASK      (0xFFFFFFFFU)
 #define EVENT_FLAGS_DONE_BIT        (0x01U)
-#define SENSOR_READ_DELAY_MS        (10U)
+#define SENSOR_READ_DELAY_MS        (3U)
 #define TOPIC_READY_POLL_DELAY_MS   (10U)
 #define CDC_READY_POLL_DELAY_MS     (10U)
 #define CDC_TX_PACE_DELAY_MS        (1U)
 #define SAVE_TASK_COUNT             (3U)
-#define SAVE_DURATION_MS            (30000U)
+#define SAVE_DURATION_MS            (10000U)
 #define USB_BUFFER_LEN              (128U)
 
 /* Create and clear a static event-flag object. */
@@ -294,14 +294,6 @@ static void print_flash_contents(void) {
 	CDC_Transmit_FS((uint8_t *)usb_buffer, strlen(usb_buffer));
 }
 
-// static float waveform_strob(float t, const void *ctx) {
-// 	(void)ctx;
-// 	return (
-// 		waveform_gate(t, &(waveform_gate_t){ .start = 0.0f, .end = 0.1f })
-// 		+ waveform_gate(t, &(waveform_gate_t){ .start = 0.2f, .end = 0.3f })
-// 	);
-// }
-
 static void change_waveform(waveform_space_t **old_waveform, waveform_space_t *new_waveform, osSemaphoreId_t *sem) {
 	osSemaphoreAcquire(*sem, osWaitForever);
 	*old_waveform = new_waveform;
@@ -506,7 +498,6 @@ void TASK_SaveData(void *argument) {
 
 	uint32_t t0 = osKernelGetTickCount();
 
-	// SAVE_DURATION_MS is in RTOS ticks (10 s at 1 kHz tick).
 	while (osKernelGetTickCount() - t0 < SAVE_DURATION_MS) {
 		data_sub_wait_for_data(&sub, osWaitForever);
 		data_sub_read(&sub, &(flash_data.data.acc));

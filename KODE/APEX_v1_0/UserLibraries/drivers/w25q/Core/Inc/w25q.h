@@ -296,7 +296,7 @@ typedef struct TASK_W25Q_WriteData_ARGS {
 	W25Q_STATE *result;
 	osEventFlagsId_t done_flags;
 } TASK_W25Q_WriteData_ARGS;
-TASK_POOL_CONFIGURE(TASK_W25Q_WriteData, 5, 512);
+TASK_POOL_CONFIGURE(TASK_W25Q_WriteData, 5, 768);
 void TASK_W25Q_WriteData(void *argument);
 
 typedef struct TASK_W25Q_ReadData_ARGS {
