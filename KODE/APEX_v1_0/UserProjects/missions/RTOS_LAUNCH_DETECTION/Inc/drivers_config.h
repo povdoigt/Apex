@@ -6,13 +6,13 @@
 
 #include "main_config.h"
 
-#include "peripherals/adc.h"
-#include "peripherals/dma.h"
-#include "peripherals/gpio.h"
-#include "peripherals/i2c.h"
-#include "peripherals/spi.h"
-#include "peripherals/tim.h"
-#include "peripherals/usart.h"
+#include "adc.h"
+#include "dma.h"
+#include "gpio.h"
+#include "i2c.h"
+#include "spi.h"
+#include "tim.h"
+#include "usart.h"
 
 // =======================================================================
 // ADXL345 configuration

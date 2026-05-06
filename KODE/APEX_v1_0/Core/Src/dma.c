@@ -19,7 +19,7 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "peripherals/dma.h"
+#include "dma.h"
 
 /* USER CODE BEGIN 0 */
 

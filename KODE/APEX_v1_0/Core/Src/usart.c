@@ -18,7 +18,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "peripherals/usart.h"
+#include "usart.h"
 
 /* USER CODE BEGIN 0 */
 

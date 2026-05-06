@@ -18,7 +18,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "peripherals/tim.h"
+#include "tim.h"
 
 /* USER CODE BEGIN 0 */
 

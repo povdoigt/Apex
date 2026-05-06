@@ -306,6 +306,8 @@ void setup(void) {
 	TASK_POOL_CREATE(TASK_SaveData);
 	TASK_POOL_CREATE(TASK_led_rgb_wave);
 
+	osDelay(1000);
+
 	init_flash_chunks();
 
 	osThreadAttr_t main_loop_attr = {

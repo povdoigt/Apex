@@ -18,7 +18,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "peripherals/spi.h"
+#include "spi.h"
 
 #include "main_config.h"
 
