@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    spi.h
+  * @file    tim.h
   * @brief   This file contains all the function prototypes for
-  *          the spi.c file
+  *          the tim.c file
   ******************************************************************************
   * @attention
   *
@@ -18,8 +18,8 @@
   */
 /* USER CODE END Header */
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __SPI_H__
-#define __SPI_H__
+#ifndef __TIM_H__
+#define __TIM_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,33 +32,31 @@ extern "C" {
 
 /* USER CODE END Includes */
 
-extern SPI_HandleTypeDef hspi1;
+extern TIM_HandleTypeDef htim2;
 
-extern SPI_HandleTypeDef hspi2;
+extern TIM_HandleTypeDef htim3;
 
-extern SPI_HandleTypeDef hspi3;
+extern TIM_HandleTypeDef htim4;
+
+extern TIM_HandleTypeDef htim9;
+
+extern TIM_HandleTypeDef htim11;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_SPI1_Init(void);
-void MX_SPI2_Init(void);
-void MX_SPI3_Init(void);
+void MX_TIM2_Init(void);
+void MX_TIM3_Init(void);
+void MX_TIM4_Init(void);
+void MX_TIM9_Init(void);
+void MX_TIM11_Init(void);
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN Prototypes */
 
-#if (APEX_CFG_SCHED_RTOS == 1)
-
-void Init_spi_semaphores();
-
-HAL_StatusTypeDef SPI_Begin_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin);
-HAL_StatusTypeDef SPI_Transmit_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pData, uint16_t Size);
-HAL_StatusTypeDef SPI_TransmitReceive_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pTxData, uint8_t *pRxData, uint16_t Size);
-HAL_StatusTypeDef SPI_Receive_DMA_RTOS(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size);
-HAL_StatusTypeDef SPI_End_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin);
-
-#endif
+void TIM_set_frequency(TIM_HandleTypeDef* htim, float freq);
 
 /* USER CODE END Prototypes */
 
@@ -66,5 +64,5 @@ HAL_StatusTypeDef SPI_End_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinB
 }
 #endif
 
-#endif /* __SPI_H__ */
+#endif /* __TIM_H__ */
 

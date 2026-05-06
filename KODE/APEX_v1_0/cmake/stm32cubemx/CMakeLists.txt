@@ -143,13 +143,13 @@ set(MX_Application_Src
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/test/Src/usb_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/test/Src/vt100_test.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/adc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/dma.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/gpio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/i2c.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/spi.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/tim.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/usart.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/adc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/dma.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/gpio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/i2c.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/spi.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/tim.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/usart.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/crc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/freertos.c
