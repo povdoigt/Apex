@@ -17,26 +17,21 @@
  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
 #include "main.h"
-
+#include "cmsis_os.h"
 #include "adc.h"
 #include "crc.h"
 #include "dma.h"
-#include "gpio.h"
 #include "i2c.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
-
-#include "stm32f4xx_hal.h"
-
-
-
 #include "usb_device.h"
+#include "gpio.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
 #include "usbd_cdc_if.h"
 
 #include "project.h"
@@ -139,14 +134,9 @@ int main(void)
 #if (APEX_CFG_SCHED_RTOS == 1)
   /* USER CODE END 2 */
 
-	/* Init scheduler */
-	osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-	MX_FREERTOS_Init();
-
-  Init_spi_semaphores();
-  Init_cleanup();
-
-	setup();
+  /* Init scheduler */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
 
   /* Start scheduler */
   osKernelStart();

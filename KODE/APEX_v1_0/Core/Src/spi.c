@@ -20,19 +20,14 @@
 /* Includes ------------------------------------------------------------------*/
 #include "spi.h"
 
+/* USER CODE BEGIN 0 */
+
 #include "main_config.h"
 
 #if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
 #endif
-
-
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_spi.h"
-#include <stdint.h>
-
-/* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
 
@@ -128,7 +123,7 @@ void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
