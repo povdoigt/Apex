@@ -22,9 +22,11 @@
 
 #include "stm32f4xx_hal.h"
 
-#include "peripherals/spi.h"
+#include "spi.h"
 
+#if (APEX_CFG_SCHED_RTOS == 1)
 #include "scheduler.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -197,8 +199,10 @@ typedef struct {
     GPIO_TypeDef *cs_bank;
     uint16_t cs_pin;
     uint32_t status_reg;
+#if (APEX_CFG_SCHED_RTOS == 1)
 	StaticSemaphore_t sem;
 	osSemaphoreId_t sem_id;
+#endif
 } W25Q_t;
 
 /* --- Table d’attributs de commandes --- */

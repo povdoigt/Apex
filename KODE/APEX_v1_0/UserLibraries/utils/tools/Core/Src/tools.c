@@ -1,6 +1,6 @@
 #include "tools.h"
 
-#include "peripherals/tim.h"
+#include "tim.h"
 
 #include <stdio.h>
 

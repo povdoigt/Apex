@@ -21,12 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cmsis_os2.h"
-
 #include "w25q.h"
-#include "peripherals/spi.h"
-#include "scheduler.h"
-
 
 
 const uint8_t W25Q_CMD_FLAGS[256] = {

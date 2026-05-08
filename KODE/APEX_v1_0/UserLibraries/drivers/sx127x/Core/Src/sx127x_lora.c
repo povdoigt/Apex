@@ -205,6 +205,8 @@ sx127x_status_t sx127x_LORA_RxReceive(sx127x_LORA_chip_t *chip, uint8_t *data, u
 
 
 
+#if (APEX_CFG_SCHED_RTOS == 1)
+
 static sx127x_status_t __sx127x_LORA_SetMode_RTOS(sx127x_LORA_chip_t *chip, sx127x_LORA_REG_01_OP_MODE_MODE mode) {
 	if (!chip || chip->base_chip->modulation != sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
 	sx127x_status_t status;
@@ -414,3 +416,4 @@ exit_flag:
 	return status;
 }
 
+#endif // APEX_CFG_SCHED_RTOS

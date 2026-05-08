@@ -2,7 +2,7 @@
 #define ADXL375_H
 
 #include "stm32f4xx_hal.h"
-#include "peripherals/spi.h"
+#include "spi.h"
 #include "scheduler.h"
 
 

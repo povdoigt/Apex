@@ -1,5 +1,4 @@
 #include "sx127x.h"
-#include "cmsis_os2.h"
 #include "stm32f4xx_hal.h"
 #include <string.h>
 
@@ -82,6 +81,8 @@ sx127x_status_t sx127x_RxReceive(sx127x_t *chip, uint8_t *data, uint16_t *len) {
 
 
 
+
+#if (APEX_CFG_SCHED_RTOS == 1)
 
 sx127x_status_t sx127x_Init_RTOS(sx127x_t *chip, sx127x_base_config_t base_config, sx127x_modulation_t modulation, sx127x_mod_config_t config) {
     if (!chip) { return sx127x_STATUS_ERROR; }
@@ -361,4 +362,4 @@ void TASK_sx127x_Init_TxRx(void *argument) {
     }
 }
 
-
+#endif // APEX_CFG_SCHED_RTOS

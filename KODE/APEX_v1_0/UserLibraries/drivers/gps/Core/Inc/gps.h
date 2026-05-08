@@ -7,7 +7,7 @@
 
 #include "stm32f4xx_hal.h"
 #include <stdbool.h>
-#include "peripherals/usart.h"
+#include "usart.h"
 
 #ifndef GPS_H_
 #define GPS_H_

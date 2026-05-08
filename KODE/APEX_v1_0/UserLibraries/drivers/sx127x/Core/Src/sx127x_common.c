@@ -1,7 +1,4 @@
 #include "sx127x_common.h"
-#include "cmsis_os.h"
-#include "cmsis_os2.h"
-#include "peripherals/spi.h"
 #include <math.h>
 #include <stdint.h>
 

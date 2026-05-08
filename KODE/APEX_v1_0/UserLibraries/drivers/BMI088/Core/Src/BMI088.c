@@ -22,7 +22,7 @@
 #include "tools.h"
 #include "float3.h"
 
-#include "peripherals/spi.h"
+#include "spi.h"
 
 #include <stdint.h>
 

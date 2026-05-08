@@ -1,8 +1,6 @@
 #include "sx127x_fsk_ook.h"
 #include "sx127x_common.h"
 
-#include "cmsis_os.h"
-#include "cmsis_os2.h"
 #include "stm32f4xx_hal.h"
 
 #include <stdbool.h>
@@ -472,8 +470,9 @@ sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *d
 
 
 
-
 /* ============================== FreeRTOS ============================== */
+
+#if (APEX_CFG_SCHED_RTOS == 1)
 
 sx127x_status_t __sx127x_FSK_OOK_SetMode_RTOS(sx127x_FSK_OOK_chip_t *chip, sx127x_FSK_OOK_REG_01_OP_MODE_MODE mode) {
 	if (!chip || chip->base_chip->modulation == sx127x_MODULATION_LORA) { return sx127x_STATUS_ERROR; }
@@ -932,3 +931,4 @@ exit_flag:
 	return status;
 }
 
+#endif // APEX_CFG_SCHED_RTOS

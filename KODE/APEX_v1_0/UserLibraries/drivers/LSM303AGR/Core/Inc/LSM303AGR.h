@@ -2,7 +2,7 @@
 #define LSM303AGR_H
 
 #include "stm32f4xx_hal.h"
-#include "peripherals/i2c.h"
+#include "i2c.h"
 
 #include "data_topic.h"
 #include "scheduler.h"
@@ -281,89 +281,5 @@ void LSM303AGR_Init(lsm303agr_t *lsm, I2C_HandleTypeDef *hi2c);
 
 void LSM303AGR_ReadAcc(lsm303agr_t *lsm, float *acc_x, float *acc_y, float *acc_z);
 void LSM303AGR_ReadMag(lsm303agr_t *lsm, float *mag_x, float *mag_y, float *mag_z);
-
-
-
-
-
-/*
-	Macro that call the ASYNC_I2C_Mem_Tx_or_Rx_DMA_init function with the LSM303AGR
-    accelerometer parameters.
-	It requires:
-		- SCHEUDLER struct named "scheduler"
-		- TASK struct named "task"
-		- ASYNC_LSM303AGR_..._CONTEXT struct named "context" witch is the context of the task
-	
-	... to be defined in the current scope.
-
-	Parameters:
-        - add: the memory address to read or write
-        - buf: the buffer to read or write
-        - size: the size of the buffer in bytes
-*/
-// #define ASYNC_I2C_Mem_Tx_or_Rx_Acc_LSM303AGR(add, buf, size) \
-//     ASYNC_I2C_Mem_Tx_or_Rx_DMA_init( \
-//         task, \
-//         context->lsm->hi2c, \
-//         LSM303AGR_SAD_A << 1, \
-//         add, \
-//         I2C_MEMADD_SIZE_8BIT, \
-//         buf, \
-//         size)
-
-/*
-    Macro that call the ASYNC_I2C_Mem_Tx_or_Rx_DMA_init function with the LSM303AGR
-    magnetometer parameters.
-    It requires:
-        - SCHEUDLER struct named "scheduler"
-        - TASK struct named "task"
-        - ASYNC_LSM303AGR_..._CONTEXT struct named "context" witch is the context of the task
-    
-    ... to be defined in the current scope.
-
-    Parameters:
-        - add: the memory address to read or write
-        - buf: the buffer to read or write
-        - size: the size of the buffer in bytes
-*/
-// #define ASYNC_I2C_Mem_Tx_or_Rx_Mag_LSM303AGR(add, buf, size) \
-//     ASYNC_I2C_Mem_Tx_or_Rx_DMA_init( \
-//         task, \
-//         context->lsm->hi2c, \
-//         LSM303AGR_SAD_M << 1, \
-//         add, \
-//         I2C_MEMADD_SIZE_8BIT, \
-//         buf, \
-//         size)
-
-
-// #define ASYNC_LSM303AGR_ReadSensor_NUMBER 5
-
-// typedef enum ASYNC_LSM303AGR_ReadSensor_STATE {
-//     ASYNC_LSM303AGR_ReadSensor_START,
-//     ASYNC_LSM303AGR_ReadSensor_WAIT_READ,
-//     ASYNC_LSM303AGR_ReadSensor_END
-// } ASYNC_LSM303AGR_ReadSensor_STATE;
-
-// typedef struct ASYNC_LSM303AGR_ReadSensor_CONTEXT {
-//     LSM303AGR *lsm; // Pointer to LSM303AGR structure
-
-//     bool is_done; // Flag to indicate if the read operation is done
-    
-//     uint8_t raw_sensor_data[6]; // Raw sensor data buffer (acceleration or magnetometer data)
-//     FLOAT3 *sensor_data; // Sensor data buffer (acceleration or magnetometer data)
-    
-//     ASYNC_LSM303AGR_ReadSensor_STATE state; // Current state of the asynchronous operation
-// } ASYNC_LSM303AGR_ReadSensor_CONTEXT;
-
-// extern TASK_POOL_CREATE(ASYNC_LSM303AGR_ReadSensor);
-
-// void ASYNC_LSM303AGR_ReadSensor_init(TASK *self, LSM303AGR *lsm, FLOAT3 *sensor_data);
-// TASK_RETURN ASYNC_LSM303AGR_ReadAcc(SCHEDULER *scheduler, TASK *self);
-// TASK_RETURN ASYNC_LSM303AGR_ReadMag(SCHEDULER *scheduler, TASK *self);
-
-
-
-
 
 #endif // LSM303AGR_H

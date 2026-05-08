@@ -1,7 +1,7 @@
 #ifndef LED_H
 #define LED_H
 
-#include "peripherals/tim.h"
+#include "tim.h"
 #include "float3.h"
 
 #include <stdbool.h>

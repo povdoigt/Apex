@@ -2,9 +2,11 @@
 #define SX127X_COMMON_H
 
 #include "stm32f4xx_hal.h"
+#if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
-#include "peripherals/spi.h"
+#endif
+#include "spi.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -335,8 +337,10 @@ typedef struct sx127x_base_config_t {
 typedef struct sx127x_base_chip_t {
 	sx127x_base_config_t	config;			// Configuration parameters
 	sx127x_modulation_t		modulation;		// Current modulation mode
+#if (APEX_CFG_SCHED_RTOS == 1)
 	StaticSemaphore_t		sem;
 	osSemaphoreId_t			sem_id;
+#endif
 } sx127x_base_chip_t;
 
 

@@ -3,7 +3,7 @@
 
 #include "sx127x_common.h"
 #include "stm32f4xx_hal.h"
-#include "peripherals/spi.h"
+#include "spi.h"
 #include <stdbool.h>
 
 
@@ -305,12 +305,14 @@ sx127x_status_t sx127x_LORA_RxReceive(sx127x_LORA_chip_t *chip, uint8_t *data, u
 
 
 
-
+#if (APEX_CFG_SCHED_RTOS == 1)
 /* ============================== FreeRTOS ============================== */
 
 sx127x_status_t	sx127x_LORA_Config_RTOS(sx127x_LORA_chip_t *chip, sx127x_base_chip_t *base_chip, sx127x_LORA_config_t config);
 
 sx127x_status_t sx127x_LORA_TxSend_RTOS(sx127x_LORA_chip_t *chip, const uint8_t *data, uint8_t len);
 sx127x_status_t sx127x_LORA_RxReceive_RTOS(sx127x_LORA_chip_t *chip, uint8_t *data, uint8_t *len);
+
+#endif // APEX_CFG_SCHED_RTOS
 
 #endif // SX127X_LORA_H

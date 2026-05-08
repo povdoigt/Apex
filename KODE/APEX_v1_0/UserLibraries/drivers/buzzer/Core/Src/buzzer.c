@@ -1,7 +1,7 @@
 
 #include "buzzer.h"
 #include "scheduler.h"
-#include "peripherals/tim.h"
+#include "tim.h"
 
 #include <string.h>
 #include <math.h>

@@ -23,17 +23,18 @@
 
 #include "main.h"
 
-#include "FreeRTOS.h"
-#include "cmsis_os2.h"
-
+#include "adc.h"
 #include "crc.h"
+#include "dma.h"
+#include "gpio.h"
+#include "i2c.h"
+#include "spi.h"
+#include "tim.h"
+#include "usart.h"
 
-#include <math.h>
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "scheduler.h"
 #include "stm32f4xx_hal.h"
+
+
 
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
