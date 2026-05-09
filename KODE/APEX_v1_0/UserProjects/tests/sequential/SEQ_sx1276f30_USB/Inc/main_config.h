@@ -27,6 +27,6 @@
 #define APEX_ENABLE_SX127X_1            0
 #define APEX_ENABLE_SX127X_2            1
 #define APEX_ENABLE_W25Q512             0
-#define APEX_ENABLE_WT901B              0
+#define APEX_ENABLE_WT901B              1
 
 #endif // MAIN_CONFIG_H

@@ -45,6 +45,33 @@ void MX_USART6_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
+typedef struct UART_buffer_t {
+  uint8_t *rx_buffer;
+  size_t rx_length;
+} UART_buffer_t;
+
+
+#ifdef USART1
+  extern UART_buffer_t uart_buffer_1;
+#endif
+#ifdef USART2
+  extern UART_buffer_t uart_buffer_2;
+#endif
+#ifdef USART3
+  extern UART_buffer_t uart_buffer_3;
+#endif
+#ifdef UART4
+  extern UART_buffer_t uart_buffer_4;
+#endif
+#ifdef UART5
+  extern UART_buffer_t uart_buffer_5;
+#endif
+#ifdef USART6
+  extern UART_buffer_t uart_buffer_6;
+#endif
+
+void UART_get_buffer(UART_HandleTypeDef *huart, UART_buffer_t **buffer_obj_ptr);
+
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

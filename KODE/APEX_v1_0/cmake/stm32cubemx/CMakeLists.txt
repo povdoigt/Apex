@@ -41,6 +41,7 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/WT901B/Core/Inc
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/test/Inc
@@ -101,6 +102,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x_fsk_ook.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Src/w25q.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/WT901B/Core/Src/WT901B.c
 
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/test/Src/ADXL375_test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/test/Src/BMI088_seq_test.c

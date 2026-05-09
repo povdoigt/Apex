@@ -21,7 +21,8 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "WT901B.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -278,5 +279,75 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+#ifdef USART1
+  UART_buffer_t uart_buffer_1 = { 0 };
+#endif
+#ifdef USART2
+  UART_buffer_t uart_buffer_2 = { 0 };
+#endif
+#ifdef USART3
+  UART_buffer_t uart_buffer_3 = { 0 };
+#endif
+#ifdef UART4
+  UART_buffer_t uart_buffer_4 = { 0 };
+#endif
+#ifdef UART5
+  UART_buffer_t uart_buffer_5 = { 0 };
+#endif
+#ifdef USART6
+  UART_buffer_t uart_buffer_6 = { 0 };
+#endif
+
+void UART_get_buffer(UART_HandleTypeDef *huart, UART_buffer_t **buffer_obj_ptr) {
+#ifdef USART1
+  if (huart->Instance == USART1) {
+    *buffer_obj_ptr = &uart_buffer_1;
+  } else
+#endif
+#ifdef USART2
+  if (huart->Instance == USART2) {
+    *buffer_obj_ptr = &uart_buffer_2;
+  } else
+#endif
+#ifdef USART3
+  if (huart->Instance == USART3) {
+    *buffer_obj_ptr = &uart_buffer_3;
+  } else
+#endif
+#ifdef UART4
+  if (huart->Instance == UART4) {
+    *buffer_obj_ptr = &uart_buffer_4;
+  } else
+#endif
+#ifdef UART5
+  if (huart->Instance == UART5) {
+    *buffer_obj_ptr = &uart_buffer_5;
+  } else
+#endif
+#ifdef USART6
+  if (huart->Instance == USART6) {
+    *buffer_obj_ptr = &uart_buffer_6;
+  } else
+#endif
+  {
+    *buffer_obj_ptr = NULL; // Unknown UART instance
+  }
+}
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
+  if (wt901b.huart == huart) {
+    // HAL_UART_AbortReceive_IT(huart);
+    // HAL_UART_Abort_IT(huart); // Dont work if not aborted for some reason...
+    WT901B_UART_Callback_RX_IRQHandler(&wt901b, Size);
+  }
+
+  UART_buffer_t *buffer_obj;
+  UART_get_buffer(huart, &buffer_obj);
+  if (buffer_obj != NULL) {
+    // CDC_Transmit_FS(buffer_obj->rx_buffer, Size); // Echo received data for debugging
+    HAL_UARTEx_ReceiveToIdle_IT(huart, buffer_obj->rx_buffer, buffer_obj->rx_length);
+  }
+}
 
 /* USER CODE END 1 */
