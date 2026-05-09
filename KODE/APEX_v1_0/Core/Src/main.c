@@ -116,7 +116,7 @@ int main(void)
   MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
 
-	MX_USB_DEVICE_Init();
+	// MX_USB_DEVICE_Init();
 
 
 #if (APEX_CFG_SCHED_SEQ == 1)

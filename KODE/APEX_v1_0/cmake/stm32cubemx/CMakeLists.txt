@@ -14,7 +14,8 @@ set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_BMI088_USB
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276f30_USB
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_SEQ
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_ILPS28
 )
 
 # STM32CubeMX generated include paths
@@ -37,9 +38,11 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/i2c_mux/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/led/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/uart_mux/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/WT901B/Core/Inc
 
@@ -95,12 +98,14 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/Core/Src/BMP388.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/Core/Src/buzzer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/Core/Src/gps.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/i2c_mux/Core/Src/i2c_mux.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/led/Core/Src/led.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/Core/Src/LSM303AGR.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x_common.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x_lora.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x_fsk_ook.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/uart_mux/Core/Src/uart_mux.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Src/w25q.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/WT901B/Core/Src/WT901B.c
 

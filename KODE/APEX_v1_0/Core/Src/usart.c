@@ -23,6 +23,7 @@
 /* USER CODE BEGIN 0 */
 #include "drivers_config.h"
 #include "project.h"
+#include "uart_mux.h"
 #include "usbd_cdc_if.h"
 /* USER CODE END 0 */
 
@@ -338,8 +339,8 @@ void UART_get_buffer(UART_HandleTypeDef *huart, UART_buffer_t **buffer_obj_ptr) 
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   if (huart->Instance == USART6) {
-    if (uart_mux_get_state(&uart_mux)) {
-      uart_seq_callback(Size);
+    if (uart_mux_get_channel(&uart_mux) == UART_MUX_CHANNEL_1) {
+      // uart_seq_callback(Size);
     } else {
       WT901B_UART_Callback_RX_IRQHandler(&wt901b, Size);
     }

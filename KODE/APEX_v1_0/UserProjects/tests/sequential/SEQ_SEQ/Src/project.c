@@ -42,12 +42,11 @@ void setup(void) {
 
     data_sub_attach(&wt901b_acc_sub, &wt901b.data_topic, DATA_ATTACH_FROM_OLDEST);
 
-    uart_mux_set(&uart_mux, false);
+    uart_mux_set(&uart_mux, UART_MUX_CHANNEL_0);
 
 }
 static bool flag_tx = false;
 static bool flag_rx = false;
-static uint32_t t0 = 0;
 
 void loop(void) {
     
@@ -62,11 +61,11 @@ void loop(void) {
         LED_RGB_SetColor(&led0_rgb, FLOAT3_ZERO); // Turn off LED
         CDC_Transmit_FS((uint8_t*)"Switched back to 1st UART\r\n", 28);
         HAL_Delay(10);
-        uart_mux_set(&uart_mux, false); // Switch back to 1st UART (USB)
+        uart_mux_set(&uart_mux, UART_MUX_CHANNEL_0); // Switch back to 1st UART (USB)
     }
 
-    if (HAL_GPIO_ReadPin(SEQ_DA_GPIO_Port, SEQ_DA_Pin) == GPIO_PIN_RESET && !flag_tx) {
-        uart_mux_set(&uart_mux, true); // Switch to 2nd UART (SEQ)
+    if (HAL_GPIO_ReadPin(SEQ_DA_GPIO_Port, SEQ_DA_Pin) == GPIO_PIN_SET && !flag_tx) {
+        uart_mux_set(&uart_mux, UART_MUX_CHANNEL_1); // Switch to 2nd UART (SEQ)
         CDC_Transmit_FS((uint8_t*)"Switched to 2nd UART\r\n", 23);
         HAL_Delay(10);
         HAL_UART_Transmit(&huart6, (uint8_t*)"Hello from APEX\r\n", 18, HAL_MAX_DELAY);
