@@ -9,6 +9,8 @@
  * Standard project entry points
  * ========================================================================= */
 
+void uart_seq_callback(uint16_t size);
+
 void setup(void);
 void loop(void);
 

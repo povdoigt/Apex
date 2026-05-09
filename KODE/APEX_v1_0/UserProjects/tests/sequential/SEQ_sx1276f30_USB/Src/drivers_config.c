@@ -1,6 +1,8 @@
 #include "drivers_config.h"
+#include "led.h"
 #include "main.h"
 #include "sx127x_common.h"
+#include "tim.h"
 
 // =======================================================================
 // ADXL345 configuration
@@ -72,7 +74,11 @@ buzzer_t buzzer;
 // LED configuration
 // =======================================================================
 #if (APEX_ENABLE_LED == 1)
-// LED config here
+TIM_HandleTypeDef * const DRIVERS_CONFIG_LED0_TIMER = &htim2;
+const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_RED = TIM_CHANNEL_3;
+const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_GREEN = TIM_CHANNEL_1;
+const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_BLUE = TIM_CHANNEL_2;
+led_rgb_t led0_rgb;
 #endif
 
 // =======================================================================
@@ -131,6 +137,15 @@ const sx127x_modulation_t sx127x_modulation_2 = sx127x_MODULATION_FSK;
 
 sx127x_t sx127x_2;
 
+#endif
+
+// =======================================================================
+// UART Mux configuration
+// =======================================================================
+#if (APEX_ENABLE_UART_MUX == 1)
+GPIO_TypeDef * const DRIVERS_CONFIG_UART_MUX_GPIO_PORT = UART_SEL_GPIO_Port;
+const uint16_t DRIVERS_CONFIG_UART_MUX_GPIO_PIN = UART_SEL_Pin;
+uart_mux_t uart_mux;
 #endif
 
 // =======================================================================

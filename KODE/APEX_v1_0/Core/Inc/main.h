@@ -89,16 +89,14 @@ void Error_Handler(void);
 #define SPI3_CS_GPIO_Port GPIOD
 #define GFSK_NRST_Pin GPIO_PIN_3
 #define GFSK_NRST_GPIO_Port GPIOB
-#define SEQ_DA_Pin GPIO_PIN_5
-#define SEQ_DA_GPIO_Port GPIOB
 #define LED1G_Pin GPIO_PIN_6
 #define LED1G_GPIO_Port GPIOB
 #define LED1B_Pin GPIO_PIN_7
 #define LED1B_GPIO_Port GPIOB
 #define LED1R_Pin GPIO_PIN_8
 #define LED1R_GPIO_Port GPIOB
-#define CAM_Pin GPIO_PIN_9
-#define CAM_GPIO_Port GPIOB
+#define SEQ_DA_Pin GPIO_PIN_9
+#define SEQ_DA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
