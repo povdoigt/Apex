@@ -340,7 +340,7 @@ void UART_get_buffer(UART_HandleTypeDef *huart, UART_buffer_t **buffer_obj_ptr) 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   if (huart->Instance == USART6) {
     if (uart_mux_get_channel(&uart_mux) == UART_MUX_CHANNEL_1) {
-      // uart_seq_callback(Size);
+      uart_seq_callback();
     } else {
       WT901B_UART_Callback_RX_IRQHandler(&wt901b, Size);
     }

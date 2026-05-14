@@ -4,21 +4,15 @@
 #include "data_topic.h"
 #include "float3.h"
 #include "led.h"
-#include "main.h"
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_uart.h"
-#include "usart.h"
 #include "waveform.h"
 #include "vt100.h"
-
 
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
-
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 
 
@@ -59,16 +53,15 @@ void loop(void) {
         LED_RGB_SetColor(&led0_rgb, FLOAT3_UNIT_Z); // Set LED to blue
         HAL_Delay(100);
         LED_RGB_SetColor(&led0_rgb, FLOAT3_ZERO); // Turn off LED
-        CDC_Transmit_FS((uint8_t*)"Switched back to 1st UART\r\n", 28);
+        CDC_Transmit_FS((uint8_t*)"SEQ received\r\n", 28);
         HAL_Delay(10);
         uart_mux_set(&uart_mux, UART_MUX_CHANNEL_0); // Switch back to 1st UART (USB)
     }
 
-    if (HAL_GPIO_ReadPin(SEQ_DA_GPIO_Port, SEQ_DA_Pin) == GPIO_PIN_SET && !flag_tx) {
+    if (HAL_GPIO_ReadPin(SEQ_DA_GPIO_Port, SEQ_DA_Pin) == GPIO_PIN_RESET && !flag_tx) {
         uart_mux_set(&uart_mux, UART_MUX_CHANNEL_1); // Switch to 2nd UART (SEQ)
-        CDC_Transmit_FS((uint8_t*)"Switched to 2nd UART\r\n", 23);
         HAL_Delay(10);
-        HAL_UART_Transmit(&huart6, (uint8_t*)"Hello from APEX\r\n", 18, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart6, (uint8_t*)"Hello, from apex!\r\n", 19, HAL_MAX_DELAY);
         flag_tx = true;
     }
 
@@ -90,6 +83,8 @@ void wt901b_acc_callback(void) {
     }
 }
 
-void uart_seq_callback(uint16_t size) {
-    flag_rx = true;
+void uart_seq_callback(void) {
+    if (memcmp(uart_buffer_6.rx_buffer, "Hello, from sequenceur!\r\n", 25) == 0) {
+        flag_rx = true;
+    }
 }

@@ -63,7 +63,7 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, CS_GRYO_Pin|GFSK_NRST_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(UART_SEL_GPIO_Port, UART_SEL_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, UART_SEL_Pin|CAM_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SPI3_CS_GPIO_Port, SPI3_CS_Pin, GPIO_PIN_SET);
@@ -88,17 +88,15 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : CS_GRYO_Pin UART_SEL_Pin GFSK_NRST_Pin */
-  GPIO_InitStruct.Pin = CS_GRYO_Pin|UART_SEL_Pin|GFSK_NRST_Pin;
+  /*Configure GPIO pins : CS_GRYO_Pin UART_SEL_Pin GFSK_NRST_Pin CAM_Pin */
+  GPIO_InitStruct.Pin = CS_GRYO_Pin|UART_SEL_Pin|GFSK_NRST_Pin|CAM_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB12 PB13 PB14 PB4
-                           PB5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_4
-                          |GPIO_PIN_5;
+  /*Configure GPIO pins : PB12 PB13 PB14 PB4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_4;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -119,7 +117,7 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin : SEQ_DA_Pin */
   GPIO_InitStruct.Pin = SEQ_DA_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SEQ_DA_GPIO_Port, &GPIO_InitStruct);
 
 }
