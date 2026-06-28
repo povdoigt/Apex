@@ -11,10 +11,17 @@ set(MX_Defines_Syms
 # Configure project path
 set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_BMI088_W25Q_1
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_MULT
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_sx1276_1_lora
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_BMI088_USB
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_SEQ
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_SEQ_UART
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_fsk
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_lora
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_lora_synchro
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_2_fsk
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_2_lora
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_ILPS28
 )
 
@@ -58,6 +65,7 @@ set(MX_Include_Dirs
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/event_uart/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_chunk/Core/Inc
@@ -73,6 +81,7 @@ set(MX_Include_Dirs
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/event_uart/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/test/Inc
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/test/Inc
@@ -121,6 +130,7 @@ set(MX_Application_Src
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Src/circular_buffer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Src/data_topic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/event_uart/Core/Src/event_uart.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Src/flash_stream.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Src/float3.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_chunk/Core/Src/flash_chunk.c

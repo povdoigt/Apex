@@ -65,23 +65,13 @@ static inline uint8_t wt901b_compute_checksum(const uint8_t buf[11]) {
 
 WT901B_status_t WT901B_Init(WT901B_t *wt, UART_HandleTypeDef *huart) {
     wt->huart = huart;
-    memset(wt->uart_buffer, 0, WT901B_FRAME_LENGTH * WT901B_FRAME_TYPE_NBR);
+    memset(wt->parse_buffer, 0, WT901B_RX_BUFFER_SIZE);
     wt->new_data_available = false;
     wt->data_in_progress = false;
     wt->last_status = WT901B_OK;
 
-    UART_buffer_t *buffer_obj;
-    HAL_StatusTypeDef res;
-    UART_get_buffer(huart, &buffer_obj);
-    if (buffer_obj != NULL) {
-        buffer_obj->rx_buffer = wt->uart_buffer;
-        buffer_obj->rx_length = sizeof(wt->uart_buffer);
-        res = HAL_UARTEx_ReceiveToIdle_IT(huart, buffer_obj->rx_buffer, buffer_obj->rx_length);
-        // if (res != HAL_OK) {
-        //     wt->last_status = WT901B_UART_ERROR;
-        //     return WT901B_UART_ERROR; // UART receive error
-        // }
-    } else {
+    UART_buffer_t *uart_buffer = UART_buffer_get(huart);
+    if (uart_buffer == NULL) {
         wt->last_status = WT901B_UART_ERROR;
         return WT901B_UART_ERROR; // Unknown UART instance
     }
@@ -92,10 +82,12 @@ WT901B_status_t WT901B_Init(WT901B_t *wt, UART_HandleTypeDef *huart) {
 }
 
 void WT901B_UART_Callback_RX_IRQHandler(WT901B_t *wt, uint16_t Size) {
+    UART_buffer_t *uart_buffer = UART_buffer_get(wt->huart);
+
     // Frame received
     if (Size >= WT901B_FRAME_LENGTH) {
         if (!wt->data_in_progress) {
-            memcpy(wt->parse_buffer, wt->uart_buffer, Size);
+            memcpy(wt->parse_buffer, uart_buffer->rx_buffer, Size);
             wt->last_received_size = Size;
             wt->data_in_progress = true;
 			wt->last_timestamp_ms = HAL_GetTick();
@@ -108,10 +100,12 @@ void WT901B_UART_Callback_RX_IRQHandler(WT901B_t *wt, uint16_t Size) {
 
 
 void WT901B_Parse_Frames(WT901B_t *wt) {
+    UART_buffer_t *uart_buffer = UART_buffer_get(wt->huart);
+
     if (!wt->data_in_progress || wt->last_received_size < WT901B_FRAME_LENGTH) {
         wt->last_status = WT901B_NO_DATA;
 		// Make sure uart interrupts are re-enabled
-		HAL_UARTEx_ReceiveToIdle_IT(wt->huart, wt->uart_buffer, sizeof(wt->uart_buffer));
+		HAL_UARTEx_ReceiveToIdle_IT(wt->huart, uart_buffer->rx_buffer, uart_buffer->rx_length);
         return; // No new data to parse (or not enought)
     }
 

@@ -602,7 +602,7 @@ W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_t *chip, uint8_t cmd, uint32_t addr, 
 	if (W25Q_IsCmdRequiresWEL(cmd)) {
 		// No need to check status again, already done above with WaitForReady
 		if (!W25Q_STATUS_REG(chip, W25Q_SR1_WEL_BIT)) {
-			st =W25Q_SendCmd_RTOS_NoLock(chip, W25Q_WRITE_ENABLE);
+			st = W25Q_SendCmd_RTOS_NoLock(chip, W25Q_WRITE_ENABLE);
 			if (st != W25Q_OK) { goto exit_release; }
 		}
 	}

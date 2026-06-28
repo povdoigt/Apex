@@ -575,3 +575,4 @@ HAL_StatusTypeDef SPI_End_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinB
 #endif /* APEX_CFG_SCHED_RTOS */
 
 /* USER CODE END 1 */
+

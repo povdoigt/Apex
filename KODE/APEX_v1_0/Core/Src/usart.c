@@ -23,7 +23,11 @@
 /* USER CODE BEGIN 0 */
 #include "drivers_config.h"
 #include "project.h"
+
 #include "uart_mux.h"
+#include "WT901B.h"
+#include "event_uart.h"
+
 #include "usbd_cdc_if.h"
 /* USER CODE END 0 */
 
@@ -301,57 +305,73 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
   UART_buffer_t uart_buffer_6 = { 0 };
 #endif
 
-void UART_get_buffer(UART_HandleTypeDef *huart, UART_buffer_t **buffer_obj_ptr) {
+UART_buffer_t *UART_buffer_init(UART_HandleTypeDef *huart, uint8_t *buffer, size_t length) {
+  UART_buffer_t *uart_buffer = UART_buffer_get(huart);
+  if (uart_buffer == NULL) {
+    return NULL; // Unknown UART instance
+  }
+  uart_buffer->rx_buffer = buffer;
+  uart_buffer->rx_length = length;
+  return uart_buffer;
+}
+
+UART_buffer_t *UART_buffer_get(UART_HandleTypeDef *huart) {
 #ifdef USART1
   if (huart->Instance == USART1) {
-    *buffer_obj_ptr = &uart_buffer_1;
-  } else
+    return &uart_buffer_1;
+  }
 #endif
 #ifdef USART2
   if (huart->Instance == USART2) {
-    *buffer_obj_ptr = &uart_buffer_2;
+    return &uart_buffer_2;
   } else
 #endif
 #ifdef USART3
   if (huart->Instance == USART3) {
-    *buffer_obj_ptr = &uart_buffer_3;
+    return &uart_buffer_3;
   } else
 #endif
 #ifdef UART4
   if (huart->Instance == UART4) {
-    *buffer_obj_ptr = &uart_buffer_4;
+    return &uart_buffer_4;
   } else
 #endif
 #ifdef UART5
   if (huart->Instance == UART5) {
-    *buffer_obj_ptr = &uart_buffer_5;
+    return &uart_buffer_5;
   } else
 #endif
 #ifdef USART6
   if (huart->Instance == USART6) {
-    *buffer_obj_ptr = &uart_buffer_6;
+    return &uart_buffer_6;
   } else
 #endif
   {
-    *buffer_obj_ptr = NULL; // Unknown UART instance
+    return NULL; // Unknown UART instance
   }
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-  if (huart->Instance == USART6) {
-    if (uart_mux_get_channel(&uart_mux) == UART_MUX_CHANNEL_1) {
-      uart_seq_callback();
-    } else {
-      WT901B_UART_Callback_RX_IRQHandler(&wt901b, Size);
-    }
-  }
+  // if (huart->Instance == USART6) {
+  //   switch (uart_mux_get_channel(&uart_mux)) {
+  //     case UART_MUX_CHANNEL_0:
+  //       WT901B_UART_Callback_RX_IRQHandler(&wt901b, Size);
+  //       break;
+  //     case UART_MUX_CHANNEL_1:
+  //       event_uart_consumer_callback(Size);
+  //       break;
+  //     default:
+  //       break;
+  //   }
+  // }
 
-  UART_buffer_t *buffer_obj;
-  UART_get_buffer(huart, &buffer_obj);
-  if (buffer_obj != NULL) {
-    // CDC_Transmit_FS(buffer_obj->rx_buffer, Size); // Echo received data for debugging
-    HAL_UARTEx_ReceiveToIdle_IT(huart, buffer_obj->rx_buffer, buffer_obj->rx_length);
+  UART_buffer_t *uart_buffer = UART_buffer_get(huart);
+  if (uart_buffer != NULL) {
+    if (uart_buffer->rx_buffer != NULL && uart_buffer->rx_length > 0) {
+      HAL_UARTEx_ReceiveToIdle_IT(huart, uart_buffer->rx_buffer, uart_buffer->rx_length);
+    }
   }
 }
 
 /* USER CODE END 1 */
+

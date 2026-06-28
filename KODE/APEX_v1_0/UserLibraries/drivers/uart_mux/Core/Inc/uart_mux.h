@@ -15,7 +15,7 @@ typedef struct uart_mux_t {
     uart_mux_channel_t   channel;
 
     GPIO_TypeDef        *gpio_port;
-    uint16_t             gpio_pin;  
+    uint16_t             gpio_pin;
 } uart_mux_t;
 
 void uart_mux_init(uart_mux_t *mux, GPIO_TypeDef *gpio_port, uint16_t gpio_pin);

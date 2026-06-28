@@ -245,20 +245,20 @@ W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, bool lock_s
 W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, uint8_t value, bool lock_sem);
 W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_t *chip, uint8_t *id, bool lock_sem);
 
-#define W25Q_WaitForReady_RTOS_NoLock(chip)					W25Q_WaitForReady_RTOS_base(chip, false);
+#define W25Q_WaitForReady_RTOS_NoLock(chip)					W25Q_WaitForReady_RTOS_base(chip, false)
 
-#define W25Q_SendCmd_RTOS_NoLock(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, false);
-#define W25Q_SendCmdAddr_RTOS_NoLock(chip, cmd, addr)		W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, false);
-#define W25Q_ReadStatus_RTOS_NoLock(chip, sr_index)			W25Q_ReadStatus_RTOS_base(chip, sr_index, false);
-#define W25Q_WriteStatus_RTOS_NoLock(chip, sr_index, value)	W25Q_WriteStatus_RTOS_base(chip, sr_index, value, false);
-#define W25Q_ReadID_RTOS_NoLock(wchip, id)					W25Q_ReadID_RTOS_base(wchip, id, false);
+#define W25Q_SendCmd_RTOS_NoLock(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, false)
+#define W25Q_SendCmdAddr_RTOS_NoLock(chip, cmd, addr)		W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, false)
+#define W25Q_ReadStatus_RTOS_NoLock(chip, sr_index)			W25Q_ReadStatus_RTOS_base(chip, sr_index, false)
+#define W25Q_WriteStatus_RTOS_NoLock(chip, sr_index, value)	W25Q_WriteStatus_RTOS_base(chip, sr_index, value, false)
+#define W25Q_ReadID_RTOS_NoLock(wchip, id)					W25Q_ReadID_RTOS_base(wchip, id, false)
 
-#define W25Q_WaitForReady_RTOS(chip)					W25Q_WaitForReady_RTOS_base(chip, true);
-#define W25Q_SendCmd_RTOS(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, true);
-#define W25Q_SendCmdAddr_RTOS(chip, cmd, addr)			W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, true);
-#define W25Q_ReadStatus_RTOS(chip, sr_index)			W25Q_ReadStatus_RTOS_base(chip, sr_index, true);
-#define W25Q_WriteStatus_RTOS(chip, sr_index, value)	W25Q_WriteStatus_RTOS_base(chip, sr_index, value, true);
-#define W25Q_ReadID_RTOS(wchip, id)						W25Q_ReadID_RTOS_base(wchip, id, true);
+#define W25Q_WaitForReady_RTOS(chip)					W25Q_WaitForReady_RTOS_base(chip, true)
+#define W25Q_SendCmd_RTOS(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, true)
+#define W25Q_SendCmdAddr_RTOS(chip, cmd, addr)			W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, true)
+#define W25Q_ReadStatus_RTOS(chip, sr_index)			W25Q_ReadStatus_RTOS_base(chip, sr_index, true)
+#define W25Q_WriteStatus_RTOS(chip, sr_index, value)	W25Q_WriteStatus_RTOS_base(chip, sr_index, value, true)
+#define W25Q_ReadID_RTOS(wchip, id)						W25Q_ReadID_RTOS_base(wchip, id, true)
 
 /* Niveau 1 : Primitives en mode TASK (version lock par défaut) */
 typedef struct TASK_W25Q_SendCmd_ARGS {

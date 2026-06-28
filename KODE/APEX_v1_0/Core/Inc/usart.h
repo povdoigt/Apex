@@ -70,7 +70,8 @@ typedef struct UART_buffer_t {
   extern UART_buffer_t uart_buffer_6;
 #endif
 
-void UART_get_buffer(UART_HandleTypeDef *huart, UART_buffer_t **buffer_obj_ptr);
+UART_buffer_t *UART_buffer_init(UART_HandleTypeDef *huart, uint8_t *buffer, size_t length);
+UART_buffer_t *UART_buffer_get(UART_HandleTypeDef *huart);
 
 /* USER CODE END Prototypes */
 

@@ -423,6 +423,7 @@ sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *d
 
 	// Reajust RxTimeout for chunk reading
 	RxTimeout_delay_ms = (uint32_t)ceil((1 + fifo_half) * bytes_time);
+	// RxTimeout_delay_ms = HAL_MAX_DELAY; // Disable timeout for debugging purposes
 
 	if (nb_chunks_adjusted > 0) {
 		for (uint8_t c = 0; c < nb_chunks_adjusted; c++) {
@@ -440,6 +441,7 @@ sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *d
 
 	// Reajust RxTimeout for remaining bytes reading
 	RxTimeout_delay_ms = (uint32_t)ceil((1 + remaining_adjusted) * bytes_time);
+	// RxTimeout_delay_ms = HAL_MAX_DELAY; // Disable timeout for debugging purposes
 
 	// Wait for PayloadReady flag
 	status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_PAYLOAD_READY_MSK, false, values);
@@ -448,16 +450,16 @@ sx127x_status_t sx127x_FSK_OOK_RxReceive(sx127x_FSK_OOK_chip_t *chip, uint8_t *d
 	// Read remaining bytes
 	if (remaining_adjusted > 0) {
 		// Change FIFO threshold to remaining_adjusted
-		status = sx127x_RegRead(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, values);
-		if (status != sx127x_STATUS_OK) { return status; }
-		values[0] &= ~sx127x_FSK_OOK_REG_35_FIFO_THRESH_FIFO_THRESH_MSK;
-		values[0] |= ((remaining_adjusted - 1) & sx127x_FSK_OOK_REG_35_FIFO_THRESH_FIFO_THRESH_MSK);
-		status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, values[0]);
-		if (status != sx127x_STATUS_OK) { return status; }
+		// status = sx127x_RegRead(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, values);
+		// if (status != sx127x_STATUS_OK) { return status; }
+		// values[0] &= ~sx127x_FSK_OOK_REG_35_FIFO_THRESH_FIFO_THRESH_MSK;
+		// values[0] |= ((remaining_adjusted - 1) & sx127x_FSK_OOK_REG_35_FIFO_THRESH_FIFO_THRESH_MSK);
+		// status = sx127x_RegWrite(chip->base_chip, sx127x_FSK_OOK_REG_35_FIFO_THRESH, values[0]);
+		// if (status != sx127x_STATUS_OK) { return status; }
 
-		// Wait until FIFO threshold is reached
-		status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK, false, values);
-		if (status != sx127x_STATUS_OK) { return status; }
+		// // Wait until FIFO threshold is reached
+		// status = __sx127x_FSK_OOK_RxReceive_IRQ(chip, RxTimeout_delay_ms, true, sx127x_FSK_OOK_REG_3F_IRQ_FLAGS2_FIFO_LEVEL_MSK, false, values);
+		// if (status != sx127x_STATUS_OK) { return status; }
 
 		// Values already available in FIFO
 		status = sx127x_RegReadMulti(chip->base_chip, sx127x_REG_00_FIFO, &data[i], remaining_adjusted);
