@@ -30,7 +30,9 @@ StaticSemaphore_t waveform_sem_cb;
 osSemaphoreId_t waveform_sem_id = NULL;
 waveform_space_t *led_waveform = NULL;
 
-data_topic_t *data_topic_acc_ptr = NULL;
+static data_topic_t *data_topic_acc_ptr = NULL;
+static data_topic_t *data_topic_gyr_ptr = NULL;
+static data_topic_t *data_topic_baro_ptr = NULL;
 
 flash_chunk_t detect_launch_chunk;
 flash_chunk_ptr_t detect_launch_chunk_writer;
@@ -86,11 +88,11 @@ static osEventFlagsId_t spawn_bmi088_init(BMI_STATE *state, StaticEventGroup_t *
 
 	TASK_BMI088_Init_ARGS bmi_init_args = {
 		.imu = &bmi088,
-		.hspi = &hspi1,
-		.cs_acc_pin = GPIO_PIN_4,
-		.cs_acc_bank = GPIOA,
-		.cs_gyr_pin = GPIO_PIN_2,
-		.cs_gyr_bank = GPIOB,
+		.hspi = DRIVERS_CONFIG_BMI088_SPI_HANDLE,
+		.cs_acc_pin = DRIVERS_CONFIG_BMI088_ACC_SPI_CS_PIN,
+		.cs_acc_bank = DRIVERS_CONFIG_BMI088_ACC_SPI_CS_PORT,
+		.cs_gyr_pin = DRIVERS_CONFIG_BMI088_GYR_SPI_CS_PIN,
+		.cs_gyr_bank = DRIVERS_CONFIG_BMI088_GYR_SPI_CS_PORT,
 		.cfg = &bmi088_config,
 		.return_state = state,
 		.done_flags = done_flags_id
@@ -111,9 +113,9 @@ static osEventFlagsId_t spawn_w25q_init(W25Q_STATE *w25q_state, StaticEventGroup
 
 	TASK_W25Q_Init_ARGS w25q_init_args = {
 		.chip = &w25q,
-		.hspi = &hspi2,
-		.cs_bank = GPIOC,
-		.cs_pin = GPIO_PIN_1,
+		.hspi = DRIVERS_CONFIG_W25Q512_SPI_HANDLE,
+		.cs_bank = DRIVERS_CONFIG_W25Q512_CS_PORT,
+		.cs_pin = DRIVERS_CONFIG_W25Q512_CS_PIN,
 		.result = w25q_state,
 		.done_flags = done_flags_id
 	};
@@ -177,7 +179,9 @@ static W25Q_STATE run_flash_erase_blocks(void) {
 }
 
 /* Start periodic sensor acquisition tasks. */
-static void spawn_measurement_tasks(data_topic_t **acc_topic_ptr) {
+static void spawn_measurement_tasks(data_topic_t **acc_topic_ptr,
+									data_topic_t **gyr_topic_ptr,
+									data_topic_t **temp_topic_ptr) {
 	TASK_BMI088_ReadAcc_ARGS bmi_acc_args = {
 		.imu = &bmi088,
 		.dt = acc_topic_ptr,
@@ -189,6 +193,30 @@ static void spawn_measurement_tasks(data_topic_t **acc_topic_ptr) {
 		.priority = (osPriority_t)osPriorityNormal,
 	};
 	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadAcc, bmi_acc_args, bmi_acc_attr, osWaitForever);
+
+	TASK_BMI088_ReadGyr_ARGS bmi_gyr_args = {
+		.imu = &bmi088,
+		.dt = gyr_topic_ptr,
+		.delay_ms = SENSOR_READ_DELAY_MS,
+		.return_state = NULL
+	};
+	osThreadAttr_t bmi_gyr_attr = {
+		.name = "TASK_BMI088_ReadGyr",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadGyr, bmi_gyr_args, bmi_gyr_attr, osWaitForever);
+
+	TASK_BMI088_ReadTemp_ARGS bmi_temp_args = {
+		.imu = &bmi088,
+		.dt = temp_topic_ptr,
+		.delay_ms = SENSOR_READ_DELAY_MS,
+		.return_state = NULL
+	};
+	osThreadAttr_t bmi_temp_attr = {
+		.name = "TASK_BMI088_ReadTemp",
+		.priority = (osPriority_t)osPriorityNormal,
+	};
+	OS_THREAD_NEW_CSTM(TASK_BMI088_ReadTemp, bmi_temp_args, bmi_temp_attr, osWaitForever);
 }
 
 /* Spawn the launch detection task. */
@@ -375,12 +403,12 @@ void TASK_Main(void *argument) {
 	}, 1000, true);
 
 
-	LED_Init(&led0.red  , &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_R_CHANNEL);
-	LED_Init(&led0.green, &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_G_CHANNEL);
-	LED_Init(&led0.blue , &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_B_CHANNEL);
+	LED_Init(&led0_rgb.red  , DRIVERS_CONFIG_LED0_TIMER, DRIVERS_CONFIG_LED0_CHANNEL_RED);
+	LED_Init(&led0_rgb.green, DRIVERS_CONFIG_LED0_TIMER, DRIVERS_CONFIG_LED0_CHANNEL_GREEN);
+	LED_Init(&led0_rgb.blue , DRIVERS_CONFIG_LED0_TIMER, DRIVERS_CONFIG_LED0_CHANNEL_BLUE);
 
 	TASK_led_rgb_wave_ARGS led_wave_args = {
-		.led = &led0,
+		.led = &led0_rgb,
 		.waveform = &led_waveform,
 		.sem_cd = &waveform_sem_cb,
 		.sem = &waveform_sem_id,
@@ -429,7 +457,7 @@ void TASK_Main(void *argument) {
 	//                  Spawn measurement tasks
 	// ===================================================
 
-	spawn_measurement_tasks(&data_topic_acc_ptr);
+	spawn_measurement_tasks(&data_topic_acc_ptr, &data_topic_gyr_ptr, &data_topic_baro_ptr);
 
 	// ===================================================
 	//  Spawn Detect Launch and save data detection tasks

@@ -160,6 +160,14 @@ data_status_t data_sub_peek_relative_ptr(data_sub_t *sub,
 data_status_t data_sub_peek_ptr(data_sub_t *sub,
                                 const void **out_ptr, int idx);
 
+/**
+ * @brief Lecture non destructive (pointeur direct) de la dernière donnée publiée.
+ *
+ * @param sub     Abonné concerné.
+ * @param out_ptr Pointeur de sortie vers la donnée (zéro copie).
+ */
+data_status_t data_sub_peek_last_ptr(data_sub_t *sub, const void **out_ptr);
+
 /* --------------------------------------------------------------------------
  *   API Subscriber : lecture "ptr" et "copy"
  * -------------------------------------------------------------------------- */

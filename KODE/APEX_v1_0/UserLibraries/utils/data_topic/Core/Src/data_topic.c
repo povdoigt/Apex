@@ -164,8 +164,8 @@ data_status_t data_sub_sync(data_sub_t *sub) {
     if (!sub || !sub->attached || !sub->topic) return DT_BAD_ARG;
 
     data_topic_t *topic = sub->topic;
-    sub->tail = topic->cb.head;
-    sub->last_seq = topic->pub_seq;
+    sub->tail = topic->cb.tail;
+    sub->last_seq = topic->pub_seq - topic->cb.count;
 
     return DT_OK;
 }
@@ -210,13 +210,18 @@ data_status_t data_sub_peek_ptr(data_sub_t *sub, const void **out_ptr, int idx) 
     return data_sub_peek_relative_ptr(sub, out_ptr, 0, idx);
 }
 
-data_status_t data_sub_read_ptr(data_sub_t *sub, const void **out_ptr) {
+data_status_t data_sub_peek_last_ptr(data_sub_t *sub, const void **out_ptr) {
     data_status_t status = data_sub_peek_relative_ptr(sub, out_ptr, sub->tail, 0);
     if (status == DT_DATA_LOSS) {
         // On relis avec la nouvelle position de la tail
         // (sync a déjà été fait dans data_sub_peek_relative_ptr)
         status = data_sub_peek_relative_ptr(sub, out_ptr, sub->tail, 0);
     }
+    return status;
+}
+
+data_status_t data_sub_read_ptr(data_sub_t *sub, const void **out_ptr) {
+    data_status_t status = data_sub_peek_last_ptr(sub, out_ptr);
     if (status != DT_BAD_ARG && status != DT_EMPTY) {
         // Avance la position de l’abonné
         sub->tail = wrap_add(sub->tail, 1, sub->topic->cb.capacity);

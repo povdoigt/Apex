@@ -1,4 +1,6 @@
 #include "drivers_config.h"
+#include "main.h"
+#include "stm32f4xx_hal_spi.h"
 
 // =======================================================================
 // ADXL345 configuration
@@ -20,22 +22,24 @@ adxl375_t ADXL375;
 // =======================================================================
 #if (APEX_ENABLE_BMI088 == 1)
 
-#define DRIVERS_CONFIG_BMI088_SPI_HANDLE		hspi1
-#define DRIVERS_CONFIG_BMI088_ACC_CS_PIN		GPIO_PIN_4
-#define DRIVERS_CONFIG_BMI088_ACC_CS_PORT		GPIOA
-#define DRIVERS_CONFIG_BMI088_GYR_CS_PIN		GPIO_PIN_2
-#define DRIVERS_CONFIG_BMI088_GYR_CS_PORT		GPIOB
-const bmi_config_t bmi088_config = {
-	.acc_range  = BMI_ACC_RANGE_24G,
-	.acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
-	.acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
-	.acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
-	.acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
+const SPI_HandleTypeDef * const DRIVERS_CONFIG_BMI088_SPI_HANDLE = &hspi1;
+const GPIO_TypeDef * const DRIVERS_CONFIG_BMI088_ACC_SPI_CS_PORT = CS_ACC0_GPIO_Port;
+const GPIO_TypeDef * const DRIVERS_CONFIG_BMI088_GYR_SPI_CS_PORT = CS_GRYO_GPIO_Port;
+const uint16_t DRIVERS_CONFIG_BMI088_ACC_SPI_CS_PIN = CS_ACC0_Pin;
+const uint16_t DRIVERS_CONFIG_BMI088_GYR_SPI_CS_PIN = CS_GRYO_Pin;
 
-	.gyr_range  = BMI_GYR_RANGE_2000,
-	.gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
-	.gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+const bmi_config_t bmi088_config = {
+    .acc_range  = BMI_ACC_RANGE_24G,
+    .acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
+    .acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
+    .acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
+    .acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
+
+    .gyr_range  = BMI_GYR_RANGE_2000,
+    .gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
+    .gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
 };
+
 bmi088_t bmi088;
 
 // ... add any additional configuration or definitions for the BMI088 here
@@ -84,7 +88,12 @@ buzzer_t buzzer;
 // =======================================================================
 #if (APEX_ENABLE_LED == 1)
 
-led_rgb_t led0, led1;
+TIM_HandleTypeDef * const DRIVERS_CONFIG_LED0_TIMER = &htim2;
+const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_RED = TIM_CHANNEL_3;
+const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_GREEN = TIM_CHANNEL_1;
+const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_BLUE = TIM_CHANNEL_2;
+led_rgb_t led0_rgb;
+
 
 #endif
 
@@ -104,14 +113,14 @@ extern lsm303agr_t lsm303agr;
 // =======================================================================
 #if (APEX_ENABLE_SX127X_1 == 1)
 
-sx127x_LORA_config_t sx127x_LORA_config = {
+const sx127x_LORA_config_t sx127x_LORA_config_1 = {
 	.implicitHeader = false,
 	.bandwidth = sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ,
 	.codingRate = sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5,
 	.spreadingFactor = sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS,
 	.crcEnabled = true,
 };
-sx127x_FSK_OOK_config_t sx127x_FSK_OOK_config = {
+const sx127x_FSK_OOK_config_t sx127x_FSK_OOK_config_1 = {
 	.bitrate = 200000,
 	.RxBw = SX127X_FSK_OOK_RxBw_125_0kHz,
 	.modShaping = sx127x_FSK_OOK_REG_0A_PA_RAMP_MOD_SHAPING_FSK_BT_0_5,
@@ -129,7 +138,7 @@ sx127x_FSK_OOK_config_t sx127x_FSK_OOK_config = {
 		.fdev = 60000,
 	},
 };
-sx127x_base_config_t sx127x_base_config_1 = {
+const sx127x_base_config_t sx127x_base_config_1 = {
 	.spiHandle = &hspi1,
 	.csPinBank = CS_LORA_GPIO_Port,
 	.csPin = CS_LORA_Pin,
@@ -137,23 +146,63 @@ sx127x_base_config_t sx127x_base_config_1 = {
 	.ocp_current_mA = 240.0,
 	.power_dBm = 20.0,
 };
-sx127x_modulation_t sx127x_modulation_1 = sx127x_MODULATION_LORA;
+const sx127x_modulation_t sx127x_modulation_1 = sx127x_MODULATION_FSK;
 
 sx127x_t sx127x_1;
 
 #endif
-
 
 // =======================================================================
 // SX127x 2 configuration
 // =======================================================================
 #if (APEX_ENABLE_SX127X_2 == 1)
 
-sx127x_base_config_t sx127x_base_config_2 = { 0 };
-sx127x_modulation_t sx127x_modulation_2 = sx127x_MODULATION_FSK;
+const sx127x_LORA_config_t sx127x_LORA_config_2 = {
+	.implicitHeader = false,
+	.bandwidth = sx127x_LORA_REG_1D_MODEM_CONFIG1_BW_125KHZ,
+	.codingRate = sx127x_LORA_REG_1D_MODEM_CONFIG1_CR_4_5,
+	.spreadingFactor = sx127x_LORA_REG_1E_MODEM_CONFIG2_SF_128CPS,
+	.crcEnabled = true,
+};
+const sx127x_FSK_OOK_config_t sx127x_FSK_OOK_config_2 = {
+	.bitrate = 200000,
+	.RxBw = SX127X_FSK_OOK_RxBw_125_0kHz,
+	.modShaping = sx127x_FSK_OOK_REG_0A_PA_RAMP_MOD_SHAPING_FSK_BT_0_5,
+	.paRamp = sx127x_FSK_OOK_REG_0A_PA_RAMP_PA_RAMP_40US,				// Default PA ramp time
+	.packetCfg = {
+		.preamble_len = 5,												// Default preamble length
+		.sync_on = true,
+		.sync_len = 4,													// Default sync length
+		.sync_word = {0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01},	// Default sync word
+		.variable_length = true,
+		// .payload_len = 63,											// Default payload length
+		.crc_on = true,
+	},
+	.mod_config.fsk = {
+		.fdev = 60000,
+	},
+};
+const sx127x_base_config_t sx127x_base_config_2 = {
+	.spiHandle = &hspi3,
+	.csPinBank = SPI3_CS_GPIO_Port,
+	.csPin = SPI3_CS_Pin,
+	.frequency = 869500000,
+	.ocp_current_mA = 240.0,
+	.power_dBm = 20.0,
+};
+const sx127x_modulation_t sx127x_modulation_2 = sx127x_MODULATION_FSK;
 
 sx127x_t sx127x_2;
 
+#endif
+
+// =======================================================================
+// UART Mux configuration
+// =======================================================================
+#if (APEX_ENABLE_UART_MUX == 1)
+GPIO_TypeDef * const DRIVERS_CONFIG_UART_MUX_GPIO_PORT = UART_SEL_GPIO_Port;
+const uint16_t DRIVERS_CONFIG_UART_MUX_GPIO_PIN = UART_SEL_Pin;
+uart_mux_t uart_mux;
 #endif
 
 
@@ -162,10 +211,11 @@ sx127x_t sx127x_2;
 // =======================================================================
 #if (APEX_ENABLE_W25Q512 == 1)
 
-#define DRIVERS_CONFIG_W25Q512_SPI_HANDLE		hspi2
-#define DRIVERS_CONFIG_W25Q512_CS_PIN			GPIO_PIN_1
-#define DRIVERS_CONFIG_W25Q512_CS_PORT			GPIOC
 W25Q_t w25q;
+
+const SPI_HandleTypeDef * const DRIVERS_CONFIG_W25Q512_SPI_HANDLE = &hspi2;
+const GPIO_TypeDef * const DRIVERS_CONFIG_W25Q512_CS_PORT = CS_FLASH_GPIO_Port;
+const uint16_t DRIVERS_CONFIG_W25Q512_CS_PIN = CS_FLASH_Pin;
 
 #endif
 
@@ -193,9 +243,15 @@ void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
 #endif
 
 #if (APEX_ENABLE_BMI088 == 1)
-	result->bmi088_init_res = BMI088_Init(&bmi088, &DRIVERS_CONFIG_BMI088_SPI_HANDLE, DRIVERS_CONFIG_BMI088_ACC_CS_PORT,
-		DRIVERS_CONFIG_BMI088_ACC_CS_PIN, DRIVERS_CONFIG_BMI088_GYR_CS_PORT,
-		DRIVERS_CONFIG_BMI088_GYR_CS_PIN, &bmi088_config);
+	result->bmi088_init_res = BMI088_Init(
+		&bmi088,
+		DRIVERS_CONFIG_BMI088_SPI_HANDLE,
+		DRIVERS_CONFIG_BMI088_ACC_SPI_CS_PORT,
+		DRIVERS_CONFIG_BMI088_ACC_SPI_CS_PIN,
+		DRIVERS_CONFIG_BMI088_GYR_SPI_CS_PORT,
+		DRIVERS_CONFIG_BMI088_GYR_SPI_CS_PIN,
+		&bmi088_config
+	);
 #endif
 
 #if (APEX_ENABLE_BMP388 == 1)
@@ -211,12 +267,9 @@ void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
 #endif
 
 #if (APEX_ENABLE_LED == 1)
-	LED_Init(&led0.red  , &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_R_CHANNEL);
-	LED_Init(&led0.green, &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_G_CHANNEL);
-	LED_Init(&led0.blue , &DRIVERS_CONFIG_LED0_TIMER_HANDLE, DRIVERS_CONFIG_LED0_B_CHANNEL);
-	LED_Init(&led1.red  , &DRIVERS_CONFIG_LED1_TIMER_HANDLE, DRIVERS_CONFIG_LED1_R_CHANNEL);
-	LED_Init(&led1.green, &DRIVERS_CONFIG_LED1_TIMER_HANDLE, DRIVERS_CONFIG_LED1_G_CHANNEL);
-	LED_Init(&led1.blue , &DRIVERS_CONFIG_LED1_TIMER_HANDLE, DRIVERS_CONFIG_LED1_B_CHANNEL);
+	LED_Init(&led0_rgb.red  , DRIVERS_CONFIG_LED0_TIMER, DRIVERS_CONFIG_LED0_CHANNEL_RED);
+	LED_Init(&led0_rgb.green, DRIVERS_CONFIG_LED0_TIMER, DRIVERS_CONFIG_LED0_CHANNEL_GREEN);
+	LED_Init(&led0_rgb.blue , DRIVERS_CONFIG_LED0_TIMER, DRIVERS_CONFIG_LED0_CHANNEL_BLUE);
 #endif
 
 #if (APEX_ENABLE_LSM303AGR == 1)
@@ -227,12 +280,12 @@ void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
 	switch (sx127x_modulation_1) {
 		case sx127x_MODULATION_LORA:
 			result->sx127x_1_init_res = sx127x_Init(&sx127x_1, sx127x_base_config_1, sx127x_modulation_1,
-				(sx127x_mod_config_t){.lora = sx127x_LORA_config});
+				(sx127x_mod_config_t){.lora = sx127x_LORA_config_1});
 			break;
 		case sx127x_MODULATION_FSK:
 		case sx127x_MODULATION_OOK:
 			result->sx127x_1_init_res = sx127x_Init(&sx127x_1, sx127x_base_config_1, sx127x_modulation_1,
-				(sx127x_mod_config_t){.fsk_ook = sx127x_FSK_OOK_config});
+				(sx127x_mod_config_t){.fsk_ook = sx127x_FSK_OOK_config_1});
 			break;
 		default:
 			result->sx127x_1_init_res = sx127x_STATUS_ERROR;
@@ -243,12 +296,12 @@ void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
 	switch (sx127x_modulation_2) {
 		case sx127x_MODULATION_LORA:
 			result->sx127x_2_init_res = sx127x_Init(&sx127x_2, sx127x_base_config_2, sx127x_modulation_2,
-				(sx127x_mod_config_t){.lora = sx127x_LORA_config});
+				(sx127x_mod_config_t){.lora = sx127x_LORA_config_2});
 			break;
 		case sx127x_MODULATION_FSK:
 		case sx127x_MODULATION_OOK:
 			result->sx127x_2_init_res = sx127x_Init(&sx127x_2, sx127x_base_config_2, sx127x_modulation_2,
-				(sx127x_mod_config_t){.fsk_ook = sx127x_FSK_OOK_config});
+				(sx127x_mod_config_t){.fsk_ook = sx127x_FSK_OOK_config_2});
 			break;
 		default:
 			result->sx127x_2_init_res = sx127x_STATUS_ERROR;
@@ -256,8 +309,12 @@ void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
 #endif
 
 #if (APEX_ENABLE_W25Q512 == 1)
-	result->w25q_init_res = W25Q_Init(&w25q, &DRIVERS_CONFIG_W25Q512_SPI_HANDLE,
-		DRIVERS_CONFIG_W25Q512_CS_PORT, DRIVERS_CONFIG_W25Q512_CS_PIN);
+	result->w25q_init_res = W25Q_Init(
+		&w25q,
+		DRIVERS_CONFIG_W25Q512_SPI_HANDLE,
+		DRIVERS_CONFIG_W25Q512_CS_PORT,
+		DRIVERS_CONFIG_W25Q512_CS_PIN
+	);
 #endif
 
 #if (APEX_ENABLE_WT901B == 1)

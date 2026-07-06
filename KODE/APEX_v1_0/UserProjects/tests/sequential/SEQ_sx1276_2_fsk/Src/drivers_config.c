@@ -74,11 +74,13 @@ buzzer_t buzzer;
 // LED configuration
 // =======================================================================
 #if (APEX_ENABLE_LED == 1)
+
 TIM_HandleTypeDef * const DRIVERS_CONFIG_LED0_TIMER = &htim2;
 const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_RED = TIM_CHANNEL_3;
 const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_GREEN = TIM_CHANNEL_1;
 const uint32_t DRIVERS_CONFIG_LED0_CHANNEL_BLUE = TIM_CHANNEL_2;
 led_rgb_t led0_rgb;
+
 #endif
 
 // =======================================================================

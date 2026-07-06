@@ -107,7 +107,9 @@ cb_status_t cb_push(circular_buffer_t *cb, const void *elem) {
 
     /* Copie de l’élément au head */
     uint8_t *dst = cb->storage + (cb->head * cb->elem_size);
-    memcpy(dst, elem, cb->elem_size);
+    if (dst != (uint8_t *)elem) { // Could happen
+        memcpy(dst, elem, cb->elem_size);
+    }
     cb->head = wrap_add(cb->head, 1, cb->capacity);
 
     cb_unlock(cb);
