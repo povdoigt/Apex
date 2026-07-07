@@ -94,7 +94,9 @@
 extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+#include <stdbool.h>
+/** Mis a 1 par CDC_SET_CONTROL_LINE_STATE quand le terminal ouvre le port (DTR=1). */
+extern volatile bool cdc_port_open;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**

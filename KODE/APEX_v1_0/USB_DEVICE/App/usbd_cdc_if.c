@@ -94,7 +94,9 @@ uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-
+#include <stdbool.h>
+/** Passe a true quand l'hote ouvre le port serie (bit DTR de SET_CONTROL_LINE_STATE). */
+volatile bool cdc_port_open = false;
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -228,7 +230,8 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
     break;
 
     case CDC_SET_CONTROL_LINE_STATE:
-
+      /* pbuf = (uint8_t*)req ; wValue bit 0 = DTR (terminal ouvert/ferme) */
+      cdc_port_open = (((USBD_SetupReqTypedef *)pbuf)->wValue & 0x01U) != 0U;
     break;
 
     case CDC_SEND_BREAK:

@@ -22,7 +22,6 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
-#include "utils/scheduler.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -82,22 +81,44 @@ void Error_Handler(void);
 #define BUZZER_GPIO_Port GPIOB
 #define CS_GRYO_Pin GPIO_PIN_2
 #define CS_GRYO_GPIO_Port GPIOB
+#define UART_SEL_Pin GPIO_PIN_15
+#define UART_SEL_GPIO_Port GPIOB
 #define LORA_DIO0_Pin GPIO_PIN_15
 #define LORA_DIO0_GPIO_Port GPIOA
+#define SPI3_CS_Pin GPIO_PIN_2
+#define SPI3_CS_GPIO_Port GPIOD
+#define GFSK_NRST_Pin GPIO_PIN_3
+#define GFSK_NRST_GPIO_Port GPIOB
+#define SEQ_DA_Pin GPIO_PIN_5
+#define SEQ_DA_GPIO_Port GPIOB
 #define LED1G_Pin GPIO_PIN_6
 #define LED1G_GPIO_Port GPIOB
 #define LED1B_Pin GPIO_PIN_7
 #define LED1B_GPIO_Port GPIOB
 #define LED1R_Pin GPIO_PIN_8
 #define LED1R_GPIO_Port GPIOB
+#define CAM_Pin GPIO_PIN_9
+#define CAM_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
-typedef struct TASK_Program_start_ARGS { } TASK_Program_start_ARGS;
+// typedef struct TASK_Program_start_ARGS { } TASK_Program_start_ARGS;
 
-TASK_POOL_CONFIGURE(TASK_Program_start, 1, 512)
+// TASK_POOL_CONFIGURE(TASK_Program_start, 1, 1024);
 
-void TASK_Program_start();
+// void TASK_Program_start(void *argument);
+
+
+// typedef struct TASK_Data_USB_Transmit_ARGS {
+//     data_topic_t **dt;
+//     uint32_t delay;
+// } TASK_Data_USB_Transmit_ARGS;
+
+// TASK_POOL_CONFIGURE(TASK_Data_USB_Transmit, 1, 1024);
+
+// void TASK_Data_USB_Transmit(void *argument);
+
+
 
 /* USER CODE END Private defines */
 

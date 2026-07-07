@@ -8,6 +8,24 @@ set(MX_Defines_Syms
     $<$<CONFIG:Debug>:DEBUG>
 )
 
+# Configure project path
+set(CMAKE_APEX_PROJECT_PATH
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_BMI088_W25Q_1
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_FLIGHT
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_MULT
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_sx1276_1_lora
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_BMI088_USB
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_SEQ_UART
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_fsk
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_lora
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_lora_synchro
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_2_fsk
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_2_lora
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_ILPS28
+)
+
 # STM32CubeMX generated include paths
 set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc
@@ -22,6 +40,61 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Device/ST/STM32F4xx/Include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Include
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/i2c_mux/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/led/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/uart_mux/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/WT901B/Core/Inc
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/led/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/test/Inc
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_packet/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/event_uart/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_chunk/Core/Inc
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Inc
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/event_uart/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/test/Inc
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/test/Inc
+
+    ${CMAKE_APEX_PROJECT_PATH}/Inc
 )
 
 # STM32CubeMX generated application sources
@@ -31,46 +104,88 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../USB_DEVICE/App/usbd_desc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../USB_DEVICE/App/usbd_cdc_if.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/ADXL375.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/BMI088.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/BMP388.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/buzzer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/gps.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/led.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/LSM303AGR.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/rfm96w.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/drivers/w25q_mem.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/Core/Src/ADXL375.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/Core/Src/BMI088.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/Core/Src/BMP388.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/Core/Src/buzzer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/Core/Src/gps.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/i2c_mux/Core/Src/i2c_mux.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/led/Core/Src/led.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/Core/Src/LSM303AGR.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x_common.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x_lora.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x_fsk_ook.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/uart_mux/Core/Src/uart_mux.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Src/w25q.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/WT901B/Core/Src/WT901B.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/adc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/dma.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/gpio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/i2c.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/spi.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/tim.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/peripherals/usart.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/test/Src/ADXL375_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/test/Src/BMI088_seq_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/test/Src/BMP388_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/test/Src/buzzer_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/test/Src/gps_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/led/test/Src/led_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/test/Src/LSM303AGR_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/test/Src/sx127x_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/test/Src/w25q_seq_test.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/circular_buffer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/data_publisher.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/flash_stream.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/gms.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/iir_filter.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/obj_pool.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/queue.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/scheduler.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/telem_format.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/test.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/utils/tools.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Src/circular_buffer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_packet/Core/Src/data_packet.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Src/data_topic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/event_uart/Core/Src/event_uart.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/Core/Src/flash_stream.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/float3/Core/Src/float3.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_chunk/Core/Src/flash_chunk.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/Core/Src/iir_filter.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Src/quaternion.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/quaternion/Core/Src/quaternion_dynamics.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/Core/Src/scheduler.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/Core/Src/telem_format.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/Core/Src/test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/Core/Src/tools.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Src/usb.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Src/vt100.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_def.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_built_in.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_scalar_arithmetic.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/waveform/Core/Src/waveform_space_arithmetic.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Src/cb_seq_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_seq_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/test/Src/flash_stream_test.c
+    # # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/test/Src/iir_filter_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/test/Src/scheduler_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/test/Src/telem_format_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/test/Src/test_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/test/Src/tools_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/types/test/Src/types_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/test/Src/usb_test.c
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/test/Src/vt100_test.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/adc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/dma.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/gpio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/i2c.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/spi.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/tim.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/usart.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/crc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/freertos.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_it.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_hal_msp.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_hal_timebase_tim.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f4xx_it.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32f411xe.s
+
+    ${CMAKE_APEX_PROJECT_PATH}/Src/drivers_config.c
+    ${CMAKE_APEX_PROJECT_PATH}/Src/main_config.c
+    ${CMAKE_APEX_PROJECT_PATH}/Src/project.c
 )
 
 # STM32 HAL/LL Drivers
