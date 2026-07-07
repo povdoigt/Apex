@@ -20,16 +20,22 @@ void data_packer_init(data_packer_t *packer, uint32_t window_ms, size_t num_topi
 
 data_packer_status_t data_packer_check(data_packer_t *packer, data_sub_t *sub, uint32_t current_time_ms, void *out_ptr) {
     const data_ts_generic_t *data_ptr = NULL;
-    
+    const int32_t half = (int32_t)(packer->T / 2);
+
     data_status_t status = data_sub_peek_last_ptr(sub, (const void **)&data_ptr);
-    while(status != DT_EMPTY && data_ptr->ts < current_time_ms - packer->T / 2) {
+    /* Trop vieille : (t - ts) > T/2 en arithmetique signee.
+     * Le cast (int32_t) de la difference gere a la fois le wrap du uint32
+     * et le signe : une mesure future (ts > t) donne un ecart negatif,
+     * donc n'est jamais consideree comme trop vieille. */
+    while (status != DT_EMPTY && (int32_t)(current_time_ms - data_ptr->ts) > half) {
         data_sub_read_ptr(sub, (const void **)&data_ptr); // read and discard the old data
         status = data_sub_peek_last_ptr(sub, (const void **)&data_ptr);
     }
 
     if (status == DT_EMPTY) {
         return PACKER_EMPTY;
-    } else if (data_ptr->ts > current_time_ms + packer->T / 2) {
+    } else if ((int32_t)(data_ptr->ts - current_time_ms) > half) {
+        /* Trop jeune : (ts - t) > T/2 en arithmetique signee. */
         return PACKER_TOO_YOUNG;
     } else {
         memcpy(out_ptr, data_ptr->data, sub->topic->cb.elem_size - sizeof(data_ts_generic_t));
@@ -39,7 +45,7 @@ data_packer_status_t data_packer_check(data_packer_t *packer, data_sub_t *sub, u
 }
 
 uint32_t data_packer_build_publish(data_packer_t *packer, uint32_t current_time_ms) {
-    data_ts_packet_generic_t *packet = (data_ts_packet_generic_t *)cb_peek_relative_ptr(&packer->topic.cb, packer->topic.cb.head, 1);
+    data_ts_packet_generic_t *packet = (data_ts_packet_generic_t *)cb_peek_relative_ptr(&packer->topic.cb, packer->topic.cb.head, 0);
     packet->ts = current_time_ms;
     packet->flags = 0;
     size_t offset = 0;
