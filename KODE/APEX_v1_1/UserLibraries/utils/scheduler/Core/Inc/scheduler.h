@@ -37,7 +37,8 @@
  * thread flags: no kernel object, no RAM, one bit per outstanding job.
  *
  * @note All public functions must be called from thread context, after
- *       osKernelStart(). None of them is ISR-safe.
+ *       osKernelStart() (task_prewarm() excepted). None of them is ISR-safe:
+ *       called from an ISR they refuse and do nothing.
  *******************************************************************************
  */
 
@@ -59,12 +60,24 @@
 /**
  * @brief Priority a slot holds while parked.
  *
- * Visible only during the short window between a job publishing its result and
- * the runner re-entering the garage. It MUST sit below every working priority,
- * otherwise an idle slot can delay a periodic task during that window.
+ * Visible only during the short window between a job releasing its slot and
+ * the runner re-entering the garage; the joiner has already been signalled by
+ * then. It should sit below every working priority, otherwise an idle slot can
+ * delay a periodic task during that window.
  */
 #ifndef TASK_PARKED_PRIORITY
 #define TASK_PARKED_PRIORITY    osPriorityLow
+#endif
+
+/**
+ * @brief FreeRTOS thread-local-storage index used by the framework.
+ *
+ * Each thread that joins keeps there the set of its join bits still in flight,
+ * so a bit cannot be reused while an earlier job on it may still signal it.
+ * Requires `configNUM_THREAD_LOCAL_STORAGE_POINTERS > TASK_TLS_INDEX`.
+ */
+#ifndef TASK_TLS_INDEX
+#define TASK_TLS_INDEX          0
 #endif
 
 /** @brief Upper bound on instances per pool (keeps the slot index one byte). */
@@ -80,14 +93,19 @@
 /**
  * @brief Flag bit 0, reserved by the framework to release a parked slot.
  *
- * Join bits are numbered 1..31 and belong to the *joiner*, not to the job, so
+ * Join bits are numbered 1..30 and belong to the *joiner*, not to the job, so
  * a worker can itself join sub-jobs without colliding with its own garage bit.
  */
 #define TASK_FLAG_START         (1u << 0)
 
-/** @brief Lowest / highest join bit a caller may claim. */
+/**
+ * @brief Lowest / highest join bit a caller may claim.
+ *
+ * Bit 31 is excluded: the CMSIS-RTOS2 FreeRTOS wrapper rejects it
+ * (MAX_BITS_TASK_NOTIFY), so a job on it could never signal its joiner.
+ */
 #define TASK_JOIN_BIT_MIN       1u
-#define TASK_JOIN_BIT_MAX       31u
+#define TASK_JOIN_BIT_MAX       30u
 
 /** @brief Value of `task_attr_t::join_bit` meaning "detached, signal nobody". */
 #define TASK_JOIN_NONE          0u
@@ -126,8 +144,8 @@ typedef struct task_slot_t {
     osThreadId_t              id;        /**< NULL until the thread exists.    */
     osThreadId_t              joiner;    /**< Thread to signal on completion.  */
     task_ret_t               *ret;       /**< Where to publish the result.     */
-    uint16_t                  gen;       /**< Bumped on release; stales handles*/
-    uint8_t                   join_bit;  /**< 0 = detached, else 1..31.        */
+    uint32_t                  gen;       /**< Bumped on release; stales handles*/
+    uint8_t                   join_bit;  /**< 0 = detached, else 1..30.        */
     bool                      busy;      /**< Slot currently holds a job.      */
 } task_slot_t;
 
@@ -159,8 +177,10 @@ typedef struct task_desc_t {
  */
 typedef struct task_attr_t {
     osPriority_t priority;  /**< Working priority for this run.               */
-    task_ret_t  *ret;       /**< Destination for the return value, or NULL.   */
-    uint8_t      join_bit;  /**< Joiner flag bit 1..31, or TASK_JOIN_NONE.    */
+    task_ret_t  *ret;       /**< Destination for the return value, or NULL.
+                                 Must stay valid until the job really ends,
+                                 even past a task_join() timeout.              */
+    uint8_t      join_bit;  /**< Joiner flag bit 1..30, or TASK_JOIN_NONE.    */
 } task_attr_t;
 
 /**
@@ -168,17 +188,18 @@ typedef struct task_attr_t {
  *
  * Carries the generation counter seen at spawn time, so a handle kept past the
  * end of its job cannot be mistaken for the next tenant of the same slot. The
- * join bit is carried here too, which lets task_join() work without touching
- * the slot at all.
+ * joiner and join bit are carried here too, which lets task_join() work
+ * without touching the slot at all.
  */
 typedef struct task_h_t {
     task_slot_t *slot;
-    uint16_t     gen;
+    osThreadId_t joiner;
+    uint32_t     gen;
     uint8_t      join_bit;
 } task_h_t;
 
 /** @brief The handle returned when a spawn fails. */
-#define TASK_H_INVALID          ((task_h_t){ .slot = NULL, .gen = 0, .join_bit = 0 })
+#define TASK_H_INVALID          ((task_h_t){ .slot = NULL, .joiner = NULL, .gen = 0, .join_bit = 0 })
 
 /* ========================================================================== */
 /*                          Declaration macros                                */
@@ -302,6 +323,8 @@ typedef struct task_h_t {
         name_##_task_args_t args;                                              \
         uint64_t            align_;                                            \
     } name_##_task_argbuf[(n_)];                                               \
+    _Static_assert(sizeof(name_##_task_argbuf[0]) <= UINT16_MAX,               \
+                   #name_ ": argument struct larger than 65535 bytes");        \
     const task_desc_t TASK_##name_ = {                                         \
         .name        = #name_,                                                 \
         .entry       = name_##_task_entry,                                     \
@@ -346,11 +369,20 @@ typedef struct task_h_t {
  * @endcode
  *
  * @param desc Task descriptor; `<name>_spawn()` supplies &TASK_<name>.
- * @param args Arguments, copied into the slot, so a caller-stack literal is safe.
+ * A join bit stays reserved for the calling thread until the job behind it
+ * ends, whether or not it was joined: after a task_join() timeout, a new spawn
+ * on the same bit is refused while the old job is still running.
+ *
+ * @param desc Task descriptor; `<name>_spawn()` supplies &TASK_<name>.
+ * @param args Arguments, copied into the slot, so a caller-stack literal is
+ *             safe. Must not be NULL when the argument struct is non-empty.
  * @param attr Spawn attributes.
- * @retval TASK_H_INVALID  Pool exhausted, thread creation failed, or invalid
- *                         attributes (priority out of range, join bit outside
- *                         1..31, join bit requested on a persistent task).
+ * @retval TASK_H_INVALID  Pool exhausted, thread creation failed, called from
+ *                         an ISR or before osKernelStart(), NULL args, or
+ *                         invalid attributes (priority outside
+ *                         osPriorityIdle..configMAX_PRIORITIES-1, join bit
+ *                         outside 1..30 or still in flight, join bit requested
+ *                         on a persistent task).
  */
 task_h_t task_spawn_(const task_desc_t *desc, void *args, const task_attr_t *attr);
 
@@ -360,17 +392,20 @@ task_h_t task_spawn_(const task_desc_t *desc, void *args, const task_attr_t *att
  * Must be called by the thread that spawned it, since the flag being waited on
  * belongs to that thread. The return value of the body is written to
  * `attr->ret` before the slot is released, so it is readable as soon as this
- * call succeeds.
+ * call succeeds. A handle can be joined successfully only once: the flag is
+ * consumed by the first successful join.
  *
  * On timeout the job is *not* cancelled and keeps running: stopping a task at
  * an arbitrary point would leave peripherals and buffers half-written. Treat
- * osErrorTimeout as a condition to degrade explicitly.
+ * osErrorTimeout as a condition to degrade explicitly; `attr->ret` will still
+ * be written when the job ends.
  *
  * @param h          Handle from task_spawn(), spawned with a non-zero join bit.
- * @param timeout_ms Milliseconds, or osWaitForever.
+ * @param timeout_ms Milliseconds (0 polls), or osWaitForever.
  * @retval osOK             Job finished.
  * @retval osErrorTimeout   Still running.
  * @retval osErrorParameter Detached handle, or caller is not the joiner.
+ * @retval osErrorISR       Called from an ISR.
  */
 osStatus_t task_join(task_h_t h, uint32_t timeout_ms);
 
@@ -378,14 +413,17 @@ osStatus_t task_join(task_h_t h, uint32_t timeout_ms);
  * @brief Wait for several jobs to finish.
  *
  * All handles must have been spawned by the calling thread on distinct join
- * bits. Waits for every one of them (osFlagsWaitAll).
+ * bits. Waits for every one of them. On timeout no flag is consumed, so the
+ * call can simply be repeated.
  *
  * @param h          Array of handles.
  * @param count      Number of handles.
- * @param timeout_ms Milliseconds, or osWaitForever.
+ * @param timeout_ms Milliseconds (0 polls), or osWaitForever.
  * @retval osOK             All jobs finished.
  * @retval osErrorTimeout   At least one still running.
- * @retval osErrorParameter A detached handle, or a duplicated join bit.
+ * @retval osErrorParameter A detached handle, a handle spawned by another
+ *                          thread, or a duplicated join bit.
+ * @retval osErrorISR       Called from an ISR.
  */
 osStatus_t task_join_all(const task_h_t *h, size_t count, uint32_t timeout_ms);
 
@@ -408,10 +446,13 @@ bool task_running(task_h_t h);
  * @brief Create every instance of a pool now, parked and idle.
  *
  * Optional. Moves the cost of first-time stack initialisation from the first
- * in-flight spawn to boot; call it for latency-critical pools only.
+ * in-flight spawn to boot; call it for latency-critical pools only. Unlike the
+ * rest of the API it may also be called before osKernelStart().
  *
- * @retval osOK    All instances exist (already-created ones are left alone).
- * @retval osError At least one thread could not be created.
+ * @retval osOK       All instances exist, or are being created by a concurrent
+ *                    spawn (already-created ones are left alone).
+ * @retval osError    At least one thread could not be created.
+ * @retval osErrorISR Called from an ISR.
  */
 osStatus_t task_prewarm(const task_desc_t *desc);
 

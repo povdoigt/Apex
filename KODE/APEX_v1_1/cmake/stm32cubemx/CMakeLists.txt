@@ -14,7 +14,8 @@ set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_FLIGHT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/SEQ_FLIGHT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/example_flash_selftest
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/example_flash_selftest
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_SCHED_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_MULT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_sx1276_1_lora
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
@@ -158,7 +159,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_seq_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/test/Src/flash_stream_test.c
     # # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/test/Src/iir_filter_test.c
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/test/Src/scheduler_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/test/Src/sched_rtos_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/test/Src/telem_format_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/test/Src/test_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/test/Src/tools_test.c
@@ -239,7 +240,8 @@ set(FreeRTOS_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/Third_Party/FreeRTOS/Source/tasks.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/Third_Party/FreeRTOS/Source/timers.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
+    # heap_4.c removed: configSUPPORT_DYNAMIC_ALLOCATION is 0 (see FreeRTOSConfig.h)
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.c
 )
 

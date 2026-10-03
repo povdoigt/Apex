@@ -47,4 +47,13 @@ void TEST_get_pass_fail_count(const TEST_case_table_t table[], size_t n_cases, u
 void TEST_print_case_result(const TEST_case_table_t *table, size_t n_cases, void (*print_func)(const char *),
                             const char suite_name[32], const char suite_desc[128]);
 
+// Print a string on the USB CDC port, usable as TEST_print_case_result's print_func.
+// Works in both schedules: it waits with osDelay() once the RTOS kernel runs, HAL_Delay()
+// otherwise, and returns only once the transfer is over, so the caller may reuse its buffer.
+void TEST_usb_print(const char *s);
+
+// Block until a host terminal opens the USB CDC port (DTR=1), then let it settle.
+// Without it, the first characters would be lost before the terminal is ready.
+void TEST_wait_host(void);
+
 #endif // TEST_H

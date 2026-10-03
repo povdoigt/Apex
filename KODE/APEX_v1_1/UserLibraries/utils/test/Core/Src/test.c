@@ -2,10 +2,55 @@
 
 #include "vt100.h"
 
+#include "main.h"
+#include "cmsis_os2.h"
+#include "usbd_cdc.h"
+#include "usbd_cdc_if.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
+
+extern USBD_HandleTypeDef hUsbDeviceFS;
+
+// Sleep when the RTOS runs (other threads keep going), busy-wait otherwise.
+static void test_delay_ms(uint32_t ms) {
+    if (osKernelGetState() == osKernelRunning) {
+        (void)osDelay(ms);
+    } else {
+        HAL_Delay(ms);
+    }
+}
+
+void TEST_usb_print(const char *s) {
+    size_t len = strlen(s);
+    if (len == 0u) {
+        return;
+    }
+
+    // A previous transfer may still be in flight: retry while busy, bounded.
+    for (uint32_t tries = 0; tries < 100u; tries++) {
+        if (CDC_Transmit_FS((uint8_t *)s, (uint16_t)len) != USBD_BUSY) {
+            break;
+        }
+        test_delay_ms(1);
+    }
+
+    // The transfer reads `s` asynchronously: wait for its end before returning.
+    USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *)hUsbDeviceFS.pClassData;
+    for (uint32_t tries = 0; hcdc != NULL && hcdc->TxState != 0u && tries < 100u; tries++) {
+        test_delay_ms(1);
+    }
+}
+
+void TEST_wait_host(void) {
+    while (!cdc_port_open) {
+        test_delay_ms(10);
+    }
+    test_delay_ms(50);
+}
 
 void TEST_configure_cases(TEST_case_table_t table[], size_t n_cases, const bool enable[]) {
     for (size_t i = 0; i < n_cases; i++) {

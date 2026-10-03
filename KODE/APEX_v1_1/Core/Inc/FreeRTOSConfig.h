@@ -85,7 +85,7 @@
 #define configUSE_APPLICATION_TASK_TAG           1
 #define configUSE_COUNTING_SEMAPHORES            1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION  0
-#define configUSE_TICKLESS_IDLE                  2
+#define configUSE_TICKLESS_IDLE                  0
 #define configRECORD_STACK_HIGH_ADDRESS          1
 #define configUSE_POSIX_ERRNO                    1
 /* USER CODE BEGIN MESSAGE_BUFFER_LENGTH_TYPE */
@@ -188,6 +188,17 @@ standard names. */
 
 /* USER CODE BEGIN Defines */
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
+
+/* Fully static RTOS: every kernel object must supply its own cb_mem/stack_mem,
+   so a forgotten one fails at creation instead of silently using a heap.
+   Overridden here so a CubeMX regeneration does not revert it. heap_4.c must
+   stay out of the build (it #errors when dynamic allocation is off). */
+#undef  configSUPPORT_DYNAMIC_ALLOCATION
+#define configSUPPORT_DYNAMIC_ALLOCATION         0
+
+/* One TLS pointer, used by the scheduler lib to track in-flight join bits
+   (see TASK_TLS_INDEX in scheduler.h). */
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS  1
 /* USER CODE END Defines */
 
 #endif /* FREERTOS_CONFIG_H */
