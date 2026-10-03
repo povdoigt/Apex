@@ -11,7 +11,8 @@ set(MX_Defines_Syms
 # Configure project path
 set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_BMI088_W25Q_1
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_FLIGHT
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_FLIGHT
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/SEQ_FLIGHT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_MULT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_sx1276_1_lora
