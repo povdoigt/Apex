@@ -126,7 +126,7 @@ typedef int32_t task_ret_t;
 typedef enum {
     TASK_F_NONE       = 0u,
     /** Body never returns (acquisition loop, LED animation). Such a task may
-     *  not be joined: task_spawn() rejects a non-zero join_bit on it. */
+     *  not be joined: task_spawn_() rejects a non-zero join_bit on it. */
     TASK_F_PERSISTENT = (1u << 0),
 } task_flags_t;
 
@@ -238,6 +238,17 @@ typedef struct task_h_t {
  * The argument struct is declared separately, as an ordinary type, and holds
  * business inputs only: no result pointer, no done-flag handle.
  *
+ * ## Generated symbols (invisible to grep: search for the macro instead)
+ *
+ *   TASK_<name>                 const task_desc_t, defined by TASK_POOL
+ *   <name>_spawn(args, attr)    inline spawner, wraps task_spawn_()
+ *   <name>_task_args_t          alias of `args_type`
+ *   <name>_TASK_STACK_BYTES     default stack size, used by TASK_POOL
+ *   <name>_TASK_FLAGS           descriptor flags (TASK_F_*)
+ *   <name>_task_entry           type-erasing adapter, defined by TASK_DEFINE
+ *   <name>_task_body            the body itself, defined by TASK_DEFINE
+ *   <name>_task_slots/_stacks/_argbuf   storage, static to the TASK_POOL unit
+ *
  * @code
  * typedef struct {
  *     W25Q_t   *chip;
@@ -256,7 +267,7 @@ typedef struct task_h_t {
  * @brief Declare a task whose body never returns.
  *
  * Same as TASK_DECLARE but marks the task persistent: its slot stays busy for
- * the lifetime of the program, and task_spawn() refuses a join bit on it
+ * the lifetime of the program, and task_spawn_() refuses a join bit on it
  * (waiting for a task that never finishes would deadlock the joiner).
  */
 #define TASK_DECLARE_PERSISTENT(name_, args_type_, stack_bytes_)               \
@@ -359,7 +370,7 @@ typedef struct task_h_t {
  * priority is exactly what makes a rate-monotonic argument unverifiable.
  *
  * @code
- * W25Q_STATE st;
+ * static task_ret_t st;   // must outlive the job, even past a join timeout
  * task_h_t h = W25Q_Write_spawn(
  *     &(W25Q_Write_args_t){ .chip = &w25q, .buf = data,
  *                           .addr = a, .len = sizeof(data) },
@@ -368,23 +379,38 @@ typedef struct task_h_t {
  * if (!task_h_valid(h)) { / * pool exhausted: degrade * / }
  * @endcode
  *
- * @param desc Task descriptor; `<name>_spawn()` supplies &TASK_<name>.
  * A join bit stays reserved for the calling thread until the job behind it
  * ends, whether or not it was joined: after a task_join() timeout, a new spawn
  * on the same bit is refused while the old job is still running.
  *
  * @param desc Task descriptor; `<name>_spawn()` supplies &TASK_<name>.
  * @param args Arguments, copied into the slot, so a caller-stack literal is
- *             safe. Must not be NULL when the argument struct is non-empty.
+ *             safe. The copy is shallow: a pointer inside the struct (`buf`)
+ *             is copied as a pointer, and what it points to must stay valid
+ *             until the job really ends. Must not be NULL when the argument
+ *             struct is non-empty.
  * @param attr Spawn attributes.
- * @retval TASK_H_INVALID  Pool exhausted, thread creation failed, called from
- *                         an ISR or before osKernelStart(), NULL args, or
- *                         invalid attributes (priority outside
- *                         osPriorityIdle..configMAX_PRIORITIES-1, join bit
- *                         outside 1..30 or still in flight, join bit requested
- *                         on a persistent task).
+ * @retval TASK_H_INVALID  A run-time condition, to degrade on: pool exhausted,
+ *                         join bit still in flight, or thread creation failed.
+ *
+ * Programming errors (called from an ISR or before osKernelStart(), NULL
+ * descriptor/attributes/args, priority outside
+ * osPriorityIdle..configMAX_PRIORITIES-1, join bit above 30, join bit on a
+ * persistent task) trip a configASSERT() by default (see
+ * task_set_misuse_handler()). If it returns, the spawn is refused with TASK_H_INVALID.
  */
 task_h_t task_spawn_(const task_desc_t *desc, void *args, const task_attr_t *attr);
+
+/**
+ * @brief Install a handler for API misuses detected by task_spawn_().
+ *
+ * Without one, a misuse is `configASSERT(0)`. A handler that returns makes the
+ * offending call fail harmlessly; meant for tests of the refusals.
+ *
+ * @param handler Receives a short description of the violated rule, or NULL to
+ *                restore the default.
+ */
+void task_set_misuse_handler(void (*handler)(const char *what));
 
 /**
  * @brief Wait for one job to finish.
@@ -400,10 +426,13 @@ task_h_t task_spawn_(const task_desc_t *desc, void *args, const task_attr_t *att
  * osErrorTimeout as a condition to degrade explicitly; `attr->ret` will still
  * be written when the job ends.
  *
- * @param h          Handle from task_spawn(), spawned with a non-zero join bit.
+ * @param h          Handle from `<name>_spawn()`, spawned with a non-zero join bit.
  * @param timeout_ms Milliseconds (0 polls), or osWaitForever.
  * @retval osOK             Job finished.
  * @retval osErrorTimeout   Still running.
+ * @retval osErrorResource  The handle's job is over and its join bit now
+ *                          belongs to a later job: the result was lost, and
+ *                          waiting would wait for that other job.
  * @retval osErrorParameter Detached handle, or caller is not the joiner.
  * @retval osErrorISR       Called from an ISR.
  */
@@ -421,6 +450,8 @@ osStatus_t task_join(task_h_t h, uint32_t timeout_ms);
  * @param timeout_ms Milliseconds (0 polls), or osWaitForever.
  * @retval osOK             All jobs finished.
  * @retval osErrorTimeout   At least one still running.
+ * @retval osErrorResource  A handle's join bit now belongs to a later job
+ *                          (see task_join()).
  * @retval osErrorParameter A detached handle, a handle spawned by another
  *                          thread, or a duplicated join bit.
  * @retval osErrorISR       Called from an ISR.

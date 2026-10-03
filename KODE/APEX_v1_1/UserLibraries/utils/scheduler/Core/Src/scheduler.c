@@ -48,9 +48,39 @@
 #error "scheduler: configNUM_THREAD_LOCAL_STORAGE_POINTERS must exceed TASK_TLS_INDEX"
 #endif
 
+/* join_wait() relies on how the CMSIS wrapper of this exact FreeRTOS line
+   handles thread flags (see the file header). Re-validate it before moving. */
+#if (tskKERNEL_VERSION_MAJOR != 10) || (tskKERNEL_VERSION_MINOR != 3)
+#error "scheduler: join_wait() was validated against FreeRTOS 10.3.x only; re-check the CMSIS-RTOS2 thread-flag wrapper before upgrading"
+#endif
+
 /* ========================================================================== */
 /*                            Internal helpers                                */
 /* ========================================================================== */
+
+static void (*volatile misuse_handler)(const char *what);
+
+void task_set_misuse_handler(void (*handler)(const char *what)) {
+    misuse_handler = handler;
+}
+
+/**
+ * @brief Report a programming error: stop the program unless a handler is set.
+ *
+ * If the handler returns, the call is refused (TASK_H_INVALID), which is also
+ * the behaviour of a build with configASSERT() compiled out.
+ */
+static void report_misuse(const char *what) {
+    void (*handler)(const char *) = misuse_handler;
+
+    if (handler != NULL) {
+        handler(what);
+    } else {
+        configASSERT(0);
+    }
+}
+
+#define MISUSE_(cond_, what_)  do { if (cond_) { report_misuse(what_); return TASK_H_INVALID; } } while (0)
 
 /**
  * @brief Enter a short critical section, tolerating a not-yet-running kernel.
@@ -226,6 +256,23 @@ static void slot_finish(task_slot_t *s, task_ret_t result) {
 }
 
 /**
+ * @brief Tell whether a handle's join bit has since been given to another job.
+ *
+ * A bumped generation means the handle's job is over. If its bit is in flight
+ * again, a later job owns it, and waiting on it would wait for that job instead
+ * (its own flag was dropped when the bit was re-reserved). If the bit is free,
+ * the finished job's flag is still latched and the join is legitimate. Call
+ * with the joiner being the calling thread.
+ */
+static bool handle_superseded(task_h_t h) {
+    int32_t token = sched_lock();
+    bool    stale = (h.slot->gen != h.gen)
+                 && (inflight_get(h.joiner) & (1u << h.join_bit)) != 0u;
+    sched_unlock(token);
+    return stale;
+}
+
+/**
  * @brief Convert a millisecond timeout to ticks, keeping osWaitForever.
  *
  * Computed in 64 bits: pdMS_TO_TICKS() overflows past ~71 min at 1 kHz.
@@ -344,29 +391,21 @@ static osStatus_t slot_create(const task_desc_t *desc, task_slot_t *s, osPriorit
 /* ========================================================================== */
 
 task_h_t task_spawn_(const task_desc_t *desc, void *args, const task_attr_t *attr) {
-    if (sched_context() != osOK) {
-        return TASK_H_INVALID;
-    }
-    if (desc == NULL || attr == NULL) {
-        return TASK_H_INVALID;
-    }
+    /* Everything up to slot_acquire() is a programming error, reported through
+       task_misuse_hook(). From there on, a failure is a run-time condition. */
+    MISUSE_(sched_context() != osOK, "task_spawn: ISR or kernel not started");
+    MISUSE_(desc == NULL || attr == NULL, "task_spawn: NULL descriptor or attributes");
     /* Without arguments the body would run on the previous tenant's ones. */
-    if (desc->args_size != 0u && args == NULL) {
-        return TASK_H_INVALID;
-    }
+    MISUSE_(desc->args_size != 0u && args == NULL, "task_spawn: NULL args");
     /* osPriorityISR equals configMAX_PRIORITIES here: vTaskPrioritySet()
        would trip its configASSERT on it. */
-    if (attr->priority < osPriorityIdle
-        || (uint32_t)attr->priority >= (uint32_t)configMAX_PRIORITIES) {
-        return TASK_H_INVALID;
-    }
-    if (attr->join_bit > TASK_JOIN_BIT_MAX) {
-        return TASK_H_INVALID;
-    }
+    MISUSE_(attr->priority < osPriorityIdle
+            || (uint32_t)attr->priority >= (uint32_t)configMAX_PRIORITIES,
+            "task_spawn: priority out of range");
+    MISUSE_(attr->join_bit > TASK_JOIN_BIT_MAX, "task_spawn: join bit out of range");
     /* Joining a task that never returns would block the joiner forever. */
-    if (attr->join_bit != TASK_JOIN_NONE && (desc->flags & TASK_F_PERSISTENT) != 0u) {
-        return TASK_H_INVALID;
-    }
+    MISUSE_(attr->join_bit != TASK_JOIN_NONE && (desc->flags & TASK_F_PERSISTENT) != 0u,
+            "task_spawn: join bit on a persistent task");
 
     task_slot_t *s = slot_acquire(desc, osThreadGetId(), attr->join_bit);
     if (s == NULL) {
@@ -418,6 +457,9 @@ osStatus_t task_join(task_h_t h, uint32_t timeout_ms) {
     if (h.joiner != osThreadGetId()) {
         return osErrorParameter;
     }
+    if (handle_superseded(h)) {
+        return osErrorResource;
+    }
 
     return join_wait(1u << h.join_bit, timeout_ms);
 }
@@ -442,6 +484,9 @@ osStatus_t task_join_all(const task_h_t *h, size_t count, uint32_t timeout_ms) {
         uint32_t bit = 1u << h[i].join_bit;
         if ((mask & bit) != 0u) {
             return osErrorParameter;   /* Two jobs sharing a bit are indistinct. */
+        }
+        if (handle_superseded(h[i])) {
+            return osErrorResource;
         }
         mask |= bit;
     }

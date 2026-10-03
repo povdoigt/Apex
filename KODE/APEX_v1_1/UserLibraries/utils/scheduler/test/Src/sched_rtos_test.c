@@ -49,6 +49,15 @@ TEST_case_table_t SCHED_rtos_test_cases[SCHED_rtos_test_N_TESTS] = {
  * jobs, qui ecriraient sinon dans une pile morte.
  * ======================================================================== */
 
+/* Handler installe par T10 et T26 seulement : un mauvais usage est compte puis
+   refuse, au lieu d'arreter le programme sur configASSERT. */
+static volatile uint32_t misuse_count;
+
+static void count_misuse(const char *what) {
+    (void)what;
+    misuse_count++;
+}
+
 #define GATE_MAX        8u
 #define N_RET           6u
 #define JOIN_BITS_MASK  0x7FFFFFFEu   /* bits 1..30 */
@@ -580,6 +589,8 @@ SCHED_CASE(SCHED_rtos_test_t10_spawn_rejects) {
     SchedT_Echo_args_t a  = { .value = 1 };
     const task_attr_t  ok = { .priority = osPriorityNormal };
 
+    misuse_count = 0u;
+    task_set_misuse_handler(count_misuse);
     TEST_ASSERT(!task_h_valid(task_spawn_(NULL, &a, &ok)), "desc NULL accepte");
     TEST_ASSERT(!task_h_valid(task_spawn_(d, &a, NULL)), "attr NULL accepte");
     TEST_ASSERT(!task_h_valid(SchedT_Echo_spawn(NULL, &ok)), "args NULL accepte (D5)");
@@ -599,6 +610,8 @@ SCHED_CASE(SCHED_rtos_test_t10_spawn_rejects) {
                                                    &(task_attr_t){ .priority = osPriorityNormal, .join_bit = 1u })),
                 "join_bit sur tache persistante accepte");
 
+    task_set_misuse_handler(NULL);
+    TEST_ASSERT(misuse_count == 9u, "%lu mauvais usages signales au lieu de 9", (unsigned long)misuse_count);
     TEST_ASSERT(task_busy_count(d) == 0u, "Un refus a consomme un slot (busy %u)", task_busy_count(d));
 
     /* Aucun refus ne doit avoir laisse le bit 1 marque comme utilise. */
@@ -868,6 +881,10 @@ SCHED_CASE(SCHED_rtos_test_t20_bit_in_flight) {
                           &(task_attr_t){ .priority = osPriorityNormal, .ret = &R[1], .join_bit = 1u });
     TEST_ASSERT(task_h_valid(b), "Respawn refuse alors que A est fini");
 
+    /* A est fini et jamais joint, B a repris son bit : joindre A attendrait B. */
+    st = task_join(a, 0u);
+    TEST_ASSERT(st == osErrorResource, "join(A perime) -> %d != osErrorResource", (int)st);
+
     st = task_join(b, 100u);
     TEST_ASSERT(st == osOK, "join(B) -> %d", (int)st);
     TEST_ASSERT(!task_running(b), "join(B) rendu avant la fin de B (flag de A)");
@@ -1031,6 +1048,8 @@ static void isr_body(void) {
 
 SCHED_CASE(SCHED_rtos_test_t26_isr_rejects) {
     isr_res.ran = false;
+    misuse_count = 0u;
+    task_set_misuse_handler(count_misuse);
     isr_hook    = isr_body;
 
     /* Priorite 6 : sous configMAX_SYSCALL_INTERRUPT_PRIORITY (5). */
@@ -1042,9 +1061,11 @@ SCHED_CASE(SCHED_rtos_test_t26_isr_rejects) {
     (void)osDelay(1u);
     NVIC_DisableIRQ(SPI5_IRQn);
     isr_hook = NULL;
+    task_set_misuse_handler(NULL);
 
     TEST_ASSERT(isr_res.ran, "L'ISR de test ne s'est pas executee");
     TEST_ASSERT(!isr_res.spawn_valid, "Spawn accepte en ISR");
+    TEST_ASSERT(misuse_count == 1u, "Spawn en ISR non signale (%lu)", (unsigned long)misuse_count);
     TEST_ASSERT(isr_res.join == osErrorISR, "join en ISR -> %d != osErrorISR", (int)isr_res.join);
     TEST_ASSERT(isr_res.join_all == osErrorISR, "join_all en ISR -> %d", (int)isr_res.join_all);
     TEST_ASSERT(isr_res.prewarm == osErrorISR, "prewarm en ISR -> %d", (int)isr_res.prewarm);
