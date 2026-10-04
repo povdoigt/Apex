@@ -29,6 +29,7 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
+#include "main_config.h"
 
 /* USER CODE END Includes */
 
@@ -50,7 +51,9 @@ void MX_SPI3_Init(void);
 
 #if (APEX_CFG_SCHED_RTOS == 1)
 
-void Init_spi_semaphores();
+/* Create the per-bus semaphores. Idempotent; call once the kernel is initialised
+   (done in MX_FREERTOS_Init). Transfers must sit between Begin and End. */
+void Init_spi_semaphores(void);
 
 HAL_StatusTypeDef SPI_Begin_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin);
 HAL_StatusTypeDef SPI_Transmit_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pData, uint16_t Size);

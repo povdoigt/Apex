@@ -25,6 +25,8 @@
 #include "main_config.h"
 
 #if (APEX_CFG_SCHED_RTOS == 1)
+#include <stdbool.h>
+#include <stddef.h>
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
 #endif
@@ -421,155 +423,156 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 
 #if (APEX_CFG_SCHED_RTOS == 1)
 
-typedef struct spi_semaphores_t {
-#ifdef SPI1
-	osSemaphoreId_t spi1_use_semaphore_id;
-	StaticSemaphore_t spi1_use_semaphore;
+/*
+ * DMA transfers under FreeRTOS.
+ *
+ * Each bus has two binary semaphores:
+ *   - use : held from SPI_Begin_DMA_RTOS to SPI_End_DMA_RTOS, so one device at
+ *           a time has its CS low. Transfers are only valid in between;
+ *   - done: starts empty, given by the complete / error callback, taken by the
+ *           thread that started the transfer.
+ *
+ * A transfer never blocks forever: a start refused by the HAL returns at once,
+ * a DMA error returns HAL_ERROR, and a lost interrupt returns HAL_TIMEOUT once
+ * twice the expected transfer time (plus a margin) has elapsed.
+ */
 
-	osSemaphoreId_t spi1_dma_semaphore_id;
-	StaticSemaphore_t spi1_dma_semaphore;
-#endif
-#ifdef SPI2
-	osSemaphoreId_t spi2_use_semaphore_id;
-	StaticSemaphore_t spi2_use_semaphore;
+/* Scheduling margin added to the computed transfer time. */
+#define SPI_DMA_RTOS_MARGIN_MS	10u
 
-	osSemaphoreId_t spi2_dma_semaphore_id;
-	StaticSemaphore_t spi2_dma_semaphore;
-#endif
-} spi_semaphores_t;
+typedef struct spi_rtos_bus_t {
+	SPI_HandleTypeDef	*hspi;
+	osSemaphoreId_t		 use_id;
+	StaticSemaphore_t	 use_cb;
+	osSemaphoreId_t		 done_id;
+	StaticSemaphore_t	 done_cb;
+	volatile bool		 error;		/* Set by HAL_SPI_ErrorCallback for the transfer in progress */
+} spi_rtos_bus_t;
 
-spi_semaphores_t spi_semaphores;
+static spi_rtos_bus_t spi_rtos_buses[] = {
+	{ .hspi = &hspi1 },
+	{ .hspi = &hspi2 },
+	{ .hspi = &hspi3 },
+};
 
-#ifdef SPI1
-const char SPI1_use_semaphore_name[19] = "SPI1_use_semaphore";
-const char SPI1_dma_semaphore_name[19] = "SPI1_dma_semaphore";
-#endif
-#ifdef SPI2
-const char SPI2_use_semaphore_name[19] = "SPI2_use_semaphore";
-const char SPI2_dma_semaphore_name[19] = "SPI2_dma_semaphore";
-#endif
-
-
-void Init_spi_semaphores() {
-#ifdef SPI1
-  	const osSemaphoreAttr_t spi1_sem_use_attr = {
-		// .name = SPI1_use_semaphore_name,
-		.cb_mem = &spi_semaphores.spi1_use_semaphore,
-		.cb_size = sizeof(spi_semaphores.spi1_use_semaphore),
-	};
-  	const osSemaphoreAttr_t spi1_sem_dma_attr = {
-		// .name = SPI1_dma_semaphore_name,
-		.cb_mem = &spi_semaphores.spi1_dma_semaphore,
-		.cb_size = sizeof(spi_semaphores.spi1_dma_semaphore),
-	};
-	spi_semaphores.spi1_use_semaphore_id = osSemaphoreNew(1, 1, &spi1_sem_use_attr);
-	spi_semaphores.spi1_dma_semaphore_id = osSemaphoreNew(1, 1, &spi1_sem_dma_attr);
-#endif
-#ifdef SPI2
-  	const osSemaphoreAttr_t spi2_sem_use_attr = {
-		// .name = SPI2_use_semaphore_name,
-		.cb_mem = &spi_semaphores.spi2_use_semaphore,
-		.cb_size = sizeof(spi_semaphores.spi2_use_semaphore),
-	};
-  	const osSemaphoreAttr_t spi2_sem_dma_attr = {
-		// .name = SPI2_dma_semaphore_name,
-		.cb_mem = &spi_semaphores.spi2_dma_semaphore,
-		.cb_size = sizeof(spi_semaphores.spi2_dma_semaphore),
-	};
-	spi_semaphores.spi2_use_semaphore_id = osSemaphoreNew(1, 1, &spi2_sem_use_attr);
-	spi_semaphores.spi2_dma_semaphore_id = osSemaphoreNew(1, 1, &spi2_sem_dma_attr);
-#endif
+static spi_rtos_bus_t *spi_rtos_bus_get(const SPI_HandleTypeDef *hspi) {
+	for (size_t i = 0; i < sizeof(spi_rtos_buses) / sizeof(spi_rtos_buses[0]); i++) {
+		if (spi_rtos_buses[i].hspi->Instance == hspi->Instance) {
+			return &spi_rtos_buses[i];
+		}
+	}
+	return NULL;
 }
 
-osSemaphoreId_t spi_use_semaphore_get(SPI_HandleTypeDef *hspi) {
-#ifdef SPI1
-	if (hspi->Instance == SPI1) {
-		return spi_semaphores.spi1_use_semaphore_id;
+void Init_spi_semaphores(void) {
+	for (size_t i = 0; i < sizeof(spi_rtos_buses) / sizeof(spi_rtos_buses[0]); i++) {
+		spi_rtos_bus_t *bus = &spi_rtos_buses[i];
+		if (bus->use_id == NULL) {
+			bus->use_id = osSemaphoreNew(1, 1, &(const osSemaphoreAttr_t){
+				.cb_mem  = &bus->use_cb,
+				.cb_size = sizeof(bus->use_cb),
+			});
+		}
+		if (bus->done_id == NULL) {
+			bus->done_id = osSemaphoreNew(1, 0, &(const osSemaphoreAttr_t){
+				.cb_mem  = &bus->done_cb,
+				.cb_size = sizeof(bus->done_cb),
+			});
+		}
+		if (bus->use_id == NULL || bus->done_id == NULL) {
+			Error_Handler();
+		}
 	}
-#endif
-#ifdef SPI2
-	if (hspi->Instance == SPI2) {
-		return spi_semaphores.spi2_use_semaphore_id;
-	}
-#endif
-	return NULL; // Invalid SPI instance
 }
 
-osSemaphoreId_t *spi_dma_semaphore_get(SPI_HandleTypeDef *hspi) {
-#ifdef SPI1
-	if (hspi->Instance == SPI1) {
-		return spi_semaphores.spi1_dma_semaphore_id;
-	}
-#endif
-#ifdef SPI2
-	if (hspi->Instance == SPI2) {
-		return spi_semaphores.spi2_dma_semaphore_id;
-	}
-#endif
-	return NULL; // Invalid SPI instance
+/* Twice the time `size` bytes take on the wire, plus a scheduling margin. */
+static uint32_t spi_rtos_timeout_ms(const SPI_HandleTypeDef *hspi, uint16_t size) {
+	/* SPI1 is the only APB2 SPI of this part. */
+	uint32_t pclk  = (hspi->Instance == SPI1) ? HAL_RCC_GetPCLK2Freq() : HAL_RCC_GetPCLK1Freq();
+	uint32_t presc = 2u << (hspi->Init.BaudRatePrescaler >> SPI_CR1_BR_Pos);
+	uint32_t ms    = (uint32_t)(((uint64_t)size * 8u * presc * 1000u) / pclk);
+	return 2u * ms + SPI_DMA_RTOS_MARGIN_MS;
 }
 
-void __HAL_SPI_CpltCallback(SPI_HandleTypeDef *hspi) {
-	osSemaphoreId_t dma_semaphore = spi_dma_semaphore_get(hspi);
-	if (dma_semaphore == NULL) {
-		Error_Handler();
+/* Called just before a start: no transfer is in progress, so any token left
+   in `done` is stale (a completion that raced an abort). */
+static void spi_rtos_prepare(spi_rtos_bus_t *bus) {
+	(void)osSemaphoreAcquire(bus->done_id, 0u);
+	bus->error = false;
+}
+
+static HAL_StatusTypeDef spi_rtos_wait(spi_rtos_bus_t *bus, HAL_StatusTypeDef started, uint16_t size) {
+	if (started != HAL_OK) {
+		return started;		/* Nothing started: no callback will come */
 	}
-	osSemaphoreRelease(dma_semaphore);
+	if (osSemaphoreAcquire(bus->done_id, spi_rtos_timeout_ms(bus->hspi, size)) != osOK) {
+		/* Blocking abort: no callback fires after it returns. */
+		(void)HAL_SPI_Abort(bus->hspi);
+		return HAL_TIMEOUT;
+	}
+	return bus->error ? HAL_ERROR : HAL_OK;
+}
+
+/* Callbacks of a bus this layer does not drive are ignored. */
+static void spi_rtos_signal(SPI_HandleTypeDef *hspi, bool error) {
+	spi_rtos_bus_t *bus = spi_rtos_bus_get(hspi);
+	if (bus == NULL || bus->done_id == NULL) {
+		return;
+	}
+	bus->error = error;
+	osSemaphoreRelease(bus->done_id);
 }
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-	__HAL_SPI_CpltCallback(hspi);
+	spi_rtos_signal(hspi, false);
 }
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
-	__HAL_SPI_CpltCallback(hspi);
+	spi_rtos_signal(hspi, false);
 }
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
-	__HAL_SPI_CpltCallback(hspi);
+	spi_rtos_signal(hspi, false);
+}
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
+	spi_rtos_signal(hspi, true);
 }
 
 HAL_StatusTypeDef SPI_Begin_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin) {
-	osSemaphoreId_t use_sem = spi_use_semaphore_get(hspi);
-	if (use_sem == NULL) { return HAL_ERROR; }
-	if (osSemaphoreAcquire(use_sem, osWaitForever) != osOK) { return HAL_ERROR; }
+	spi_rtos_bus_t *bus = spi_rtos_bus_get(hspi);
+	if (bus == NULL || bus->use_id == NULL) { return HAL_ERROR; }
+	if (osSemaphoreAcquire(bus->use_id, osWaitForever) != osOK) { return HAL_ERROR; }
 	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_RESET);
 	return HAL_OK;
 }
 
 HAL_StatusTypeDef SPI_Transmit_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pData, uint16_t Size) {
-	osSemaphoreId_t dma_sem = spi_dma_semaphore_get(hspi);
-	if (dma_sem == NULL) { return HAL_ERROR; }
-	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
-	HAL_StatusTypeDef status = HAL_SPI_Transmit_DMA(hspi, pData, Size);
-	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
-	if (osSemaphoreRelease(dma_sem) != osOK) { return HAL_ERROR; }
-	return status;
+	spi_rtos_bus_t *bus = spi_rtos_bus_get(hspi);
+	if (bus == NULL || bus->done_id == NULL) { return HAL_ERROR; }
+	if (Size == 0u) { return HAL_OK; }
+	spi_rtos_prepare(bus);
+	return spi_rtos_wait(bus, HAL_SPI_Transmit_DMA(hspi, pData, Size), Size);
 }
 
 HAL_StatusTypeDef SPI_TransmitReceive_DMA_RTOS(SPI_HandleTypeDef *hspi, const uint8_t *pTxData, uint8_t *pRxData, uint16_t Size) {
-	osSemaphoreId_t dma_sem = spi_dma_semaphore_get(hspi);
-	if (dma_sem == NULL) { return HAL_ERROR; }
-	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
-	HAL_StatusTypeDef status = HAL_SPI_TransmitReceive_DMA(hspi, pTxData, pRxData, Size);
-	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
-	if (osSemaphoreRelease(dma_sem) != osOK) { return HAL_ERROR; }
-	return status;
+	spi_rtos_bus_t *bus = spi_rtos_bus_get(hspi);
+	if (bus == NULL || bus->done_id == NULL) { return HAL_ERROR; }
+	if (Size == 0u) { return HAL_OK; }
+	spi_rtos_prepare(bus);
+	return spi_rtos_wait(bus, HAL_SPI_TransmitReceive_DMA(hspi, pTxData, pRxData, Size), Size);
 }
 
 HAL_StatusTypeDef SPI_Receive_DMA_RTOS(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size) {
-	osSemaphoreId_t dma_sem = spi_dma_semaphore_get(hspi);
-	if (dma_sem == NULL) { return HAL_ERROR; }
-	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
-	HAL_StatusTypeDef status = HAL_SPI_Receive_DMA(hspi, pData, Size);
-	if (osSemaphoreAcquire(dma_sem, osWaitForever) != osOK) { return HAL_ERROR; }
-	if (osSemaphoreRelease(dma_sem) != osOK) { return HAL_ERROR; }
-	return status;
+	spi_rtos_bus_t *bus = spi_rtos_bus_get(hspi);
+	if (bus == NULL || bus->done_id == NULL) { return HAL_ERROR; }
+	if (Size == 0u) { return HAL_OK; }
+	spi_rtos_prepare(bus);
+	return spi_rtos_wait(bus, HAL_SPI_Receive_DMA(hspi, pData, Size), Size);
 }
 
 HAL_StatusTypeDef SPI_End_DMA_RTOS(SPI_HandleTypeDef *hspi, GPIO_TypeDef *csPinBank, uint16_t csPin) {
-	osSemaphoreId_t use_sem = spi_use_semaphore_get(hspi);
-	if (use_sem == NULL) { return HAL_ERROR; }
+	spi_rtos_bus_t *bus = spi_rtos_bus_get(hspi);
+	if (bus == NULL || bus->use_id == NULL) { return HAL_ERROR; }
 	HAL_GPIO_WritePin(csPinBank, csPin, GPIO_PIN_SET);
-	return osSemaphoreRelease(use_sem) == osOK ? HAL_OK : HAL_ERROR;
+	return osSemaphoreRelease(bus->use_id) == osOK ? HAL_OK : HAL_ERROR;
 }
 
 #endif /* APEX_CFG_SCHED_RTOS */

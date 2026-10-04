@@ -6,13 +6,6 @@
 
 #include "main_config.h"
 
-#include "adc.h"
-#include "dma.h"
-#include "gpio.h"
-#include "i2c.h"
-#include "spi.h"
-#include "tim.h"
-#include "usart.h"
 
 // =======================================================================
 // ADXL345 configuration
@@ -32,6 +25,12 @@ extern adxl375_t ADXL375;
 #include "BMI088.h"
 extern bmi088_t bmi088;
 extern const bmi_config_t bmi088_config;
+
+#if (APEX_CFG_PROFILE_TEST == 1)
+
+#include "BMI088_seq_test.h"
+
+#endif
 
 #endif
 
@@ -115,8 +114,15 @@ extern sx127x_t sx127x_2;
 // =======================================================================
 #if (APEX_ENABLE_W25Q512 == 1)
 
-#include "w25q.h"
+#include "w25q_rtos.h"
 extern W25Q_t w25q;
+extern const W25Q_config_t w25q_config;
+
+#if (APEX_CFG_PROFILE_TEST == 1)
+
+#include "w25q_rtos_test.h"
+
+#endif
 
 #endif
 

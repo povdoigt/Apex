@@ -1,6 +1,7 @@
 #ifndef SX127X_COMMON_H
 #define SX127X_COMMON_H
 
+#include "main_config.h"
 #include "stm32f4xx_hal.h"
 #if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"

@@ -19,21 +19,41 @@ void setup(void) {
     W25Q_seq_test_set_context(&w25q);
 
     TEST_configure_cases(W25Q_seq_test_cases, W25Q_seq_test_N_TESTS, (const bool[]) {
-        true,	/* T0  Write zero size */
-        true,	/* T1  Unaligned RW */
-        true,	/* T2  AND behavior */
-        true,	/* T3  Erase limits */
-        true,	/* T4  Write limits */
-        true,	/* T5  Read limits */
-        true,	/* T6  Robustesse unaligned RW */
-        true,	/* T7  Robustesse multi-sector RW */
-		true,	/* T8  Read status */
-		true,	/* T9  Erase 32 KB */
-		true,	/* T10 Erase 64 KB */
-		true,	/* T11 Soft reset */
-		true,	/* T12 Multi-sector write */
-		true,	/* T13 End of flash clamp */
-		true	/* T14 Write size=0 */
+        /* A. Communication */
+        true,	/* T0  ID Check */
+        true,	/* T1  Read Status */
+        /* B. Configuration */
+        true,	/* T2  Cfg To Status */
+        true,	/* T3  Cfg Applied */
+        true,	/* T4  Cfg Invalid */
+        true,	/* T5  Cfg Keep */
+        /* C. Primitives commande */
+        true,	/* T6  Cmd Invalid */
+        true,	/* T7  Write Enable Latch */
+        true,	/* T8  Addr Mode Tracking */
+        /* D. Effacement secteur */
+        true,	/* T9  Erase Verify */
+        /* E. Lecture / ecriture */
+        true,	/* T10 Aligned R/W */
+        true,	/* T11 Cross-page R/W */
+        true,	/* T12 Cross-sector R/W */
+        true,	/* T13 Unaligned R/W */
+        true,	/* T14 Multi-sector R/W */
+        true,	/* T15 AND without Erase */
+        true,	/* T16 R/W in 3B Mode */
+        /* F. Effacement etendu */
+        true,	/* T17 Erase Addr Length */
+        true,	/* T18 Block Erase 32 KB */
+        true,	/* T19 Block Erase 64 KB */
+        true,	/* T20 Sector Isolation */
+        true,	/* T21 Busy Timeout */
+        /* G. Cas limites R/W */
+        true,	/* T22 Write Size=0 */
+        true,	/* T23 Write Near End */
+        true,	/* T24 Read Near End */
+        true,	/* T25 Addr Out Of Range */
+        /* H. Reset */
+        true,	/* T26 Soft Reset */
     });
 
 	// Execute all tests sequentially and fill the results in the test cases.

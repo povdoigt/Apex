@@ -182,6 +182,12 @@ extern "C" {
 #define W25Q_FLAG_WEL		   (1u << 2)
 #define W25Q_FLAG_DEVICE_BUSY  (1u << 3)
 #define W25Q_FLAG_WAIT_AFTER   (1u << 4)
+#define W25Q_FLAG_ADDR_4B      (1u << 5)	// Adresse toujours sur 4 octets (sinon 3 ou 4 selon ADS)
+
+/* Bits de status_reg en lecture seule : une écriture de SR ne les modifie pas */
+#define W25Q_SR_READONLY_MASK	((1UL << W25Q_SR1_BUSY_BIT) | (1UL << W25Q_SR1_WEL_BIT) | \
+								 (1UL << W25Q_SR2_SUS_BIT)  | (1UL << W25Q_SR3_ADS_BIT))
+
 
 /* --- Codes de retour --- */
 typedef enum {
@@ -191,14 +197,112 @@ typedef enum {
     W25Q_PARAM_ERR,
     W25Q_BUSY_TIMEOUT,
 	W25Q_SEM_ERR,
+	W25Q_LOCK_TIMEOUT,	// RTOS : semaphore de la puce non obtenu dans le delai
 } W25Q_STATE;
+
+/* ====================== Configuration du composant ====================== */
+/*
+ * Chaque champ de configuration vaut W25Q_CFG_KEEP (= 0) par défaut : le bit
+ * correspondant du registre de statut est laissé tel quel. Une config
+ * zéro-initialisée ne modifie donc rien dans la puce. W25Q_Init n'écrit un
+ * registre de statut que si la valeur voulue diffère de la valeur lue.
+ *
+ * Volontairement non exposés (préservés tels quels) : SRP, SRL et LB1-3,
+ * qui peuvent verrouiller la puce de façon permanente (OTP).
+ */
+#define W25Q_CFG_KEEP	0u
+
+/* Mode d'écriture des registres de statut */
+typedef enum W25Q_SR_WRITE {
+	W25Q_SR_WRITE_NON_VOLATILE = 0,	// 06h + écriture : persistant, BUSY pendant tW (~15 ms max)
+	W25Q_SR_WRITE_VOLATILE,			// 50h + écriture : perdu à la mise hors tension, immédiat
+} W25Q_SR_WRITE;
+
+/* SR1 [5:2] BP3..BP0 : taille de la zone protégée (0 = aucune, 15 = toute la puce) */
+#define W25Q_CFG_BP(n)		((uint8_t)((n) + 1u))	// n dans [0, 15]
+#define W25Q_CFG_BP_NONE	W25Q_CFG_BP(0)
+
+/* SR1 [6] TB : la zone protégée part du haut ou du bas de la mémoire */
+typedef enum W25Q_CFG_TB {
+	W25Q_CFG_TB_KEEP = W25Q_CFG_KEEP,
+	W25Q_CFG_TB_TOP,			// TB=0
+	W25Q_CFG_TB_BOTTOM,			// TB=1
+} W25Q_CFG_TB;
+
+/* SR2 [1] QE : Quad Enable (QE=0 active les fonctions /WP et /HOLD) */
+typedef enum W25Q_CFG_QE {
+	W25Q_CFG_QE_KEEP = W25Q_CFG_KEEP,
+	W25Q_CFG_QE_OFF,			// QE=0
+	W25Q_CFG_QE_ON,				// QE=1
+} W25Q_CFG_QE;
+
+/* SR2 [6] CMP : complément de la zone protégée par BP/TB */
+typedef enum W25Q_CFG_CMP {
+	W25Q_CFG_CMP_KEEP = W25Q_CFG_KEEP,
+	W25Q_CFG_CMP_OFF,			// CMP=0
+	W25Q_CFG_CMP_ON,			// CMP=1
+} W25Q_CFG_CMP;
+
+/* SR3 [0] ADS : mode d'adressage courant (lecture seule, changé par B7h/E9h, volatile) */
+typedef enum W25Q_CFG_ADS {
+	W25Q_CFG_ADS_KEEP = W25Q_CFG_KEEP,
+	W25Q_CFG_ADS_3B,			// E9h (Exit 4-Byte Address Mode)  -> ADS=0
+	W25Q_CFG_ADS_4B,			// B7h (Enter 4-Byte Address Mode) -> ADS=1
+} W25Q_CFG_ADS;
+
+/* SR3 [1] ADP : mode d'adressage à la mise sous tension */
+typedef enum W25Q_CFG_ADP {
+	W25Q_CFG_ADP_KEEP = W25Q_CFG_KEEP,
+	W25Q_CFG_ADP_3B,			// ADP=0
+	W25Q_CFG_ADP_4B,			// ADP=1
+} W25Q_CFG_ADP;
+
+/* SR3 [2] WPS : schéma de protection en écriture */
+typedef enum W25Q_CFG_WPS {
+	W25Q_CFG_WPS_KEEP = W25Q_CFG_KEEP,
+	W25Q_CFG_WPS_STATUS_BITS,	// WPS=0 : protection par BP/TB/CMP
+	W25Q_CFG_WPS_INDIVIDUAL,	// WPS=1 : protection bloc par bloc (36h/39h)
+} W25Q_CFG_WPS;
+
+/* SR3 [6:5] DRV1..DRV0 : force de sortie */
+typedef enum W25Q_CFG_DRV {
+	W25Q_CFG_DRV_KEEP = W25Q_CFG_KEEP,
+	W25Q_CFG_DRV_100,			// 00
+	W25Q_CFG_DRV_75,			// 01
+	W25Q_CFG_DRV_50,			// 10
+	W25Q_CFG_DRV_25,			// 11
+} W25Q_CFG_DRV;
+
+/* Configuration du bus SPI */
+typedef struct W25Q_bus_config_t {
+	SPI_HandleTypeDef	*hspi;				// SPI handle
+	GPIO_TypeDef		*cs_bank;			// Chip Select port
+	uint16_t			 cs_pin;			// Chip Select pin
+} W25Q_bus_config_t;
+
+/* Configuration des registres de statut */
+typedef struct W25Q_reg_config_t {
+	W25Q_SR_WRITE		 sr_write;			// Écriture volatile ou non volatile
+	uint8_t				 block_protect;		// W25Q_CFG_KEEP ou W25Q_CFG_BP(n)
+	W25Q_CFG_TB			 top_bottom;
+	W25Q_CFG_CMP		 complement;
+	W25Q_CFG_QE			 quad_enable;
+	W25Q_CFG_ADS		 addr_mode;			// Appliqué par commande, pas par écriture de SR3
+	W25Q_CFG_ADP		 power_up_addr_mode;
+	W25Q_CFG_WPS		 write_protect_scheme;
+	W25Q_CFG_DRV		 drive_strength;
+} W25Q_reg_config_t;
+
+/* Configuration globale du composant */
+typedef struct W25Q_config_t {
+	W25Q_bus_config_t	 bus;
+	W25Q_reg_config_t	 reg;
+} W25Q_config_t;
 
 /* --- Structure principale du périphérique --- */
 typedef struct {
-    SPI_HandleTypeDef *hspi;
-    GPIO_TypeDef *cs_bank;
-    uint16_t cs_pin;
-    uint32_t status_reg;
+    W25Q_config_t config;		// Configuration appliquée par W25Q_Init
+    uint32_t status_reg;		// Cache SR1 | SR2<<8 | SR3<<16. ADS y est suivi : il fixe la longueur d'adresse de SendCmdAddr
 #if (APEX_CFG_SCHED_RTOS == 1)
 	StaticSemaphore_t sem;
 	osSemaphoreId_t sem_id;
@@ -207,6 +311,13 @@ typedef struct {
 
 /* --- Table d’attributs de commandes --- */
 extern const uint8_t W25Q_CMD_FLAGS[256];
+
+static inline bool W25Q_IsCmdValid(uint8_t cmd)				{ return (W25Q_CMD_FLAGS[cmd] & W25Q_FLAG_VALID      ); }
+static inline bool W25Q_IsCmdRequiresBusyCheck(uint8_t cmd)	{ return (W25Q_CMD_FLAGS[cmd] & W25Q_FLAG_BUSY       ); }
+static inline bool W25Q_IsCmdRequiresWEL(uint8_t cmd)		{ return (W25Q_CMD_FLAGS[cmd] & W25Q_FLAG_WEL        ); }
+static inline bool W25Q_IsCmdSetsDeviceBusy(uint8_t cmd)	{ return (W25Q_CMD_FLAGS[cmd] & W25Q_FLAG_DEVICE_BUSY); }
+static inline bool W25Q_IsCmdNeedWaitAfter(uint8_t cmd)		{ return (W25Q_CMD_FLAGS[cmd] & W25Q_FLAG_WAIT_AFTER ); }
+static inline bool W25Q_IsCmdAddr4B(uint8_t cmd)			{ return (W25Q_CMD_FLAGS[cmd] & W25Q_FLAG_ADDR_4B    ); }
 
 #define W25Q_STATUS_REG(chip, bit) ((chip)->status_reg & (1 << (bit)) ? 1 : 0)
 #define W25Q_FLASH_SIZE_BYTES (1 << 26) // 512 MBits = 64 MBytes
@@ -218,126 +329,23 @@ extern const uint8_t W25Q_CMD_FLAGS[256];
 /* ============================== Sequential ============================== */
 
 /* Niveau 1 : Primitives */
-W25Q_STATE W25Q_SendCmd(W25Q_t *chip, uint8_t cmd);
-W25Q_STATE W25Q_SendCmdAddr(W25Q_t *chip, uint8_t cmd, uint32_t addr);
+W25Q_STATE W25Q_SendCmd(W25Q_t *chip, uint8_t cmd, uint32_t timeout_ms);
+W25Q_STATE W25Q_SendCmdAddr(W25Q_t *chip, uint8_t cmd, uint32_t addr, uint32_t timeout_ms);
 W25Q_STATE W25Q_ReadStatus(W25Q_t *chip, uint8_t sr_index);
-W25Q_STATE W25Q_WriteStatus(W25Q_t *chip, uint8_t sr_index, uint8_t value);
+W25Q_STATE W25Q_WriteStatus(W25Q_t *chip, uint8_t sr_index, uint8_t value, W25Q_SR_WRITE mode, uint32_t timeout_ms);
 W25Q_STATE W25Q_ReadID(W25Q_t *chip, uint8_t *id);
-W25Q_STATE W25Q_WaitForReady(W25Q_t *chip);
+W25Q_STATE W25Q_WaitForReady(W25Q_t *chip, uint32_t timeout_ms);
+
+/* Traduit une config de registres en (masque, valeur) sur la disposition de status_reg (SR1|SR2<<8|SR3<<16).
+   Partagé par les versions séquentielle et RTOS de l'init. */
+W25Q_STATE W25Q_ConfigToStatus(const W25Q_reg_config_t *reg, uint32_t *mask, uint32_t *bits);
 
 /* Niveau 2 : Logique périphérique */
-W25Q_STATE W25Q_Init(W25Q_t *chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin);
-W25Q_STATE W25Q_WriteData(W25Q_t *chip, const uint8_t *data, uint32_t addr, uint32_t data_size);
-W25Q_STATE W25Q_ReadData(W25Q_t *chip, uint8_t *data, uint32_t addr, uint32_t data_size);
+W25Q_STATE W25Q_Init(W25Q_t *chip, W25Q_config_t config, uint32_t timeout_ms);
+W25Q_STATE W25Q_WriteData(W25Q_t *chip, const uint8_t *data, uint32_t addr, uint32_t data_size, uint32_t timeout_ms);
+W25Q_STATE W25Q_ReadData(W25Q_t *chip, uint8_t *data, uint32_t addr, uint32_t data_size, uint32_t timeout_ms);
 
 
-
-
-// /* ============================== FreeRTOS ============================== */
-
-// #if (APEX_CFG_SCHED_RTOS == 1)
-
-
-// /* Niveau 1 : Primitives */
-// W25Q_STATE W25Q_WaitForReady_RTOS_base(W25Q_t *chip, bool lock_sem);
-// W25Q_STATE W25Q_SendCmd_RTOS_base(W25Q_t *chip, uint8_t cmd, bool lock_sem);
-// W25Q_STATE W25Q_SendCmdAddr_RTOS_base(W25Q_t *chip, uint8_t cmd, uint32_t addr, bool lock_sem);
-// W25Q_STATE W25Q_ReadStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, bool lock_sem);
-// W25Q_STATE W25Q_WriteStatus_RTOS_base(W25Q_t *chip, uint8_t sr_index, uint8_t value, bool lock_sem);
-// W25Q_STATE W25Q_ReadID_RTOS_base(W25Q_t *chip, uint8_t *id, bool lock_sem);
-
-// #define W25Q_WaitForReady_RTOS_NoLock(chip)					W25Q_WaitForReady_RTOS_base(chip, false)
-
-// #define W25Q_SendCmd_RTOS_NoLock(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, false)
-// #define W25Q_SendCmdAddr_RTOS_NoLock(chip, cmd, addr)		W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, false)
-// #define W25Q_ReadStatus_RTOS_NoLock(chip, sr_index)			W25Q_ReadStatus_RTOS_base(chip, sr_index, false)
-// #define W25Q_WriteStatus_RTOS_NoLock(chip, sr_index, value)	W25Q_WriteStatus_RTOS_base(chip, sr_index, value, false)
-// #define W25Q_ReadID_RTOS_NoLock(wchip, id)					W25Q_ReadID_RTOS_base(wchip, id, false)
-
-// #define W25Q_WaitForReady_RTOS(chip)					W25Q_WaitForReady_RTOS_base(chip, true)
-// #define W25Q_SendCmd_RTOS(chip, cmd)					W25Q_SendCmd_RTOS_base(chip, cmd, true)
-// #define W25Q_SendCmdAddr_RTOS(chip, cmd, addr)			W25Q_SendCmdAddr_RTOS_base(chip, cmd, addr, true)
-// #define W25Q_ReadStatus_RTOS(chip, sr_index)			W25Q_ReadStatus_RTOS_base(chip, sr_index, true)
-// #define W25Q_WriteStatus_RTOS(chip, sr_index, value)	W25Q_WriteStatus_RTOS_base(chip, sr_index, value, true)
-// #define W25Q_ReadID_RTOS(wchip, id)						W25Q_ReadID_RTOS_base(wchip, id, true)
-
-// /* Niveau 1 : Primitives en mode TASK (version lock par défaut) */
-// typedef struct TASK_W25Q_SendCmd_ARGS {
-// 	W25Q_t *chip;
-// 	uint8_t cmd;
-// 	W25Q_STATE *result;
-// 	osEventFlagsId_t done_flags;
-// } TASK_W25Q_SendCmd_ARGS;
-// TASK_POOL_CONFIGURE(TASK_W25Q_SendCmd, 5, 512);
-// void TASK_W25Q_SendCmd(void *argument);
-
-// typedef struct TASK_W25Q_SendCmdAddr_ARGS {
-// 	W25Q_t *chip;
-// 	uint8_t cmd;
-// 	uint32_t addr;
-// 	W25Q_STATE *result;
-// 	osEventFlagsId_t done_flags;
-// } TASK_W25Q_SendCmdAddr_ARGS;
-// TASK_POOL_CONFIGURE(TASK_W25Q_SendCmdAddr, 5, 512);
-// void TASK_W25Q_SendCmdAddr(void *argument);
-
-// /* Niveau 2 : Logique périphérique */
-// typedef struct TASK_W25Q_Init_ARGS {
-// 	W25Q_t *chip;
-// 	SPI_HandleTypeDef *hspi;
-// 	GPIO_TypeDef *cs_bank;
-// 	uint16_t cs_pin;
-// 	W25Q_STATE *result; 
-// 	osEventFlagsId_t done_flags;
-// } TASK_W25Q_Init_ARGS;
-// TASK_POOL_CONFIGURE(TASK_W25Q_Init, 1, 512);
-// void TASK_W25Q_Init(void *argument);
-
-// typedef struct TASK_W25Q_WriteData_ARGS {
-// 	W25Q_t *chip;
-// 	uint8_t *buffer;
-// 	uint32_t addr;
-// 	uint32_t buf_size;
-// 	W25Q_STATE *result;
-// 	osEventFlagsId_t done_flags;
-// } TASK_W25Q_WriteData_ARGS;
-// TASK_POOL_CONFIGURE(TASK_W25Q_WriteData, 1, 768);
-// void TASK_W25Q_WriteData(void *argument);
-
-// typedef struct TASK_W25Q_ReadData_ARGS {
-// 	W25Q_t *chip;
-// 	uint8_t *buffer;
-// 	uint32_t addr;
-// 	uint32_t buf_size;
-// 	W25Q_STATE *result;
-// 	osEventFlagsId_t done_flags;
-// } TASK_W25Q_ReadData_ARGS;
-// TASK_POOL_CONFIGURE(TASK_W25Q_ReadData, 5, 384);
-// void TASK_W25Q_ReadData(void *argument);
-
-
-
-// #endif /* APEX_CFG_SCHED_RTOS == 1 */
-
-
-
-// // ============================================== Fonction de test ==============================================
-
-// void W25Q_ReadWriteTest(W25Q_t *W25Q_t);
-
-
-// #if (APEX_CFG_SCHED_RTOS == 1)
-
-
-// // A enlevé plus tard pour gagner de la place
-// typedef struct TASK_W25Q_ReadWriteTest_ARGS {
-// 	W25Q_t *chip;
-// } TASK_W25Q_ReadWriteTest_ARGS;
-// TASK_POOL_CONFIGURE(TASK_W25Q_ReadWriteTest, 1, 8192);
-// void TASK_W25Q_ReadWriteTest(void *argument);
-
-
-// #endif /* APEX_CFG_SCHED_RTOS == 1 */
 
 
 #ifdef __cplusplus

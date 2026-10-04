@@ -119,26 +119,46 @@ void setup(void) {
     total_tests += W25Q_seq_test_N_TESTS;
     W25Q_seq_test_set_context(&w25q);
     TEST_configure_cases(W25Q_seq_test_cases, W25Q_seq_test_N_TESTS, (const bool[]) {
-        true,	/* T0  */
-        true,	/* T1  */
-        true,	/* T2  */
-        true,	/* T3  */
-        true,	/* T4  */
-        true,	/* T5  */
-        true,	/* T6  */
-        true,	/* T7  */
-        true,	/* T8  */
-        true,	/* T9  */
-        true,	/* T10 */
-        true,	/* T11 */
-        true,	/* T12 */
-        true,	/* T13 */
-        true,	/* T14 */
+        /* A. Communication */
+        true,	/* T0  ID Check */
+        true,	/* T1  Read Status */
+        /* B. Configuration */
+        true,	/* T2  Cfg To Status */
+        true,	/* T3  Cfg Applied */
+        true,	/* T4  Cfg Invalid */
+        true,	/* T5  Cfg Keep */
+        /* C. Primitives commande */
+        true,	/* T6  Cmd Invalid */
+        true,	/* T7  Write Enable Latch */
+        true,	/* T8  Addr Mode Tracking */
+        /* D. Effacement secteur */
+        true,	/* T9  Erase Verify */
+        /* E. Lecture / ecriture */
+        true,	/* T10 Aligned R/W */
+        true,	/* T11 Cross-page R/W */
+        true,	/* T12 Cross-sector R/W */
+        true,	/* T13 Unaligned R/W */
+        true,	/* T14 Multi-sector R/W */
+        true,	/* T15 AND without Erase */
+        true,	/* T16 R/W in 3B Mode */
+        /* F. Effacement etendu */
+        true,	/* T17 Erase Addr Length */
+        true,	/* T18 Block Erase 32 KB */
+        true,	/* T19 Block Erase 64 KB */
+        true,	/* T20 Sector Isolation */
+        true,	/* T21 Busy Timeout */
+        /* G. Cas limites R/W */
+        true,	/* T22 Write Size=0 */
+        true,	/* T23 Write Near End */
+        true,	/* T24 Read Near End */
+        true,	/* T25 Addr Out Of Range */
+        /* H. Reset */
+        true,	/* T26 Soft Reset */
     });
     TEST_perform_cases(W25Q_seq_test_cases, W25Q_seq_test_N_TESTS);
     TEST_get_pass_fail_count(W25Q_seq_test_cases, W25Q_seq_test_N_TESTS, &total_pass, &total_fail);
     const char w25q_suite_name[32]   = "W25Q Sequential Tests";
-    const char w25q_suite_desc[128]  = "Suite de tests sequentiels pour W25Q512 (15 cas)";
+    const char w25q_suite_desc[128]  = "Suite de tests sequentiels pour W25Q512 (27 cas)";
     TEST_print_case_result(W25Q_seq_test_cases, W25Q_seq_test_N_TESTS,
                            usb_print, w25q_suite_name, w25q_suite_desc);
 	usb_print("\n");

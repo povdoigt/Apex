@@ -255,6 +255,7 @@ typedef struct task_h_t {
  *     uint8_t  *buf;
  *     uint32_t  addr;
  *     uint32_t  len;
+ *     uint32_t  timeout_ms;
  * } W25Q_Write_args_t;
  *
  * TASK_DECLARE(W25Q_Write, W25Q_Write_args_t, 768);
@@ -283,7 +284,7 @@ typedef struct task_h_t {
  * @code
  * TASK_DEFINE(W25Q_Write) {
  *     if (args->chip == NULL) return W25Q_PARAM_ERR;
- *     return W25Q_WriteData(args->chip, args->buf, args->addr, args->len);
+ *     return W25Q_WriteData(args->chip, args->buf, args->addr, args->len, args->timeout_ms);
  * }
  * @endcode
  */

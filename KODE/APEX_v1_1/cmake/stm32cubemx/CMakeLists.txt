@@ -15,8 +15,9 @@ set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/SEQ_FLIGHT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/example_flash_selftest
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_SCHED_USB
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_MULT
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_SCHED_USB
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_PERF
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_sx1276_1_lora
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_BMI088_USB
@@ -26,6 +27,7 @@ set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_lora_synchro
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_2_fsk
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_2_lora
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_W25Q_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_ILPS28
 )
 
@@ -67,6 +69,7 @@ set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/test/Inc
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/bench/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_packet/Core/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Inc
@@ -121,6 +124,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/Core/Src/sx127x.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/uart_mux/Core/Src/uart_mux.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Src/w25q.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/Core/Src/w25q_rtos.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/WT901B/Core/Src/WT901B.c
 
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/test/Src/ADXL375_test.c
@@ -132,7 +136,10 @@ set(MX_Application_Src
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/LSM303AGR/test/Src/LSM303AGR_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/sx127x/test/Src/sx127x_test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/test/Src/w25q_seq_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/test/Src/w25q_rtos_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/w25q/test/Src/w25q_rtos_bench.c
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/bench/Core/Src/bench.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/Core/Src/circular_buffer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_packet/Core/Src/data_packet.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/Core/Src/data_topic.c

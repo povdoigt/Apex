@@ -105,9 +105,19 @@ sx127x_t sx127x_2;
 // W25Q512
 // =======================================================================
 #if (APEX_ENABLE_W25Q512 == 1)
-#define DRIVERS_CONFIG_W25Q512_SPI_HANDLE   hspi2
-#define DRIVERS_CONFIG_W25Q512_CS_PIN       GPIO_PIN_1
-#define DRIVERS_CONFIG_W25Q512_CS_PORT      GPIOC
+#define DRIVERS_CONFIG_W25Q512_INIT_TIMEOUT_MS   100U
+const W25Q_config_t w25q_config = {
+    .bus = {
+        .hspi    = &hsp2,
+        .cs_bank = GPIOC,
+        .cs_pin  = GPIO_PIN_1,
+    },
+    .reg = {
+        .sr_write           = W25Q_SR_WRITE_NON_VOLATILE,
+        .addr_mode          = W25Q_CFG_ADS_4B,		// mode 4 octets immédiat (B7h)
+        .power_up_addr_mode = W25Q_CFG_ADP_4B,		// et conservé après reset / mise sous tension
+    },
+};
 W25Q_t w25q;
 #endif
 
@@ -146,7 +156,6 @@ void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
         sx127x_modulation_2, (sx127x_mod_config_t){ 0 });
 #endif
 #if (APEX_ENABLE_W25Q512 == 1)
-    result->w25q_init_res = W25Q_Init(&w25q, &DRIVERS_CONFIG_W25Q512_SPI_HANDLE,
-        DRIVERS_CONFIG_W25Q512_CS_PORT, DRIVERS_CONFIG_W25Q512_CS_PIN);
+    result->w25q_init_res = W25Q_Init(&w25q, w25q_config, DRIVERS_CONFIG_W25Q512_INIT_TIMEOUT_MS);
 #endif
 }

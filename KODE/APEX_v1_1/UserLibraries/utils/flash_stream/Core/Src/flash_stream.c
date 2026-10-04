@@ -15,12 +15,12 @@ void flash_stream_init(FLASH_STREAM* stream, W25Q_t* flash_chip, size_t data_siz
 
 void flash_stream_write(FLASH_STREAM* stream, uint8_t* data, uint16_t len) {
     if (stream->write_ptr + stream->data_size < LAST_SECTOR_ADDR) {
-        W25Q_WriteData(stream->flash_chip, data, stream->write_ptr, len);
+        W25Q_WriteData(stream->flash_chip, data, stream->write_ptr, len, HAL_MAX_DELAY);
         stream->write_ptr += len;
     }
 }
 
 void flash_stream_read(FLASH_STREAM* stream, uint8_t* data, uint16_t len) {
-    W25Q_ReadData(stream->flash_chip, data, stream->read_ptr, len);
+    W25Q_ReadData(stream->flash_chip, data, stream->read_ptr, len, HAL_MAX_DELAY);
     stream->read_ptr += len;
 }

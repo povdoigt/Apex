@@ -22,7 +22,7 @@
 // Suites – drivers (matériel requis – voir main_config.h)
 // =======================================================================
 #define APEX_TEST_ENABLE_BMI088         1   // BMI088 IMU        (8 cas)  → APEX_ENABLE_BMI088
-#define APEX_TEST_ENABLE_W25Q           1   // W25Q512 flash     (15 cas) → APEX_ENABLE_W25Q512
+#define APEX_TEST_ENABLE_W25Q           1   // W25Q512 flash     (27 cas) → APEX_ENABLE_W25Q512
 
 // =======================================================================
 // Contrôles de cohérence (compile-time)
