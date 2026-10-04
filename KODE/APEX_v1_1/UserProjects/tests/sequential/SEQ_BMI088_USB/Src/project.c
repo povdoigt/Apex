@@ -51,7 +51,9 @@ void setup(void) {
     usb_print(VT100_SCREEN_CLEAR);
 
 	const char title[32] = "BMI088 Sequential Driver Test";
-	const char desc[128] = "IDs, reset, config R/W, self-test, temperature";
+	char desc[128];
+	snprintf(desc, sizeof(desc), "IDs, reset, config R/W, self-test, temperature, init demarrage: %s (%d)",
+	         (bmi088_boot_init_res == BMI_OK) ? "OK" : "ECHEC", (int)bmi088_boot_init_res);
 
 	TEST_print_case_result(BMI088_seq_test_cases, BMI088_seq_test_N_TESTS, usb_print, title, desc);
     

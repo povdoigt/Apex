@@ -17,9 +17,15 @@
 #define APEX_CFG_PROFILE_TEST			1 // Test profile (for unit testing and development)
 #define APEX_CFG_PROFILE_MISSION		0 // Mission profile (for actual deployment)
 
+// =======================================================================
+// Benchmark: links BMI088_rtos_bench.c instead of the BMI088 RTOS test suite
+// (both define the driver task pools).
+// =======================================================================
+#define APEX_CFG_BMI088_BENCH			1
+
 //========================================================================
 // Modules enable/disable (set to 1 to enable, 0 to disable)
-// Note: BMI088 RTOS tests, only the IMU driver is needed.
+// Note: BMI088 RTOS benchmark, only the IMU driver is needed.
 //========================================================================
 #define APEX_ENABLE_ADXL345				0
 #define APEX_ENABLE_BMI088				1

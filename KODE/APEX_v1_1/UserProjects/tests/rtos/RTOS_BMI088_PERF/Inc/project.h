@@ -4,7 +4,7 @@
 #include "main_config.h"
 #include "drivers_config.h"
 
-#include "BMI088_rtos_test.h"
+#include "BMI088_rtos_bench.h"
 
 // In RTOS mode, setup() is the whole application entry point. It runs once, in the
 // application thread (defaultTask), after osKernelStart() and the USB init: it may spawn

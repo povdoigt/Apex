@@ -28,15 +28,24 @@ adxl375_t ADXL375;
 #define DRIVERS_CONFIG_BMI088_GYR_CS_PORT   GPIOB
 
 const bmi_config_t bmi088_config = {
-    .acc_range  = BMI_ACC_RANGE_24G,
-    .acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
-    .acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
-    .acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
-    .acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
+	.bus = {
+		.hspi        = &DRIVERS_CONFIG_BMI088_SPI_HANDLE,
+		.cs_acc_bank = DRIVERS_CONFIG_BMI088_ACC_CS_PORT,
+		.cs_acc_pin  = DRIVERS_CONFIG_BMI088_ACC_CS_PIN,
+		.cs_gyr_bank = DRIVERS_CONFIG_BMI088_GYR_CS_PORT,
+		.cs_gyr_pin  = DRIVERS_CONFIG_BMI088_GYR_CS_PIN,
+	},
+	.reg = {
+	    .acc_range  = BMI_ACC_RANGE_24G,
+	    .acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
+	    .acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
+	    .acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
+	    .acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
 
-    .gyr_range  = BMI_GYR_RANGE_2000,
-    .gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
-    .gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+	    .gyr_range  = BMI_GYR_RANGE_2000,
+	    .gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
+	    .gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
+	},
 };
 
 bmi088_t bmi088;

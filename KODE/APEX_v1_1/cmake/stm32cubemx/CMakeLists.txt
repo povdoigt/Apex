@@ -15,8 +15,10 @@ set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/SEQ_FLIGHT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/example_flash_selftest
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_PERF
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_SCHED_USB
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_PERF
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_PERF
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_sx1276_1_lora
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
@@ -112,6 +114,7 @@ set(MX_Application_Src
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/Core/Src/ADXL375.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/Core/Src/BMI088.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/Core/Src/BMI088_rtos.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/Core/Src/BMP388.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/Core/Src/buzzer.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/Core/Src/gps.c
@@ -129,6 +132,8 @@ set(MX_Application_Src
 
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/ADXL375/test/Src/ADXL375_test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/test/Src/BMI088_seq_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/test/Src/BMI088_rtos_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMI088/test/Src/BMI088_rtos_bench.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/BMP388/test/Src/BMP388_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/buzzer/test/Src/buzzer_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/drivers/gps/test/Src/gps_test.c

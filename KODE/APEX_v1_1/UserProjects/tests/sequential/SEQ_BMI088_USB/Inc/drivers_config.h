@@ -31,6 +31,7 @@ extern adxl375_t ADXL375;
 
 #include "BMI088.h"
 extern bmi088_t bmi088;
+extern BMI_STATE bmi088_boot_init_res;
 extern const bmi_config_t bmi088_config;
 
 #endif

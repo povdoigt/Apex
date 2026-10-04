@@ -1,14 +1,21 @@
-#include "drivers_config.h"
+// driver_config.h
+// This file contains the configuration for the hardware drivers used in the APEX project.
+
+#ifndef DRIVERS_CONFIG_H
+#define DRIVERS_CONFIG_H
+
+#include "main_config.h"
+
+#include "spi.h"
+
 
 // =======================================================================
 // ADXL345 configuration
 // =======================================================================
 #if (APEX_ENABLE_ADXL345 == 1)
 
-#define DRIVERS_CONFIG_ADXL375_SPI_HANDLE   hspi1
-#define DRIVERS_CONFIG_ADXL375_CS_PIN       GPIO_PIN_3
-#define DRIVERS_CONFIG_ADXL375_CS_PORT      GPIOA
-adxl375_t ADXL375;
+#include "ADXL375.h"
+extern adxl375_t ADXL375;
 
 #endif
 
@@ -17,102 +24,161 @@ adxl375_t ADXL375;
 // =======================================================================
 #if (APEX_ENABLE_BMI088 == 1)
 
-#define DRIVERS_CONFIG_BMI088_SPI_HANDLE    hspi1
-#define DRIVERS_CONFIG_BMI088_ACC_CS_PIN    GPIO_PIN_4
-#define DRIVERS_CONFIG_BMI088_ACC_CS_PORT   GPIOA
-#define DRIVERS_CONFIG_BMI088_GYR_CS_PIN    GPIO_PIN_2
-#define DRIVERS_CONFIG_BMI088_GYR_CS_PORT   GPIOB
+#include "BMI088_rtos.h"
+extern bmi088_t bmi088;
+extern const bmi_config_t bmi088_config;
 
-const bmi_config_t bmi088_config = {
-	.bus = {
-		.hspi        = &DRIVERS_CONFIG_BMI088_SPI_HANDLE,
-		.cs_acc_bank = DRIVERS_CONFIG_BMI088_ACC_CS_PORT,
-		.cs_acc_pin  = DRIVERS_CONFIG_BMI088_ACC_CS_PIN,
-		.cs_gyr_bank = DRIVERS_CONFIG_BMI088_GYR_CS_PORT,
-		.cs_gyr_pin  = DRIVERS_CONFIG_BMI088_GYR_CS_PIN,
-	},
-	.reg = {
-	    .acc_range  = BMI_ACC_RANGE_24G,
-	    .acc_bwp    = BMI_ACC_CONF_BWP_NORMAL,
-	    .acc_odr    = BMI_ACC_CONF_ODR_100_HZ,
-	    .acc_pwr    = BMI_ACC_PWR_CONF_ACTIVE,
-	    .acc_ctrl   = BMI_ACC_PWR_CTRL_ENABLE,
+#if (APEX_CFG_PROFILE_TEST == 1)
 
-	    .gyr_range  = BMI_GYR_RANGE_2000,
-	    .gyr_bw     = BMI_GYR_BANDWIDTH_BW_23_HZ,
-	    .gyr_mode   = BMI_GYR_LPM1_MODE_NORMAL,
-	},
-};
-
-bmi088_t bmi088;
-
-/* Topic pointers — set by TASK_BMI088_ReadAcc / TASK_BMI088_ReadGyr */
-data_topic_t *bmi088_acc_topic = NULL;
-data_topic_t *bmi088_gyr_topic = NULL;
+#include "BMI088_rtos_bench.h"
 
 #endif
+
+#endif
+
 
 // =======================================================================
 // BMP388 configuration
 // =======================================================================
 #if (APEX_ENABLE_BMP388 == 1)
-BMP388_HandleTypeDef bmp388;
+
+#include "BMP388.h"
+extern BMP388_HandleTypeDef bmp388;
+
 #endif
+
 
 // =======================================================================
 // Buzzer configuration
 // =======================================================================
 #if (APEX_ENABLE_BUZZER == 1)
-#define DRIVERS_CONFIG_BUZZER_TIM_HANDLE    htim3
-#define DRIVERS_CONFIG_BUZZER_CHANNEL       TIM_CHANNEL_4
-buzzer_t buzzer;
+
+#include "buzzer.h"
+extern buzzer_t buzzer;
+
 #endif
+
 
 // =======================================================================
 // GPS configuration
 // =======================================================================
 #if (APEX_ENABLE_GPS == 1)
-// GPS config here
+
+#include "gps.h"
+
 #endif
+
 
 // =======================================================================
 // LED configuration
 // =======================================================================
 #if (APEX_ENABLE_LED == 1)
-// LED config here
+
+#include "led.h"
+
 #endif
+
 
 // =======================================================================
 // LSM303AGR configuration
 // =======================================================================
 #if (APEX_ENABLE_LSM303AGR == 1)
-lsm303agr_t lsm303agr;
+
+#include "LSM303AGR.h"
+extern lsm303agr_t lsm303agr;
+
 #endif
+
 
 // =======================================================================
 // SX127x 1 configuration
 // =======================================================================
 #if (APEX_ENABLE_SX127X_1 == 1)
-sx127x_t sx127x_1;
+
+#include "sx127x.h"
+extern sx127x_t sx127x_1;
+
 #endif
 
 // =======================================================================
 // SX127x 2 configuration
 // =======================================================================
 #if (APEX_ENABLE_SX127X_2 == 1)
-sx127x_t sx127x_2;
+
+#include "sx127x.h"
+extern sx127x_t sx127x_2;
+
 #endif
+
 
 // =======================================================================
 // W25Q512 configuration
 // =======================================================================
 #if (APEX_ENABLE_W25Q512 == 1)
-W25Q_t w25q;
+
+#include "w25q_rtos.h"
+extern W25Q_t w25q;
+extern const W25Q_config_t w25q_config;
+
+#if (APEX_CFG_PROFILE_TEST == 1)
+
+#include "w25q_rtos_test.h"
+
 #endif
 
+#endif
+
+
 // =======================================================================
-// Sequential initialisation stub (unused in RTOS mode — kept for linker)
+// WT901B configuration
 // =======================================================================
-void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result) {
-    (void)result;
-}
+#if (APEX_ENABLE_WT901B == 1)
+
+#include "WT901B.h"
+
+#endif
+
+
+
+
+
+// =======================================================================
+// Initialization functions prototypes
+// =======================================================================
+
+typedef struct DRIVERS_CONFIG_init_result_t {
+#if (APEX_ENABLE_ADXL345 == 1)
+    // No specific initialization result for ADXL375 for now, but will add here later
+#endif
+#if (APEX_ENABLE_BMI088 == 1)
+    BMI_STATE bmi088_init_res;
+#endif
+#if (APEX_ENABLE_BMP388 == 1)
+    // No specific initialization result for BMP388 for now, but will add here later
+#endif
+#if (APEX_ENABLE_BUZZER == 1)
+    // No specific initialization result for buzzer for now, but will add here later
+#endif
+#if (APEX_ENABLE_GPS == 1)
+    // GPS initialization result here
+#endif
+#if (APEX_ENABLE_LED == 1)
+    // LED initialization result here
+#endif
+#if (APEX_ENABLE_LSM303AGR == 1)
+    // No specific initialization result for LSM303AGR for now, but will add here later
+#endif
+#if (APEX_ENABLE_SX127X_1 == 1)
+    sx127x_status_t sx127x_1_init_res;
+#endif
+#if (APEX_ENABLE_SX127X_2 == 1)
+    sx127x_status_t sx127x_2_init_res;
+#endif
+#if (APEX_ENABLE_W25Q512 == 1)
+    W25Q_STATE w25q_init_res;
+#endif
+} DRIVERS_CONFIG_init_result_t;
+void DRIVERS_CONFIG_init_seq(DRIVERS_CONFIG_init_result_t *result);
+
+
+#endif // DRIVERS_CONFIG_H

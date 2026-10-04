@@ -10,11 +10,33 @@
  *       Two independent SPI chip-selects are required (ACC and GYR).
  *
  * @details
- * API layers:
- *  - **Level 0** – raw SPI primitives (blocking HAL / DMA+RTOS)
+ * This header holds the register map, the configuration types and the
+ * sequential (blocking HAL) API. The RTOS layer lives in BMI088_rtos.h.
+ *
+ *  - **Level 0** – SPI transaction (private, BMI088.c / BMI088_rtos.c)
  *  - **Level 1** – single and burst register read/write helpers
- *  - **Level 2** – sensor logic: init, configuration, data read, self-test
- *  - **RTOS section** – semaphore-protected wrappers + FreeRTOS tasks
+ *  - **Level 2** – sensor logic: init, configuration, data read
+ *  - **Shared helpers** – pure functions used by both flavours
+ *
+ * Timing rules applied by both flavours (datasheet, Bosch BMI08x API values):
+ *  - the accelerometer boots in I2C mode: a rising edge on its CS (dummy
+ *    read) switches it to SPI, after power-up and after every soft reset;
+ *  - soft reset: wait 1 ms (ACC) / 30 ms (GYR);
+ *  - power mode change (ACC_PWR_CONF, ACC_PWR_CTRL): wait 5 ms;
+ *  - between two write accesses: 2 us in normal mode, 450 us when the
+ *    accelerometer is in suspend mode.
+ *
+ * @warning Accelerometer data settling, not handled by the driver. After an
+ *          Init or an ApplyConfig, the ACC data registers keep their previous
+ *          content for about 55 ms (measured: 51-54 ms at ODR 100 Hz, BWP
+ *          normal, i.e. ~5 output periods). During that time ReadAcc returns
+ *          BMI_OK with wrong values: zeros after an Init (reset registers),
+ *          or the old-range raw data scaled by the new range factor after a
+ *          range change (x8 error between 24 g and 3 g). The configuration
+ *          is meant to be set before acquisition starts; if it must change
+ *          while acquiring, discard the ACC samples of the next ~5 ODR
+ *          periods (more at a lower ODR). Measured by T19/T20 of the RTOS
+ *          test suite.
  */
 
 /**
@@ -30,19 +52,18 @@
 #ifndef BMI088_IMU_H
 #define BMI088_IMU_H
 
-
 #include <stdbool.h>
+#include <stdint.h>
 
-#include "data_topic.h"
+#include "main_config.h"
+
+#include "stm32f4xx_hal.h"
+#include "float3.h"
 
 #if (APEX_CFG_SCHED_RTOS == 1)
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
-#include "scheduler.h"
 #endif
-
-#include "stm32f4xx_hal.h"
-#include "tools.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -557,10 +578,11 @@ typedef enum {
 /* -------------------------------------------------------------------------- */
 /* [7:5] reserved ; [2:0] power_mode. */ /* :contentReference[oaicite:5]{index=5} */
 typedef enum {
-    BMI_GYR_LPM1_MODE_NORMAL      = 0b00000000, /**< Normal (full operation) mode */
-    BMI_GYR_LPM1_MODE_DEEPSUSPEND = 0b00000111  /**< Deep suspend (lowest power)  */
+    BMI_GYR_LPM1_MODE_NORMAL      = 0b00000000, /**< Normal (full operation) mode (0x00) */
+    BMI_GYR_LPM1_MODE_DEEPSUSPEND = 0b00100000, /**< Deep suspend (lowest power)  (0x20) */
+    BMI_GYR_LPM1_MODE_SUSPEND     = 0b10000000  /**< Suspend                      (0x80) */
 } bmi_gyr_lpm1_mode_t;
-#define BMI_GYR_LPM1_MODE_MASK (0b00000111)
+#define BMI_GYR_LPM1_MODE_MASK (0b10100000)
 
 /* -------------------------------------------------------------------------- */
 /* 0x14 — GYR_SOFTRESET : Software reset (WO, reset = N/A)                     */
@@ -719,31 +741,53 @@ typedef enum {
 
 /** @} */ /* end of group BMI088_Enums_Gyroscope */
 
-/**
- * @struct bmi_config_t
- * @brief Aggregated configuration for both accelerometer and gyroscope.
- * @details
- * This structure can be used for initialization, reconfiguration, and state
- * saving. It mirrors the BMI088 register configuration fields.
- */
-typedef struct {
+/* ========================================================================== */
+/*                              Timing constants                              */
+/* ========================================================================== */
+
+#define BMI_ACC_SOFTRESET_DELAY_MS   1U    /**< ACC usable again after a soft reset     */
+#define BMI_GYR_SOFTRESET_DELAY_MS   30U   /**< GYR usable again after a soft reset     */
+#define BMI_ACC_PWR_DELAY_MS         5U    /**< After a write to ACC_PWR_CONF / _CTRL   */
+#define BMI_GYR_WAKEUP_DELAY_MS      30U   /**< GYR leaving (deep) suspend              */
+#define BMI_IDLE_NORMAL_US           2U    /**< Between write accesses, normal mode     */
+#define BMI_IDLE_SUSPEND_US          450U  /**< Between write accesses, ACC suspended   */
+
+#define BMI_SPI_TIMEOUT_MS           10U   /**< Blocking HAL transfer timeout (sequential) */
+#define BMI_BURST_MAX                32U   /**< Longest ReadMultiple, in data bytes        */
+
+/* ========================================================================== */
+/*                               Configuration                                */
+/* ========================================================================== */
+
+/** @brief SPI bus and chip-selects. ACC and GYR share the bus. */
+typedef struct bmi_bus_config_t {
+    SPI_HandleTypeDef   *hspi;          /**< SPI handle shared by ACC and GYR */
+    GPIO_TypeDef        *cs_acc_bank;   /**< Accelerometer chip-select port   */
+    uint16_t             cs_acc_pin;    /**< Accelerometer chip-select pin    */
+    GPIO_TypeDef        *cs_gyr_bank;   /**< Gyroscope chip-select port       */
+    uint16_t             cs_gyr_pin;    /**< Gyroscope chip-select pin        */
+} bmi_bus_config_t;
+
+/** @brief Register configuration of both sensors. */
+typedef struct bmi_reg_config_t {
     /* Accelerometer */
-    bmi_acc_range_t         acc_range;   /**< +-g full-scale range */
-    bmi_acc_conf_bwp_t      acc_bwp;     /**< Bandwidth / oversampling */
-    bmi_acc_conf_odr_t      acc_odr;     /**< Output Data Rate */
-    bmi_acc_pwr_conf_t      acc_pwr;     /**< Power configuration */
-    bmi_acc_pwr_ctrl_t      acc_ctrl;    /**< Power control enable/disable */
+    bmi_acc_range_t         acc_range;  /**< +-g full-scale range         */
+    bmi_acc_conf_bwp_t      acc_bwp;    /**< Bandwidth / oversampling     */
+    bmi_acc_conf_odr_t      acc_odr;    /**< Output data rate             */
+    bmi_acc_pwr_conf_t      acc_pwr;    /**< Active / suspend             */
+    bmi_acc_pwr_ctrl_t      acc_ctrl;   /**< Sensor enable                */
 
     /* Gyroscope */
-    bmi_gyr_range_t         gyr_range;   /**< +-°/s full-scale range */
-    bmi_gyr_bandwidth_bw_t  gyr_bw;      /**< Bandwidth / filter setting */
-    bmi_gyr_lpm1_mode_t     gyr_mode;    /**< Power mode selection */
+    bmi_gyr_range_t         gyr_range;  /**< +-deg/s full-scale range     */
+    bmi_gyr_bandwidth_bw_t  gyr_bw;     /**< ODR / filter bandwidth       */
+    bmi_gyr_lpm1_mode_t     gyr_mode;   /**< Normal / suspend / deep susp. */
+} bmi_reg_config_t;
 
-    // Additional configuration fields can be added here as needed
-    // e.g., interrupt settings, FIFO configuration, etc.
+/** @brief Complete configuration: bus + registers. */
+typedef struct bmi_config_t {
+    bmi_bus_config_t    bus;
+    bmi_reg_config_t    reg;
 } bmi_config_t;
-
-/** @} */ /* end of group BMI088_Config */
 
 typedef enum {
     BMI_OK          = 0,  /**< Operation successful */
@@ -751,166 +795,125 @@ typedef enum {
     BMI_INVALID_ARG,      /**< NULL pointer or illegal argument */
     BMI_BUSY,             /**< Bus or peripheral is busy */
     BMI_TIMEOUT,          /**< Operation timed out */
-    BMI_UNKNOWN_ERR,      /**< Unexpected error (e.g. wrong chip ID) */
-    BMI_SEM_ERR           /**< FreeRTOS semaphore acquire/release error */
+    BMI_UNKNOWN_ERR,      /**< Unexpected error */
+    BMI_SEM_ERR,          /**< RTOS: sensor semaphore missing or release failed */
+    BMI_ID_ERR,           /**< Wrong chip ID (ACC or GYR) */
+    BMI_CFG_ERR,          /**< Configuration read back differs from what was written */
+    BMI_LOCK_TIMEOUT,     /**< RTOS: sensor semaphore not obtained in time */
 } BMI_STATE;
 
 /**
  * @brief BMI088 device handle.
  *
- * @details Holds all runtime state for a single BMI088 instance:
- *  SPI handle, GPIO chip-selects, calibration offsets, physical-unit
- *  conversion factors, active configuration, and the FreeRTOS semaphore
- *  used by RTOS-aware variants.
- *
- *  Initialise with @ref BMI088_Init (bare-metal) or @ref TASK_BMI088_Init (RTOS).
+ * Zero-initialise it (static storage), then bring it up with BMI088_Init
+ * (sequential) or the BMI088_Init task (RTOS, BMI088_rtos.h).
  */
 typedef struct bmi088_t {
-
-    /* SPI */
-    SPI_HandleTypeDef   *spi;           /**< HAL SPI handle shared by ACC and GYR */
-
-    /* Accelerometer */
-    GPIO_TypeDef        *cs_acc_bank;   /**< GPIO port of the accelerometer chip-select */
-    uint16_t             cs_acc_pin;    /**< GPIO pin  of the accelerometer chip-select */
-    float3_t             acc_offset;    /**< Static offset subtracted from raw ACC data */
-    float                acc_conv;      /**< LSB → m/s² (or g) conversion factor, computed at init */
-
-    /* Gyroscope */
-    GPIO_TypeDef        *cs_gyr_bank;   /**< GPIO port of the gyroscope chip-select */
-    uint16_t             cs_gyr_pin;    /**< GPIO pin  of the gyroscope chip-select */
-    float3_t             gyr_offset;    /**< Static offset subtracted from raw GYR data */
-    float                gyr_conv;      /**< LSB → °/s (or rad/s) conversion factor, computed at init */
-
-    bmi_config_t         config;        /**< Active register configuration snapshot */
+    bmi_config_t         config;        /**< Bus + register configuration in force */
+    float                acc_conv;      /**< LSB -> m/s^2 (or g), from acc_range   */
+    float                gyr_conv;      /**< LSB -> deg/s (or rad/s), from gyr_range */
 #if (APEX_CFG_SCHED_RTOS == 1)
-    StaticSemaphore_t    sem;           /**< Static semaphore control block (FreeRTOS) */
-    osSemaphoreId_t      sem_id;        /**< CMSIS-RTOS semaphore handle (binary, init=1) */
+    StaticSemaphore_t    sem;           /**< Sensor semaphore control block */
+    osSemaphoreId_t      sem_id;        /**< Created by the first RTOS init */
 #endif
 } bmi088_t;
 
-/* -------------------------------------------------------------------------- */
-/*                       Niveau 1 : Primitives capteur                        */
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
+/*                  Shared helpers (sequential and RTOS layers)               */
+/* ========================================================================== */
+
+/** @brief Reject a register configuration holding an out-of-range value. */
+BMI_STATE BMI088_CheckConfig(const bmi_reg_config_t *reg);
+
+/** @brief Conversion factors for a full-scale range (unit set by BMI_*_UNIT_*). */
+float BMI088_AccSensitivity(bmi_acc_range_t range);
+float BMI088_GyrSensitivity(bmi_gyr_range_t range);
+
+/** @brief Decode 3 little-endian int16 axes (X, Y, Z) and scale them. */
+void BMI088_DecodeXYZ(const uint8_t raw[6], float conv, float3_t *out);
+
+/** @brief Decode TEMP_MSB / TEMP_LSB into degrees Celsius. */
+float BMI088_DecodeTemp(const uint8_t raw[2]);
+
+/**
+ * @brief Busy-wait on the DWT cycle counter. Re-entrant: it only reads the
+ *        counter, so concurrent tasks may use it (unlike TIM_Delay_Micro).
+ */
+void BMI088_DelayUs(uint32_t us);
+
+/**
+ * @brief Bus access and delay used by the multi-step sequences below.
+ *
+ * The sequential layer passes its blocking primitives and HAL_Delay; the RTOS
+ * layer passes its _NoLock primitives and osDelay, and holds the sensor
+ * semaphore around the whole sequence. One implementation, two flavours.
+ * `delay_ms(n)` must wait at least n ms.
+ *
+ * Convention for every function that takes one (public or static):
+ *   - its name ends in `_io`;
+ *   - the bmi_io_t is the 2nd argument, right after the handle:
+ *       BMI_STATE BMI088_Xxx_io(bmi088_t *imu, const bmi_io_t *io, ...);
+ * The callbacks themselves (read, write, delay_ms) are not concerned.
+ */
+typedef struct bmi_io_t {
+    BMI_STATE (*read)(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *data, uint16_t len);
+    BMI_STATE (*write)(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t value);
+    void      (*delay_ms)(uint32_t ms);
+} bmi_io_t;
+
+/** @brief Soft reset + wait (+ return to SPI mode for the ACC). */
+BMI_STATE BMI088_SoftReset_io(bmi088_t *imu, const bmi_io_t *io, bool is_gyr);
+/** @brief Write, read back and cache a register configuration. */
+BMI_STATE BMI088_ApplyConfig_io(bmi088_t *imu, const bmi_io_t *io, const bmi_reg_config_t *reg);
+/** @brief SPI mode, soft resets, chip IDs, then ApplyConfig. imu->config.bus must be set. */
+BMI_STATE BMI088_Bringup_io(bmi088_t *imu, const bmi_io_t *io, const bmi_reg_config_t *reg);
+
+/* ========================================================================== */
+/*                     Level 1: register access (sequential)                  */
+/* ========================================================================== */
 
 BMI_STATE BMI088_ReadRegister(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *value);
 BMI_STATE BMI088_WriteRegister(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t value);
+/** @brief Burst read of `len` (1..BMI_BURST_MAX) consecutive registers. */
 BMI_STATE BMI088_ReadMultiple(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *data, uint16_t len);
 BMI_STATE BMI088_ReadID(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id);
+/**
+ * @brief Soft-reset one sensor and wait until it answers again. For the ACC
+ *        this includes the dummy read that switches it back to SPI. All
+ *        registers of that sensor return to their reset values.
+ */
 BMI_STATE BMI088_SoftReset(bmi088_t *imu, bool is_gyr);
 
-/* -------------------------------------------------------------------------- */
-/*                      Niveau 2 : Logique périphérique                       */
-/* -------------------------------------------------------------------------- */
+/* ========================================================================== */
+/*                     Level 2: sensor logic (sequential)                     */
+/* ========================================================================== */
 
 /**
- * @brief Initialise le capteur BMI088 (acc + gyr).
+ * @brief Bring up both sensors: SPI mode, soft resets, chip IDs, then
+ *        BMI088_ApplyConfig. Rejected parameters leave the handle untouched.
+ * @warning ACC data read as zeros for ~55 ms afterwards (see file header).
  */
-BMI_STATE BMI088_Init(bmi088_t *imu, SPI_HandleTypeDef *hspi,
-                      GPIO_TypeDef *cs_acc_bank, uint16_t cs_acc_pin,
-                      GPIO_TypeDef *cs_gyr_bank, uint16_t cs_gyr_pin,
-                      const bmi_config_t *cfg);
+BMI_STATE BMI088_Init(bmi088_t *imu, const bmi_config_t *config);
 
 /**
- * @brief Applique une configuration complète (acc + gyr).
+ * @brief Write a register configuration, read it back, update the
+ *        conversion factors. BMI_CFG_ERR if the read-back differs.
+ * @warning ACC data still reflect the previous setting for ~55 ms
+ *          afterwards (see file header).
  */
-BMI_STATE BMI088_ApplyConfig(bmi088_t *imu, const bmi_config_t *cfg);
+BMI_STATE BMI088_ApplyConfig(bmi088_t *imu, const bmi_reg_config_t *reg);
 
-/**
- * @brief Lecture des données d'accélération (en m/s²).
- */
+/** @brief Acceleration, scaled (m/s^2 or g). */
 BMI_STATE BMI088_ReadAcc(bmi088_t *imu, float3_t *accel);
 
-/**
- * @brief Lecture des données de gyroscope (en °/s).
- */
+/** @brief Angular rate, scaled (deg/s or rad/s). */
 BMI_STATE BMI088_ReadGyr(bmi088_t *imu, float3_t *gyro);
 
-/**
- * @brief Lecture de la température interne (en °C).
- */
-BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float_t *temp_c);
-
-
-#if (APEX_CFG_SCHED_RTOS == 1)
-
-// /* -------------------------------------------------------------------------- */
-// /*                       Niveau 1 : Primitives capteur RTOS                   */
-// /* -------------------------------------------------------------------------- */
-
-// BMI_STATE BMI088_ReadRegister_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *value, bool lock_sem);
-// BMI_STATE BMI088_WriteRegister_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t value, bool lock_sem);
-// BMI_STATE BMI088_ReadMultiple_RTOS_base(bmi088_t *imu, bool is_gyr, uint8_t reg, uint8_t *data, uint16_t len, bool lock_sem);
-// BMI_STATE BMI088_ReadID_RTOS_base(bmi088_t *imu, uint8_t *acc_id, uint8_t *gyr_id, bool lock_sem);
-// BMI_STATE BMI088_SoftReset_RTOS_base(bmi088_t *imu, bool is_gyr, bool lock_sem);
-
-// #define BMI088_ReadRegister_RTOS_NoLock(imu, is_gyr, reg, value)        BMI088_ReadRegister_RTOS_base(imu, is_gyr, reg, value, false)
-// #define BMI088_WriteRegister_RTOS_NoLock(imu, is_gyr, reg, value)       BMI088_WriteRegister_RTOS_base(imu, is_gyr, reg, value, false)
-// #define BMI088_ReadMultiple_RTOS_NoLock(imu, is_gyr, reg, data, len)    BMI088_ReadMultiple_RTOS_base(imu, is_gyr, reg, data, len, false)
-// #define BMI088_ReadID_RTOS_NoLock(imu, acc_id, gyr_id)                  BMI088_ReadID_RTOS_base(imu, acc_id, gyr_id, false)
-// #define BMI088_SoftReset_RTOS_NoLock(imu, is_gyr)                       BMI088_SoftReset_RTOS_base(imu, is_gyr, false)
-
-// #define BMI088_ReadRegister_RTOS(imu, is_gyr, reg, value)               BMI088_ReadRegister_RTOS_base(imu, is_gyr, reg, value, true)
-// #define BMI088_WriteRegister_RTOS(imu, is_gyr, reg, value)              BMI088_WriteRegister_RTOS_base(imu, is_gyr, reg, value, true)
-// #define BMI088_ReadMultiple_RTOS(imu, is_gyr, reg, data, len)           BMI088_ReadMultiple_RTOS_base(imu, is_gyr, reg, data, len, true)
-// #define BMI088_ReadID_RTOS(imu, acc_id, gyr_id)                         BMI088_ReadID_RTOS_base(imu, acc_id, gyr_id, true)
-// #define BMI088_SoftReset_RTOS(imu, is_gyr)                              BMI088_SoftReset_RTOS_base(imu, is_gyr, true)
-
-
-
-// /* -------------------------------------------------------------------------- */
-// /*                      Niveau 2 : Logique peripherique RTOS                  */
-// /* -------------------------------------------------------------------------- */
-
-// typedef struct TASK_BMI088_Init_ARGS {
-//     bmi088_t                *imu;           /**< Handle to initialise */
-//     SPI_HandleTypeDef       *hspi;          /**< HAL SPI handle */
-//     GPIO_TypeDef            *cs_acc_bank;   /**< ACC chip-select GPIO port */
-//     uint16_t                 cs_acc_pin;    /**< ACC chip-select GPIO pin */
-//     GPIO_TypeDef            *cs_gyr_bank;   /**< GYR chip-select GPIO port */
-//     uint16_t                 cs_gyr_pin;    /**< GYR chip-select GPIO pin */
-//     const bmi_config_t      *cfg;           /**< Configuration to apply */
-//     BMI_STATE               *return_state;  /**< Written with the final status code */
-//     osEventFlagsId_t         done_flags;    /**< Optional event flag set on completion (bit 0) */
-// } TASK_BMI088_Init_ARGS;
-// TASK_POOL_CONFIGURE(TASK_BMI088_Init, 1, 512);
-// void TASK_BMI088_Init(void *arguments);
-
-// BMI_STATE BMI088_ApplyConfig_RTOS(bmi088_t *imu, const bmi_config_t *cfg);
-
-// typedef struct TASK_BMI088_ReadAcc_ARGS {
-//     bmi088_t        *imu;           /**< Initialised BMI088 handle */
-//     data_topic_t   **dt;            /**< Set to the internal data topic on first iteration */
-//     uint32_t         delay_ms;      /**< Delay between reads; if 0xffffffff then not periodic */
-//     BMI_STATE       *return_state;  /**< Updated each iteration with the latest status code */
-// } TASK_BMI088_ReadAcc_ARGS;
-// TASK_POOL_CONFIGURE(TASK_BMI088_ReadAcc, 1, 2048);
-// void TASK_BMI088_ReadAcc(void *arguments);
-
-// typedef struct TASK_BMI088_ReadGyr_ARGS {
-//     bmi088_t        *imu;           /**< Initialised BMI088 handle */
-//     data_topic_t   **dt;            /**< Set to the internal data topic on first iteration */
-//     uint32_t         delay_ms;      /**< Delay between reads; if 0xffffffff then not periodic */
-//     BMI_STATE       *return_state;  /**< Updated each iteration with the latest status code */
-// } TASK_BMI088_ReadGyr_ARGS;
-// TASK_POOL_CONFIGURE(TASK_BMI088_ReadGyr, 1, 2048);
-// void TASK_BMI088_ReadGyr(void *arguments);
-
-// typedef struct TASK_BMI088_ReadTemp_ARGS {
-//     bmi088_t        *imu;           /**< Initialised BMI088 handle */
-//     data_topic_t   **dt;            /**< Set to the internal data topic on first iteration */
-//     uint32_t         delay_ms;      /**< Delay between reads; if 0xffffffff then not periodic */
-//     BMI_STATE       *return_state;  /**< Updated each iteration with the latest status code */
-// } TASK_BMI088_ReadTemp_ARGS;
-// TASK_POOL_CONFIGURE(TASK_BMI088_ReadTemp, 1, 2048);
-// void TASK_BMI088_ReadTemp(void *arguments);
-
-#endif /* APEX_CFG_SCHED_RTOS */
+/** @brief Internal temperature, in degrees Celsius. */
+BMI_STATE BMI088_ReadTemp(bmi088_t *imu, float *temp_c);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* BMI088_H */
-
-/** @} */ /* end of group BMI088_Driver */
+#endif /* BMI088_IMU_H */

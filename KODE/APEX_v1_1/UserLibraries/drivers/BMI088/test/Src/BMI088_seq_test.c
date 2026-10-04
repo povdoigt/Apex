@@ -1,4 +1,5 @@
 #include "BMI088_seq_test.h"
+#include "BMI088_test_common.h"
 #include "test.h"
 #include "tools.h"
 
@@ -24,46 +25,6 @@ TEST_case_table_t BMI088_seq_test_cases[BMI088_seq_test_N_TESTS] = {
     { .case_info = { .name = "T7 ACC Temperature" }, .func = BMI088_seq_test_t7_acc_temperature }
 };
 
-/* ========================================================================
- * Constantes de test
- * ======================================================================== */
-
-/* Identifiants de puce attendus (datasheet Rev.1.9) */
-#define BMI_ACC_CHIP_ID_EXP  BMI_ACC_CHIP_ID_VALUE   /* 0x1E */
-#define BMI_GYR_CHIP_ID_EXP  0x0FU
-
-/* Self-test accelerometre (procedure Bosch AN §4.4.1)
- *   - Plage obligatoire : ±24 g  →  1 LSB = 24 / 2^15 ≈ 0.000732 g
- *   - Seuil minimum : 1000 mg = 1366 LSB (Bosch AN p.12)             */
-#define ACC_ST_MIN_LSB   1366
-
-/* Self-test gyro (registre 0x3C) — bits datasheet
- *   bit 0 : trig_bist   bit 1 : bist_rdy
- *   bit 2 : bist_fail   bit 4 : rate_ok                              */
-#define GYR_BIST_TRIG    0x01U
-#define GYR_BIST_RDY     0x02U
-#define GYR_BIST_FAIL    0x04U
-#define GYR_BIST_OK      0x10U
-#define GYR_BIST_TIMEOUT 200U   /* ms */
-
-/* Plage de temperature valide */
-#define TEMP_MIN_C  (-40.0f)
-#define TEMP_MAX_C  ( 85.0f)
-
-static const char *bmi_str(BMI_STATE s) {
-    switch (s) {
-        case BMI_OK:          return "OK";
-        case BMI_SPI_ERR:     return "SPI_ERR";
-        case BMI_INVALID_ARG: return "INVALID_ARG";
-        case BMI_BUSY:        return "BUSY";
-        case BMI_TIMEOUT:     return "TIMEOUT";
-        case BMI_UNKNOWN_ERR: return "UNKNOWN_ERR";
-        case BMI_SEM_ERR:     return "SEM_ERR";
-        default:              return "?";
-    }
-}
-
-
 void BMI088_seq_test_t0_chip_ids(TEST_case_t *tc) {
     uint8_t acc_id = 0, gyr_id = 0;
     BMI_STATE st = BMI088_ReadID(bmi088, &acc_id, &gyr_id);
@@ -77,52 +38,42 @@ void BMI088_seq_test_t0_chip_ids(TEST_case_t *tc) {
 
 
 void BMI088_seq_test_t1_acc_soft_reset(TEST_case_t *tc) {
+    /* SoftReset attend la fin du reset et repasse l'ACC en SPI (lecture fictive). */
     BMI_STATE st = BMI088_SoftReset(bmi088, false /* ACC */);
     TEST_ASSERT(st == BMI_OK, "SoftReset: %s", bmi_str(st));
-    HAL_Delay(50);
-
-    /* Apres reset : ACC est en SUSPEND ; il faut le remettre en ACTIVE    */
-    BMI088_WriteRegister(bmi088, false, BMI_ACC_PWR_CTRL, (uint8_t)BMI_ACC_PWR_CTRL_ENABLE);
-    HAL_Delay(5);
-    BMI088_WriteRegister(bmi088, false, BMI_ACC_PWR_CONF, (uint8_t)BMI_ACC_PWR_CONF_ACTIVE);
-    HAL_Delay(5);
 
     uint8_t id = 0;
     st = BMI088_ReadRegister(bmi088, false, BMI_ACC_CHIP_ID, &id);
     TEST_ASSERT(st == BMI_OK, "ReadID post-reset: %s", bmi_str(st));
     TEST_ASSERT(id == BMI_ACC_CHIP_ID_EXP, "ID=0x%02X apres reset (exp:0x%02X)", id, BMI_ACC_CHIP_ID_EXP);
+
+    /* Le reset remet la config ACC a ses valeurs par defaut : on la reapplique. */
+    st = BMI088_ApplyConfig(bmi088, &bmi088_config->reg);
+    TEST_ASSERT(st == BMI_OK, "ApplyConfig apres reset: %s", bmi_str(st));
     tc->result = R_PASS;
-    snprintf(tc->detail, sizeof(tc->detail), "ID=0x%02X intact apres reset", id);
+    snprintf(tc->detail, sizeof(tc->detail), "ID=0x%02X apres reset, config reappliquee", id);
 }
 
 
 void BMI088_seq_test_t2_gyr_soft_reset(TEST_case_t *tc) {
     BMI_STATE st = BMI088_SoftReset(bmi088, true /* GYR */);
     TEST_ASSERT(st == BMI_OK, "SoftReset: %s", bmi_str(st));
-    HAL_Delay(30);
 
     uint8_t id = 0;
     st = BMI088_ReadRegister(bmi088, true, BMI_GYR_CHIP_ID, &id);
     TEST_ASSERT(st == BMI_OK, "ReadID post-reset: %s", bmi_str(st));
     TEST_ASSERT(id == BMI_GYR_CHIP_ID_EXP, "ID=0x%02X apres reset (exp:0x%02X)", id, BMI_GYR_CHIP_ID_EXP);
+
+    st = BMI088_ApplyConfig(bmi088, &bmi088_config->reg);
+    TEST_ASSERT(st == BMI_OK, "ApplyConfig apres reset: %s", bmi_str(st));
     tc->result = R_PASS;
-    snprintf(tc->detail, sizeof(tc->detail), "ID=0x%02X intact apres reset", id);
+    snprintf(tc->detail, sizeof(tc->detail), "ID=0x%02X apres reset, config reappliquee", id);
 }
 
 
 void BMI088_seq_test_t3_acc_config_rw(TEST_case_t *tc) {
-    /* Config a ecrire : +-12 g, ODR=200 Hz, BWP=OSR2 */
-    const bmi_config_t test_cfg = {
-        .acc_range = BMI_ACC_RANGE_12G,
-        .acc_bwp   = BMI_ACC_CONF_BWP_OSR2,
-        .acc_odr   = BMI_ACC_CONF_ODR_200_HZ,
-        .acc_pwr   = BMI_ACC_PWR_CONF_ACTIVE,
-        .acc_ctrl  = BMI_ACC_PWR_CTRL_ENABLE,
-        /* GYR inchange : copie de la config nominale */
-        .gyr_range = bmi088_config->gyr_range,
-        .gyr_bw    = bmi088_config->gyr_bw,
-        .gyr_mode  = bmi088_config->gyr_mode,
-    };
+    /* Config a ecrire : +-12 g, ODR=200 Hz, BWP=OSR2 ; GYR inchange */
+    const bmi_reg_config_t test_cfg = bmi_test_cfg_acc(&bmi088_config->reg);
     BMI_STATE st = BMI088_ApplyConfig(bmi088, &test_cfg);
     if (st != BMI_OK) {
         tc->result = R_FAIL;
@@ -146,8 +97,8 @@ void BMI088_seq_test_t3_acc_config_rw(TEST_case_t *tc) {
     }
 
     {
-        const uint8_t conf_exp  = (uint8_t)BMI_ACC_CONF_BWP_OSR2 | (uint8_t)BMI_ACC_CONF_ODR_200_HZ;
-        const uint8_t range_exp = (uint8_t)BMI_ACC_RANGE_12G;
+        const uint8_t conf_exp  = BMI_TEST_ACC_CONF_EXP;
+        const uint8_t range_exp = BMI_TEST_ACC_RANGE_EXP;
         if (conf_r != conf_exp || range_r != range_exp) {
             tc->result = R_FAIL;
             snprintf(tc->detail, sizeof(tc->detail),
@@ -161,24 +112,14 @@ void BMI088_seq_test_t3_acc_config_rw(TEST_case_t *tc) {
     }
 
 t3_restore:
-    BMI088_ApplyConfig(bmi088, bmi088_config);
+    BMI088_ApplyConfig(bmi088, &bmi088_config->reg);
     HAL_Delay(2);
 }
 
 
 void BMI088_seq_test_t4_gyr_config_rw(TEST_case_t *tc) {
-    const bmi_config_t test_cfg = {
-        /* ACC inchange */
-        .acc_range = bmi088_config->acc_range,
-        .acc_bwp   = bmi088_config->acc_bwp,
-        .acc_odr   = bmi088_config->acc_odr,
-        .acc_pwr   = bmi088_config->acc_pwr,
-        .acc_ctrl  = bmi088_config->acc_ctrl,
-        /* GYR : ±500 dps, BW=47 Hz */
-        .gyr_range = BMI_GYR_RANGE_500,
-        .gyr_bw    = BMI_GYR_BANDWIDTH_BW_47_HZ,
-        .gyr_mode  = BMI_GYR_LPM1_MODE_NORMAL,
-    };
+    /* GYR : ±500 dps, BW=47 Hz ; ACC inchange */
+    const bmi_reg_config_t test_cfg = bmi_test_cfg_gyr(&bmi088_config->reg);
     BMI_STATE st = BMI088_ApplyConfig(bmi088, &test_cfg);
     if (st != BMI_OK) {
         tc->result = R_FAIL;
@@ -202,8 +143,8 @@ void BMI088_seq_test_t4_gyr_config_rw(TEST_case_t *tc) {
     }
 
     {
-        const uint8_t range_exp = (uint8_t)BMI_GYR_RANGE_500;
-        const uint8_t bw_exp    = (uint8_t)BMI_GYR_BANDWIDTH_BW_47_HZ;
+        const uint8_t range_exp = BMI_TEST_GYR_RANGE_EXP;
+        const uint8_t bw_exp    = BMI_TEST_GYR_BW_EXP;
 
         range_r &= BMI_GYR_RANGE_MASK;
         bw_r    &= BMI_GYR_BANDWIDTH_BW_MASK;
@@ -221,23 +162,14 @@ void BMI088_seq_test_t4_gyr_config_rw(TEST_case_t *tc) {
     }
 
 t4_restore:
-    BMI088_ApplyConfig(bmi088, bmi088_config);
+    BMI088_ApplyConfig(bmi088, &bmi088_config->reg);
     HAL_Delay(2);
 }
 
 
 void BMI088_seq_test_t5_acc_self_test(TEST_case_t *tc) {
-    /* Config self-test : +-24g obligatoire, 1600 Hz, Normal           */
-    const bmi_config_t st_cfg = {
-        .acc_range = BMI_ACC_RANGE_24G,
-        .acc_bwp   = BMI_ACC_CONF_BWP_NORMAL,
-        .acc_odr   = BMI_ACC_CONF_ODR_1600_HZ,
-        .acc_pwr   = BMI_ACC_PWR_CONF_ACTIVE,
-        .acc_ctrl  = BMI_ACC_PWR_CTRL_ENABLE,
-        .gyr_range = bmi088_config->gyr_range,
-        .gyr_bw    = bmi088_config->gyr_bw,
-        .gyr_mode  = bmi088_config->gyr_mode,
-    };
+    /* Config self-test : +-24g obligatoire, 1600 Hz, Normal */
+    const bmi_reg_config_t st_cfg = bmi_test_cfg_selftest(&bmi088_config->reg);
     BMI_STATE st = BMI088_ApplyConfig(bmi088, &st_cfg);
     if (st != BMI_OK) {
         tc->result = R_FAIL;
@@ -253,7 +185,7 @@ void BMI088_seq_test_t5_acc_self_test(TEST_case_t *tc) {
         snprintf(tc->detail, sizeof(tc->detail), "WriteSTpos: %s", bmi_str(st));
         goto t5_cleanup;
     }
-    HAL_Delay(50);
+    HAL_Delay(ACC_ST_SETTLE_MS);
 
     uint8_t raw_p[6] = {0};
     st = BMI088_ReadMultiple(bmi088, false, BMI_ACC_X_LSB, raw_p, 6);
@@ -270,7 +202,7 @@ void BMI088_seq_test_t5_acc_self_test(TEST_case_t *tc) {
         snprintf(tc->detail, sizeof(tc->detail), "WriteSTneg: %s", bmi_str(st));
         goto t5_cleanup;
     }
-    HAL_Delay(50);
+    HAL_Delay(ACC_ST_SETTLE_MS);
 
     uint8_t raw_n[6] = {0};
     st = BMI088_ReadMultiple(bmi088, false, BMI_ACC_X_LSB, raw_n, 6);
@@ -281,18 +213,11 @@ void BMI088_seq_test_t5_acc_self_test(TEST_case_t *tc) {
     }
 
     {
-        const int16_t xp = (int16_t)((raw_p[1] << 8) | raw_p[0]);
-        const int16_t yp = (int16_t)((raw_p[3] << 8) | raw_p[2]);
-        const int16_t zp = (int16_t)((raw_p[5] << 8) | raw_p[4]);
-        const int16_t xn = (int16_t)((raw_n[1] << 8) | raw_n[0]);
-        const int16_t yn = (int16_t)((raw_n[3] << 8) | raw_n[2]);
-        const int16_t zn = (int16_t)((raw_n[5] << 8) | raw_n[4]);
+        int32_t d[3];
+        const bool ok = bmi_selftest_delta(raw_p, raw_n, d);
+        const int32_t dx = d[0], dy = d[1], dz = d[2];
 
-        const int32_t dx = (int32_t)xp - xn;
-        const int32_t dy = (int32_t)yp - yn;
-        const int32_t dz = (int32_t)zp - zn;
-
-        if (dx < ACC_ST_MIN_LSB || dy < ACC_ST_MIN_LSB || dz < ACC_ST_MIN_LSB) {
+        if (!ok) {
             tc->result = R_FAIL;
             snprintf(tc->detail, sizeof(tc->detail),
                      "dX=%ld dY=%ld dZ=%ld (min=%d LSB)",
@@ -307,8 +232,8 @@ void BMI088_seq_test_t5_acc_self_test(TEST_case_t *tc) {
 
 t5_cleanup:
     BMI088_WriteRegister(bmi088, false, BMI_ACC_SELF_TEST, (uint8_t)BMI_ACC_SELF_TEST_OFF);
-    HAL_Delay(50);
-    BMI088_ApplyConfig(bmi088, bmi088_config);
+    HAL_Delay(ACC_ST_SETTLE_MS);
+    BMI088_ApplyConfig(bmi088, &bmi088_config->reg);
     HAL_Delay(2);
 }
 
