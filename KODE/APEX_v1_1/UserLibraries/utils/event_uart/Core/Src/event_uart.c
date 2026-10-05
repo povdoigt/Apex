@@ -41,7 +41,7 @@ void event_uart_producer_add_event(event_uart_producer_t *producer, event_uart_m
 void event_uart_producer_send_events(event_uart_producer_t *producer) {
     switch (producer->state) {
         case EVENT_UART_PRODUCER_STATE_WAITING_FOR_EVENT: {
-            if (producer->cb.count > 0) {
+            if (cb_count(&producer->cb) > 0u) {
                 producer->state = EVENT_UART_PRODUCER_STATE_SEND_NOTIFICATION;
             }
             break;

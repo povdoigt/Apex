@@ -1,0 +1,11 @@
+[2J[H[36m===== DP Sequential Tests Test Suite =====[0m
+Suite de tests sequentiels pour data_packet (6 test cases)
+
+  [32m[PASS][0m T0 Init / free                   10 refus sans abonne laisse ; init / free / init OK
+  [32m[PASS][0m T1 Paquet nominal                3 sources (16/8/64 o) : flags 0x7, horodatage et charges exacts
+  [32m[PASS][0m T2 Fenetre                       trop vieilles jetees, trop jeunes gardees, bornes T/2, passage par 2^32
+  [32m[PASS][0m T3 Copie, champs a 0             10 paquets dans 3 : LOSS puis 7,8,9 intacts, champ absent a zero
+  [32m[PASS][0m T4 Source liberee                source liberee : flag a 0 sans erreur, les autres continuent
+  [32m[PASS][0m T5 Concurrence ISR               2539 paquets (1993 avec C), 2539 relus + 1495 par l'ISR : 0 incoherent
+
+[42m[30m  6/6 PASS   0 FAIL  [0m

@@ -4,7 +4,7 @@
 #include "circular_buffer.h"
 #include "test.h"
 
-#define CB_seq_test_N_TESTS 11
+#define CB_seq_test_N_TESTS 22
 
 extern TEST_case_table_t CB_seq_test_cases[CB_seq_test_N_TESTS];
 
@@ -112,5 +112,98 @@ void CB_seq_test_t9_float_elemsize(TEST_case_t *tc);
  *   complet (head, tail, count tous remis a zero logiquement).
  * ======================================================================== */
 void CB_seq_test_t10_fill_drain_cycle(TEST_case_t *tc);
+
+/* ========================================================================
+ * Cas limites et stress (revue du 05/10/2026)
+ * ======================================================================== */
+
+/* ========================================================================
+ * T11 – Capacite 1, deux politiques
+ *   head = tail = 0 en permanence. REJECT_NEW : 5 cycles push / push refuse
+ *   (CB_FULL, donnee intacte) / pop / pop vide. OVERWRITE_OLDEST : chaque
+ *   push suivant ecrase (CB_OVERWROTE_OLDEST), la derniere valeur reste.
+ * ======================================================================== */
+void CB_seq_test_t11_capacity_one(TEST_case_t *tc);
+
+/* ========================================================================
+ * T12 – Ecrasements successifs (OVERWRITE_OLDEST)
+ *   capacity=3, pousse 1..10 : 3 CB_OK puis 7 CB_OVERWROTE_OLDEST, le tail
+ *   fait plusieurs tours par le chemin d'ecrasement ; pop -> 8, 9, 10.
+ *   Puis 1000 pushes : restent les 3 derniers, dans l'ordre.
+ * ======================================================================== */
+void CB_seq_test_t12_multi_overwrite(TEST_case_t *tc);
+
+/* ========================================================================
+ * T13 – Sortie de l'etat plein (REJECT_NEW)
+ *   capacity=4 plein ; 50 fois : pop (ordre FIFO), push accepte, push
+ *   suivant refuse. Vidange finale dans l'ordre.
+ * ======================================================================== */
+void CB_seq_test_t13_reject_recovery(TEST_case_t *tc);
+
+/* ========================================================================
+ * T14 – Tailles d'element 1, 3, 13 et 128 octets, avec canaris
+ *   Stockage et sorties encadres d'octets temoins. 23 pushes (plusieurs
+ *   tours) avec pops intercales, peek de chaque slot : contenu exact octet
+ *   par octet, aucun temoin touche (aucune ecriture hors limites).
+ * ======================================================================== */
+void CB_seq_test_t14_elem_sizes_guards(TEST_case_t *tc);
+
+/* ========================================================================
+ * T15 – Acces pointeur cb_peek_ptr / cb_peek_relative_ptr
+ *   Adresses dans le stockage au slot attendu (avec wrap), identiques au
+ *   contenu copie par cb_peek / cb_peek_relative sur un balayage
+ *   origine x offset. NULL pour un buffer NULL ou non initialise.
+ * ======================================================================== */
+void CB_seq_test_t15_ptr_accessors(TEST_case_t *tc);
+
+/* ========================================================================
+ * T16 – cb_wrap aux extremes
+ *   capacites 1..1000, origines 0 / SIZE_MAX / SIZE_MAX-1..., offsets
+ *   INT_MIN / INT_MIN+1 / INT_MAX / +-capacity... : slot compare a une
+ *   reference calculee en 64 bits signes.
+ * ======================================================================== */
+void CB_seq_test_t16_wrap_extremes(TEST_case_t *tc);
+
+/* ========================================================================
+ * T17 – Arguments invalides restants
+ *   pop/peek/peek_relative avec sortie NULL, buffer NULL, buffer a zero
+ *   (jamais initialise), reset/free/count sur NULL, politique inconnue,
+ *   elem_size * capacity au-dela de SIZE_MAX.
+ * ======================================================================== */
+void CB_seq_test_t17_bad_args(TEST_case_t *tc);
+
+/* ========================================================================
+ * T18 – Push d'une donnee deja en place dans le slot head
+ *   Element ecrit via cb_peek_ptr(head) puis pousse depuis cette adresse :
+ *   CB_OK et valeur relue, sur plusieurs tours.
+ * ======================================================================== */
+void CB_seq_test_t18_push_in_place(TEST_case_t *tc);
+
+/* ========================================================================
+ * T19 – Test aleatoire contre un modele de reference
+ *   36 configurations (capacite 1/2/3/7/8/16 x politique x taille 1/4/12),
+ *   10000 operations tirees au hasard chacune (graine fixe) : push, pop,
+ *   peek, peek_relative, reset. Modele independant (rang de push modulo la
+ *   capacite) ; statut, contenu, count et temoins verifies a chaque pas.
+ * ======================================================================== */
+void CB_seq_test_t19_random_model(TEST_case_t *tc);
+
+/* ========================================================================
+ * T20 – cb_push depuis une interruption (TIM5, 20 kHz)
+ *   Meme scenario que le T23 RTOS, mais a l'attente active : l'ISR pousse
+ *   0, 1, 2... (REJECT_NEW, refus comptes), la boucle principale depile
+ *   300 ms. Valeurs croissantes, trous == refus, depiles + refus ==
+ *   pousses, count coherent avec head / tail, au moins un refus.
+ * ======================================================================== */
+void CB_seq_test_t20_isr_push(TEST_case_t *tc);
+
+/* ========================================================================
+ * T21 – Copies jamais dechirees face a une ISR (OVERWRITE_OLDEST)
+ *   L'ISR pousse a 20 kHz des elements de 64 o (16 mots = numero) dans un
+ *   buffer de 4 ; la boucle principale fait cb_peek (slot au hasard) et
+ *   cb_pop pendant 300 ms : chaque copie est homogene, les pops sont
+ *   strictement croissants, et l'ISR a bien ecrase des elements.
+ * ======================================================================== */
+void CB_seq_test_t21_isr_no_torn_copy(TEST_case_t *tc);
 
 #endif /* CB_SEQ_TEST_H */

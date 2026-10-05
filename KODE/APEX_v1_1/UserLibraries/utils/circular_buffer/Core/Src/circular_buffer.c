@@ -1,29 +1,33 @@
 #include "circular_buffer.h"
-#include "freertos_mpool.h"
 #include <string.h>
 
 /* --------------------------------------------------------------------------
  *   Fonctions internes (non exportées)
  * -------------------------------------------------------------------------- */
 
-// Effectue une addition modulo avec un offset pouvant être négatif.
-// Permet de gérer les index circulaires.
-static inline size_t wrap_add(size_t base, int offset, size_t mod) {
-    int result = (int)base + offset;
-    int wrapped = (result % (int)mod + (int)mod) % (int)mod;
-    return (size_t)wrapped;
+// Index suivant, avec retour à 0 en fin de stockage.
+static inline size_t cb_next(size_t idx, size_t capacity) {
+    return (idx + 1u == capacity) ? 0u : idx + 1u;
 }
 
-static inline void cb_lock(circular_buffer_t *cb) {
-#if (APEX_CFG_SCHED_RTOS == 1)
-    osMutexAcquire(cb->mutex_id, osWaitForever);
-#endif
+// (origin + offset) modulo capacity, sans débordement : origin peut dépasser
+// capacity et offset être négatif ("wrap permissif").
+static inline size_t cb_wrap(size_t origin, int offset, size_t capacity) {
+    size_t base = origin % capacity;
+    size_t step;
+    if (offset >= 0) {
+        step = (size_t)offset % capacity;
+    } else {
+        /* -(offset + 1) + 1 évite de calculer -INT_MIN */
+        size_t back = ((size_t)(-(offset + 1)) + 1u) % capacity;
+        step = (back == 0u) ? 0u : capacity - back;
+    }
+    /* base < capacity et step < capacity */
+    return (base >= capacity - step) ? base - (capacity - step) : base + step;
 }
 
-static inline void cb_unlock(circular_buffer_t *cb) {
-#if (APEX_CFG_SCHED_RTOS == 1)
-    osMutexRelease(cb->mutex_id);
-#endif
+static inline uint8_t *cb_slot(const circular_buffer_t *cb, size_t idx) {
+    return cb->storage + (idx * cb->elem_size);
 }
 
 /* --------------------------------------------------------------------------
@@ -33,7 +37,10 @@ static inline void cb_unlock(circular_buffer_t *cb) {
 cb_status_t cb_init(circular_buffer_t *cb,
                     void *storage, size_t elem_size, size_t capacity,
                     cb_overflow_policy_t policy) {
-    if (!cb || !storage || elem_size == 0u || capacity == 0u) return CB_BAD_ARG ;
+    if (!cb || !storage || elem_size == 0u || capacity == 0u) return CB_BAD_ARG;
+    if (policy != CB_OVERWRITE_OLDEST && policy != CB_REJECT_NEW) return CB_BAD_ARG;
+    /* elem_size * capacity doit tenir dans un size_t : sinon cb_slot déborde. */
+    if (capacity > SIZE_MAX / elem_size) return CB_BAD_ARG;
 
     cb->storage = (uint8_t *)storage;
     cb->elem_size = elem_size;
@@ -43,43 +50,22 @@ cb_status_t cb_init(circular_buffer_t *cb,
     cb->count = 0u;
     cb->policy = policy;
 
-#if (APEX_CFG_SCHED_RTOS == 1)
-    // Initialisation du mutex
-    const osMutexAttr_t mutex_attr = {
-        // .name = "CB_Mutex",
-        .cb_mem = &cb->mutex_cm,
-        .cb_size = sizeof(cb->mutex_cm)
-    };
-    cb->mutex_id = osMutexNew(&mutex_attr);
-    if (!(cb->mutex_id)) {
-        // Échec de la création du mutex
-        return CB_BAD_ARG;
-    }
-#endif
-
     return CB_OK;
 }
 
 cb_status_t cb_reset(circular_buffer_t *cb) {
     if (!cb) return CB_BAD_ARG;
-    cb_lock(cb);
+    cb_critical_t c = cb_critical_enter();
     cb->head = 0u;
     cb->tail = 0u;
     cb->count = 0u;
-    cb_unlock(cb);
+    cb_critical_exit(c);
     return CB_OK;
 }
 
 cb_status_t cb_free(circular_buffer_t *cb) {
-#if (APEX_CFG_SCHED_RTOS == 1)
     if (!cb) return CB_BAD_ARG;
-    if (cb->mutex_id) {
-        osMutexDelete(cb->mutex_id);
-        cb->mutex_id = NULL;
-    }
-#endif
     return CB_OK;
-
 }
 
 /* --------------------------------------------------------------------------
@@ -87,76 +73,73 @@ cb_status_t cb_free(circular_buffer_t *cb) {
  * -------------------------------------------------------------------------- */
 
 cb_status_t cb_push(circular_buffer_t *cb, const void *elem) {
-    if (!cb || !elem) return CB_BAD_ARG;
-    cb_lock(cb);
+    if (!cb || !elem || !cb->storage) return CB_BAD_ARG;
 
     cb_status_t status = CB_OK;
+    cb_critical_t c = cb_critical_enter();
+
     /* Cas plein */
     if (cb->count == cb->capacity) {
         if (cb->policy == CB_REJECT_NEW) {
-            cb_unlock(cb);  /* libère le mutex avant de retourner */
+            cb_critical_exit(c);
             return CB_FULL;
         }
-        /* Overwrite oldest: on avance le tail */
-        cb->tail = wrap_add(cb->tail, 1, cb->capacity);
+        /* Overwrite oldest: on avance le tail, count reste saturé */
+        cb->tail = cb_next(cb->tail, cb->capacity);
         status = CB_OVERWROTE_OLDEST;
-        /* count reste saturé */
     } else {
         cb->count++;
     }
 
     /* Copie de l’élément au head */
-    uint8_t *dst = cb->storage + (cb->head * cb->elem_size);
-    if (dst != (uint8_t *)elem) { // Could happen
+    uint8_t *dst = cb_slot(cb, cb->head);
+    if (dst != (const uint8_t *)elem) { /* donnée déjà en place : memcpy sur elle-même interdit */
         memcpy(dst, elem, cb->elem_size);
     }
-    cb->head = wrap_add(cb->head, 1, cb->capacity);
+    cb->head = cb_next(cb->head, cb->capacity);
 
-    cb_unlock(cb);
-
+    cb_critical_exit(c);
     return status;
 }
 
 cb_status_t cb_pop(circular_buffer_t *cb, void *out) {
-    if (!cb)             return CB_BAD_ARG;
-    if (cb->count == 0u) return CB_EMPTY;
-    if (!out)            return CB_BAD_ARG;
+    if (!cb || !out || !cb->storage) return CB_BAD_ARG;
 
-    cb_lock(cb);
+    cb_critical_t c = cb_critical_enter();
 
-    const uint8_t *src = cb->storage + (cb->tail * cb->elem_size);
-    memcpy(out, src, cb->elem_size);
+    /* count testé sous la section critique : deux consommateurs ne peuvent
+       pas retirer tous les deux le dernier élément. */
+    if (cb->count == 0u) {
+        cb_critical_exit(c);
+        return CB_EMPTY;
+    }
 
-    cb->tail = wrap_add(cb->tail, 1, cb->capacity);
+    memcpy(out, cb_slot(cb, cb->tail), cb->elem_size);
+    cb->tail = cb_next(cb->tail, cb->capacity);
     cb->count--;
 
-    cb_unlock(cb);
-
+    cb_critical_exit(c);
     return CB_OK;
+}
+
+size_t cb_count(const circular_buffer_t *cb) {
+    if (!cb) return 0u;
+    return cb->count;   /* lecture d'un mot, atomique sur Cortex-M */
 }
 
 /* --------------------------------------------------------------------------
  *   Accès pointeur (bas niveau, sans copie)
  * -------------------------------------------------------------------------- */
 
-
 const void *cb_peek_relative_ptr(circular_buffer_t *cb,
                                  size_t origin, int offset) {
-    if (!cb || !cb->storage) return NULL;
-
-    cb_lock(cb);
-
-    size_t index = wrap_add(origin, offset, cb->capacity);
-
-    void *result = cb->storage + (index * cb->elem_size);
-
-    cb_unlock(cb);
-
-    return result;
+    if (!cb || !cb->storage || cb->capacity == 0u) return NULL;
+    return cb_slot(cb, cb_wrap(origin, offset, cb->capacity));
 }
 
 const void *cb_peek_ptr(circular_buffer_t *cb, size_t idx) {
-    return cb_peek_relative_ptr(cb, 0, (int)idx);
+    if (!cb || !cb->storage || cb->capacity == 0u) return NULL;
+    return cb_slot(cb, idx % cb->capacity);
 }
 
 /* --------------------------------------------------------------------------
@@ -165,15 +148,19 @@ const void *cb_peek_ptr(circular_buffer_t *cb, size_t idx) {
 
 cb_status_t cb_peek_relative(circular_buffer_t *cb,
                              size_t origin, int offset, void *out) {
-    if (!cb || !out) return CB_BAD_ARG;
+    if (!cb || !out || !cb->storage || cb->capacity == 0u) return CB_BAD_ARG;
 
-    const void *src = cb_peek_relative_ptr(cb, origin, offset);
-    if (!src) return CB_BAD_ARG;
-
-    memcpy(out, src, cb->elem_size);
+    cb_critical_t c = cb_critical_enter();
+    memcpy(out, cb_slot(cb, cb_wrap(origin, offset, cb->capacity)), cb->elem_size);
+    cb_critical_exit(c);
     return CB_OK;
 }
 
 cb_status_t cb_peek(circular_buffer_t *cb, size_t idx, void *out) {
-    return cb_peek_relative(cb, 0, (int)idx, out);
+    if (!cb || !out || !cb->storage || cb->capacity == 0u) return CB_BAD_ARG;
+
+    cb_critical_t c = cb_critical_enter();
+    memcpy(out, cb_slot(cb, idx % cb->capacity), cb->elem_size);
+    cb_critical_exit(c);
+    return CB_OK;
 }

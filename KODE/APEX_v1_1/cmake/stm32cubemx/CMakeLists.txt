@@ -15,14 +15,19 @@ set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/SEQ_FLIGHT
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/example_flash_selftest
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_PERF
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_PERF
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_USB
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_DT_USB
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_DT_STRESS
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_SCHED_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_PERF
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_sx1276_1_lora
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_LED_PWM
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_BMI088_USB
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_CB_USB
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_DT_USB
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_DP_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_SEQ_UART
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_fsk
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/sequential/SEQ_sx1276_1_lora
@@ -91,6 +96,7 @@ set(MX_Include_Dirs
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_packet/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/event_uart/test/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/test/Inc
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/test/Inc
@@ -158,6 +164,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/Core/Src/scheduler.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/telem_format/Core/Src/telem_format.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/Core/Src/test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/test/Core/Src/test_irq.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/tools/Core/Src/tools.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/usb/Core/Src/usb.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/vt100/Core/Src/vt100.c
@@ -169,6 +176,9 @@ set(MX_Application_Src
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/circular_buffer/test/Src/cb_seq_test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_seq_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_rtos_test.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_topic/test/Src/dt_rtos_stress.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/data_packet/test/Src/dp_seq_test.c
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/flash_stream/test/Src/flash_stream_test.c
     # # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/iir_filter/test/Src/iir_filter_test.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../UserLibraries/utils/scheduler/test/Src/sched_rtos_test.c

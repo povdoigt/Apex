@@ -47,7 +47,7 @@ Naming: `SEQ_*` projects use the bare-metal super-loop, and `RTOS_*` projects us
 [Core/Src/main.c](Core/Src/main.c) initialises the HAL, clocks, all `MX_*` peripherals and USB, then branches on the active project's `main_config.h`:
 
 - **Sequential (`APEX_CFG_SCHED_SEQ`)**: `DRIVERS_CONFIG_init_seq()` → `setup()` once → `loop()` forever in `while(1)`.
-- **RTOS (`APEX_CFG_SCHED_RTOS`)**: `osKernelStart()`. `MX_FREERTOS_Init()` in [Core/Src/freertos.c](Core/Src/freertos.c) calls `Init_spi_semaphores()`, and `StartDefaultTask` runs the project's `setup()` in thread context, then exits. **RTOS projects have no `loop()`.** Anything long-lived is a persistent task spawned from `setup()`.
+- **RTOS (`APEX_CFG_SCHED_RTOS`)**: `osKernelStart()`. `MX_FREERTOS_Init()` in [Core/Src/freertos.c](Core/Src/freertos.c) calls `Init_spi_semaphores()`, then the project's optional `setup_pre_kernel()` (a weak no-op unless the project defines it: thread mode, scheduler not started, nothing blocking). `StartDefaultTask` runs the project's `setup()` in thread context, then exits. **RTOS projects have no `loop()`.** Anything long-lived is a persistent task spawned from `setup()`.
 
 ### RTOS rules
 
@@ -58,7 +58,10 @@ Naming: `SEQ_*` projects use the bare-metal super-loop, and `RTOS_*` projects us
   - `TASK_POOL(name, n)` / `TASK_POOL_SZ` goes in the **application** (`project.c`) and owns the RAM. Every pool sits in one auditable block.
   - Spawn with `<name>_spawn(&args, &(task_attr_t){ .priority, .ret, .join_bit })`, then call `task_join(...)`. Join bits 1..30 belong to the joiner. Slots are created lazily, then parked and reused. Call these from thread context only, never from an ISR.
 - **SPI under RTOS** goes through the DMA + per-bus semaphore wrappers in [Core/Src/spi.c](Core/Src/spi.c) / [Core/Inc/spi.h](Core/Inc/spi.h): `SPI_Begin_DMA_RTOS` (takes the bus and asserts CS) → `SPI_*_DMA_RTOS` → `SPI_End_DMA_RTOS`. Don't call the HAL SPI functions directly from tasks.
-- For inter-task data, use `data_topic` (pub/sub ring with per-subscriber cursors and `DT_DATA_LOSS` signalling).
+- For inter-task data, use `data_topic` (pub/sub ring with per-subscriber cursors and `DT_DATA_LOSS` signalling). Read its header doc. Three rules matter most:
+  - A `data_sub_t` must be detached before its memory is reused. A task-local subscriber is detached before the task body returns. The topic keeps its address, and `topic->list_faults` counts subscribers found corrupted.
+  - Publishing from an ISR requires an NVIC priority numerically ≥ `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY` (5). Publishing before `osKernelStart()` is allowed.
+  - The `_ptr` (zero-copy) reads are only safe when the publisher cannot run during the read. Otherwise use the copying `read` / `peek`.
 
 ## Code layout
 
@@ -75,6 +78,12 @@ The on-target test harness is in [UserLibraries/utils/test/Core/Inc/test.h](User
 - A test project's `setup()` does the following: `TEST_configure_cases(table, N, (const bool[]){...})` to enable or disable individual cases → `TEST_perform_cases` → `TEST_wait_host()` (blocks until a terminal opens the CDC port, DTR=1) → `TEST_print_case_result(..., TEST_usb_print, name, desc)`.
 - To run a suite, select its `tests/...` project, make sure its test `.c` is uncommented in the CMake source list, then build and flash. Open the USB serial port to see the VT100-formatted report.
 - Sequential and RTOS twin suites (e.g. W25Q) share case numbering on purpose. If an RTOS case fails while its sequential twin passes, the fault is in the RTOS layer.
+- Concurrency cases need an asynchronous interrupt. Use TIM5 (unused on APEX) through [UserLibraries/utils/test/Core/Inc/test_irq.h](UserLibraries/utils/test/Core/Inc/test_irq.h), which exists in test builds only. Task-against-task time slicing only preempts at the tick, and it proved unable to detect missing critical sections.
+- Data core (`circular_buffer`, `data_topic`, `data_packet`):
+  - `SEQ_CB_USB`, `SEQ_DT_USB` and `SEQ_DP_USB` run the sequential suites.
+  - `RTOS_DT_USB` runs the RTOS suite and replays all three sequential suites under RTOS.
+  - `RTOS_DT_STRESS` runs every suite ×50, then a 10-min mission-like endurance, then DWT critical-section timing. Its report ends with `END_OF_REPORT`.
+  - When changing a locking path, re-check that the concurrency cases still fail with `cb_critical_enter/exit` emptied (mutation).
 
 ## Conventions
 

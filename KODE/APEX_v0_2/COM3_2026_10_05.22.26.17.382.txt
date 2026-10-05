@@ -1,0 +1,16 @@
+[2J[H[36m===== CB Sequential Tests Test Suite =====[0m
+Suite de tests sequentiels pour circular_buffer (11 cas) (11 test cases)
+
+  [32m[PASS][0m T0 NULL args                     Tous les NULL/bad-arg correctement rejetes
+  [32m[PASS][0m T1 FIFO order                    FIFO {10,20,30} OK, count=0 en fin
+  [32m[PASS][0m T2 Empty read                    CB_EMPTY retourne, out intact, count=0
+  [32m[PASS][0m T3 Full REJECT_NEW               CB_FULL ok, {1,2,3} intacts, 99 rejete
+  [32m[PASS][0m T4 Full OVERWRITE                CB_OVERWROTE_OLDEST ok, FIFO={2,3,4} apres push 4
+  [32m[PASS][0m T5 Reset                         Reset: count=0, CB_EMPTY, reutilisable OK
+  [32m[PASS][0m T6 Peek absolute                 peek wrap-permissif: idx%cap OK (B,C,D,E), non-destructif OK
+  [32m[PASS][0m T7 Peek relative                 peek_rel wrap-permissif: A-J OK (pos/neg/grand/origin arb.), non-dest.
+  [32m[PASS][0m T8 Wrap-around                   Wrap-around: FIFO={3,4,5,6} correct, count=0
+  [32m[PASS][0m T9 Float elem_size               elem_size=float: {1.5,2.5,3.5} push/pop OK
+  [32m[PASS][0m T10 Fill/Drain x2                2 cycles fill/drain cap=8 OK, count=0 final
+
+[42m[30m  11/11 PASS   0 FAIL  [0m

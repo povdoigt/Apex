@@ -1,0 +1,19 @@
+[2J[H[36m===== DT Sequential Tests Test Suite =====[0m
+Suite de tests sequentiels pour data_topic (14 cas) (14 test cases)
+
+  [32m[PASS][0m T0  NULL args                    Tous les NULL/bad-arg correctement rejetes
+  [32m[PASS][0m T1  Pub/Read FIFO                FIFO {10,20,30} OK, pub_seq=3, num_to_read=0
+  [32m[PASS][0m T2  Empty read                   DT_EMPTY pour read et peek, out non modifie
+  [32m[PASS][0m T3  Attach OLDEST                FROM_OLDEST: num=3, {10,20,30} lus, DT_EMPTY OK
+  [32m[PASS][0m T4  Attach NOW                   FROM_NOW: historique ignore, pub 40 lue OK
+  [32m[PASS][0m T5  num_to_read                  num_to_read: 1->2->3 puis 2->1->0 apres reads OK
+  [32m[PASS][0m T6  Two subscribers              sub1={10,20} lu, sub2={10,20,30} intact, tails indep.
+  [32m[PASS][0m T7  Data loss                    read: LOSS+3 puis 4,5 ; peek signale la perte une fois (12)
+  [32m[PASS][0m T8  Sync                         NOW: num=0, tail=head, 40 lu ; OLDEST: 10..40 relus
+  [32m[PASS][0m T9  Detach/Reattach              Detach: sub_count=1, sub2 lit 99, re-attach OK, 2e topic refuse
+  [32m[PASS][0m T10 Peek non-dest.               peek[0..2]={10,20,30}, peek[3] vide, tail intact, read->10
+  [32m[PASS][0m T11 REJECT_NEW refuse            REJECT_NEW refuse ; OVERWRITE: 5 tours plein/vide sans blocage
+  [32m[PASS][0m T12 Zero-copy ptr                peek_ptr(0)=1 (plus ancien), peek_ptr(2)=3, read_ptr=1 puis 2
+  [32m[PASS][0m T13 Free detache                 free: 2 abonnes detaches, topic refuse, re-init + lecture OK
+
+[42m[30m  14/14 PASS   0 FAIL  [0m

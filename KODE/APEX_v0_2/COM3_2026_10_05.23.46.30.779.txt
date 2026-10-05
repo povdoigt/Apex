@@ -1,0 +1,30 @@
+[2J[H[36m===== DT Sequential Tests Test Suite =====[0m
+Suite de tests sequentiels pour data_topic (25 test cases)
+
+  [32m[PASS][0m T0  NULL args                    Tous les NULL/bad-arg correctement rejetes
+  [32m[PASS][0m T1  Pub/Read FIFO                FIFO {10,20,30} OK, pub_seq=3, num_to_read=0
+  [32m[PASS][0m T2  Empty read                   DT_EMPTY pour read et peek, out non modifie
+  [32m[PASS][0m T3  Attach OLDEST                FROM_OLDEST: num=3, {10,20,30} lus, DT_EMPTY OK
+  [32m[PASS][0m T4  Attach NOW                   FROM_NOW: historique ignore, pub 40 lue OK
+  [32m[PASS][0m T5  num_to_read                  num_to_read: 1->2->3 puis 2->1->0 apres reads OK
+  [32m[PASS][0m T6  Two subscribers              sub1={10,20} lu, sub2={10,20,30} intact, tails indep.
+  [32m[PASS][0m T7  Data loss                    read: LOSS+3 puis 4,5 ; peek signale la perte une fois (12)
+  [32m[PASS][0m T8  Sync                         NOW: num=0, tail=head, 40 lu ; OLDEST: 10..40 relus
+  [32m[PASS][0m T9  Detach/Reattach              Detach: sub_count=1, sub2 lit 99, re-attach OK, 2e topic refuse
+  [32m[PASS][0m T10 Peek non-dest.               peek[0..2]={10,20,30}, peek[3] vide, tail intact, read->10
+  [32m[PASS][0m T11 REJECT_NEW refuse            REJECT_NEW refuse ; OVERWRITE: 5 tours plein/vide sans blocage
+  [32m[PASS][0m T12 Zero-copy ptr                peek_ptr(0)=1 (plus ancien), peek_ptr(2)=3, read_ptr=1 puis 2
+  [32m[PASS][0m T13 Free detache                 free: 2 abonnes detaches, topic refuse, re-init + lecture OK
+  [32m[PASS][0m T14 Bornes de perte              lag=4 : 1..4 sans perte ; lag=5 : LOSS/6 puis 7,8,9
+  [32m[PASS][0m T15 Perte par peek(i)            peek(2) : LOSS/6 et recalage ; peek(0)=4, peek(3)=7, puis 4..7 lus
+  [32m[PASS][0m T16 Perte par _ptr               read_ptr LOSS/3, peek_ptr(1) LOSS/10, recalage puis 9
+  [32m[PASS][0m T17 Peek hors donnees            peek(4)/peek(100) vides sans recalage (num=7), read -> LOSS/4
+  [32m[PASS][0m T18 Detach milieu                detach milieu/tete/queue : chainage double et sub_count exacts
+  [32m[PASS][0m T19 pub_seq 2^32                 pub_seq repasse par 0 : num_to_read, FROM_OLDEST et perte exacts
+  [32m[PASS][0m T20 OLDEST + cap 1               OLDEST apres 10/4 : 7..10 sans perte ; cap 1 : pertes, peek, 2 abonnes
+  [32m[PASS][0m T21 Tailles+temoins              13 et 128 o : lectures, perte, peek exacts ; temoins intacts
+  [32m[PASS][0m T22 Attache refusee              mode 7 refuse ; abonne remis a zero encore chaine refuse (queue, tete)
+  [32m[PASS][0m T23 ISR dechirure                2943 trames lues / 5989 publiees en ISR, 0 dechiree, 2057 pertes signalees
+  [32m[PASS][0m T24 ISR pertes                   5998 publiees en ISR = 4808 lues + 1190 sautees (149 pertes signalees)
+
+[42m[30m  25/25 PASS   0 FAIL  [0m

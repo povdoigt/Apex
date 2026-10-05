@@ -67,7 +67,9 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+#if (APEX_CFG_SCHED_RTOS == 1)
+void setup_pre_kernel(void);
+#endif
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -135,7 +137,10 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+#if (APEX_CFG_SCHED_RTOS == 1)
+  /* Optional project hook, still before osKernelStart(): no task runs yet. */
+  setup_pre_kernel();
+#endif
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -175,6 +180,14 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
+#if (APEX_CFG_SCHED_RTOS == 1)
+/* Default: nothing to prepare before the kernel starts. A project that needs
+   it (objects to create before any task runs, pre-kernel tests) defines its
+   own setup_pre_kernel(). Thread mode, scheduler not started: no blocking
+   call, no osDelay, no task_spawn. */
+__weak void setup_pre_kernel(void)
+{
+}
+#endif
 /* USER CODE END Application */
 

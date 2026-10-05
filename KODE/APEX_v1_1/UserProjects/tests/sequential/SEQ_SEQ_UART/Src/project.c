@@ -70,7 +70,7 @@ void wt901b_acc_callback(void) {
 }
 
 void seq_callback(void) {
-    if (event_uart_consumer.cb.count > 0) {
+    if (cb_count(&event_uart_consumer.cb) > 0u) {
         event_uart_msg_t msg;
         cb_pop(&event_uart_consumer.cb, &msg);
         LED_RGB_SetColor(&led0_rgb, FLOAT3_UNIT_Y);
