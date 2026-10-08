@@ -1,0 +1,123 @@
+BMI088 RTOS - banc de performance
+Build : Debug (-O0)
+SYSCLK 96 MHz, SCK 3000 kHz, init capteur : OK (code 0)
+Erreurs : aucune
+
+== A1 Couche SPI1 RTOS (DMA) vs HAL bloquant
+Mesure                                 n octets     min us     med us     p99 us     max us     moy us     KiB/s
+DWT (mesure a vide)                  200      0       0.18       0.18       0.18       0.20       0.18       0.0
+Begin + End (bus + CS)               200      0      10.58      10.58      13.03      13.41      10.69       0.0
+TxRx DMA 2 o (ecriture reg)          200      2      34.99      34.99      37.42      37.49      35.22      55.8
+TxRx DMA 3 o (lecture reg ACC)       200      3      34.94      34.96      37.48      39.10      35.21      83.8
+TxRx DMA 4 o (temperature)           200      4      37.20      47.10      50.23      51.57      47.36      82.9
+TxRx DMA 7 o (GYR XYZ)               200      7      49.75      60.00      63.13      63.20      59.86     113.9
+TxRx DMA 8 o (ACC XYZ)               200      8      59.91      59.91      63.25      65.26      60.43     130.4
+TxRx DMA 33 o (burst max)            200     33     119.03     119.05     121.54     128.62     119.44     270.7
+TxRx HAL bloquant 2 o                200      2      14.19      14.19      16.44      16.77      14.27     137.7
+TxRx HAL bloquant 3 o                200      3      18.01      18.01      20.58      20.60      18.15     162.7
+TxRx HAL bloquant 4 o                200      4      21.83      21.83      24.18      24.42      21.94     178.9
+TxRx HAL bloquant 7 o                200      7      33.30      33.30      36.28      76.79      33.85     205.3
+TxRx HAL bloquant 8 o                200      8      37.12      37.12      39.69      41.56      37.34     210.4
+TxRx HAL bloquant 33 o               200     33     132.70     132.70     137.29     162.31     133.80     242.9
+Temps mort tIDLE 2 us (DelayUs)      200      0       2.72       2.72       2.90       5.06       2.73       0.0
+
+== A2 Primitives
+Mesure                                 n octets     min us     med us     p99 us     max us     moy us     KiB/s
+Verrou capteur pris + rendu          200      0       6.44       6.44       9.12       9.17       6.51       0.0
+ReadRegister ACC (verrou)            200      0      60.19      60.19     111.00     133.86      61.74       0.0
+ReadRegister GYR (verrou)            200      0      60.31      60.31     107.08     128.16      61.75       0.0
+ReadRegister ACC (NoLock)            200      0      53.56      53.87     146.80     160.57      65.77       0.0
+WriteRegister ACC_RANGE              200      0      50.92      50.92      53.85      55.06      51.31       0.0
+ReadID (2 transactions)              200      0     115.43     115.43     120.07     120.34     116.34       0.0
+ReadAcc_RTOS                         200      6      89.42      89.42      94.29      94.71      90.23      65.5
+ReadGyr_RTOS                         200      6      78.67      89.67      94.62      95.18      89.80      65.3
+ReadTemp_RTOS                        200      2      63.93      73.79      77.03      78.38      74.31      26.5
+DecodeXYZ seul (CPU)                 200      0       1.31       1.31       1.31       1.40       1.31       0.0
+ReadAcc sequentiel (HAL bloquant)    200      6      48.10      48.10      50.89      51.44      48.42     121.8
+ReadGyr sequentiel (HAL bloquant)    200      6      44.34      44.34      47.16      49.00      44.69     132.1
+
+== A3 Sequences (reset, config, init)
+Mesure                                 n octets     min us     med us     p99 us     max us     moy us     KiB/s
+ApplyConfig_RTOS direct               20      0     752.41     753.51     755.17     755.17     753.95       0.0
+Tache ApplyConfig (spawn + join)      20      0     856.11     861.23     864.23     864.23     860.71       0.0
+SoftReset ACC (+ retour SPI)           5      0    1121.24    1419.89    1419.89    1419.89    1360.16       0.0
+SoftReset GYR                          5      0   30945.91   30946.15   30946.15   30946.15   30946.09       0.0
+ApplyConfig apres reset                5      0   12632.84   12632.84   12632.84   12632.84   12632.84       0.0
+Tache Init complete                    3      0   44999.18   44999.77   45008.26   45008.26   45002.40       0.0
+
+== A4 Cycle d'acquisition (thread du banc)
+Mesure                                 n octets     min us     med us     p99 us     max us     moy us     KiB/s
+ReadAcc + ReadGyr                    200     12     167.88     178.92     184.69     184.85     179.97      65.5
+data_topic_publish, 0 abonne         200      0      10.71      11.18      13.73      13.84      11.23       0.0
+data_topic_publish, 1 abonne         200      0      14.48      14.54      17.14      19.03      14.65       0.0
+Periode ACC+GYR+publication          200     12     190.93     201.93     207.38     207.54     201.47      58.0
+Periode ACC+GYR+TEMP+publication     200     14     275.27     288.65     291.79     291.83     287.92      47.4
+
+== B2 Gigue de periode (abonne prio haute)
+Mesure                                 n octets     min us     med us     p99 us     max us     moy us     KiB/s
+Periode 1 ms : ecart entre reveils   199      0     669.70    1000.00    1002.79    1002.93     998.33       0.0
+Periode 2 ms : ecart entre reveils   199      0    1641.21    2000.00    2002.59    2002.59    1998.21       0.0
+Periode 5 ms : ecart entre reveils   100      0    4187.07    5000.00    5002.75    5002.95    4991.86       0.0
+Periode 10 ms : ecart entre reveils    50      0    9950.56   10000.00   10002.54   10002.54    9999.04       0.0
+
+== B1 Tache BMI088_Acquire (ACC+GYR, TEMP 1/10), 1000 ms par periode
+periode ms     cycles         Hz    retards    erreurs  CPU libre
+       ref          -          -          -          -     100.0%
+         1       1001     1001.0          0          0      76.5%
+         2        501      501.0          0          0      88.2%
+         5        201      201.0          0          0      95.3%
+        10        101      101.0          0          0      97.7%
+
+== C Marge de pile (instance 0)
+Pool                                   pile o    libre o  utilise o
+BMI088_Init                              1024        312        712
+BMI088_ApplyConfig                       1024        352        672
+BMI088_Acquire                           1024        244        780
+BMIB_Spin                                 512        260        252
+BMIB_Probe                                768        464        304
+
+--- CSV BEGIN ---
+group,name,n,bytes,min_us,p50_us,p99_us,max_us,mean_us,kib_s
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,DWT (mesure a vide),200,0,0.177,0.177,0.177,0.198,0.177,0.0
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,Begin + End (bus + CS),200,0,10.583,10.583,13.031,13.406,10.688,0.0
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx DMA 2 o (ecriture reg),200,2,34.990,34.990,37.417,37.490,35.219,55.8
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx DMA 3 o (lecture reg ACC),200,3,34.938,34.958,37.479,39.104,35.208,83.8
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx DMA 4 o (temperature),200,4,37.198,47.104,50.229,51.573,47.365,82.9
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx DMA 7 o (GYR XYZ),200,7,49.750,60.000,63.125,63.198,59.865,113.9
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx DMA 8 o (ACC XYZ),200,8,59.906,59.906,63.250,65.260,60.427,130.4
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx DMA 33 o (burst max),200,33,119.031,119.052,121.542,128.625,119.438,270.7
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx HAL bloquant 2 o,200,2,14.188,14.188,16.438,16.771,14.271,137.7
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx HAL bloquant 3 o,200,3,18.010,18.010,20.583,20.604,18.146,162.7
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx HAL bloquant 4 o,200,4,21.833,21.833,24.177,24.417,21.938,178.9
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx HAL bloquant 7 o,200,7,33.302,33.302,36.281,76.792,33.854,205.3
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx HAL bloquant 8 o,200,8,37.125,37.125,39.688,41.562,37.344,210.4
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,TxRx HAL bloquant 33 o,200,33,132.698,132.698,137.292,162.312,133.802,242.9
+A1 Couche SPI1 RTOS (DMA) vs HAL bloquant,Temps mort tIDLE 2 us (DelayUs),200,0,2.719,2.719,2.896,5.062,2.729,0.0
+A2 Primitives,Verrou capteur pris + rendu,200,0,6.438,6.438,9.125,9.167,6.510,0.0
+A2 Primitives,ReadRegister ACC (verrou),200,0,60.188,60.188,111.000,133.865,61.740,0.0
+A2 Primitives,ReadRegister GYR (verrou),200,0,60.312,60.312,107.083,128.156,61.750,0.0
+A2 Primitives,ReadRegister ACC (NoLock),200,0,53.562,53.875,146.802,160.573,65.771,0.0
+A2 Primitives,WriteRegister ACC_RANGE,200,0,50.917,50.917,53.854,55.062,51.312,0.0
+A2 Primitives,ReadID (2 transactions),200,0,115.427,115.427,120.073,120.344,116.344,0.0
+A2 Primitives,ReadAcc_RTOS,200,6,89.417,89.417,94.292,94.708,90.229,65.5
+A2 Primitives,ReadGyr_RTOS,200,6,78.667,89.667,94.625,95.177,89.802,65.3
+A2 Primitives,ReadTemp_RTOS,200,2,63.927,73.792,77.031,78.375,74.312,26.5
+A2 Primitives,DecodeXYZ seul (CPU),200,0,1.312,1.312,1.312,1.396,1.312,0.0
+A2 Primitives,ReadAcc sequentiel (HAL bloquant),200,6,48.104,48.104,50.885,51.438,48.417,121.8
+A2 Primitives,ReadGyr sequentiel (HAL bloquant),200,6,44.344,44.344,47.156,49.000,44.688,132.1
+A3 Sequences (reset, config, init),ApplyConfig_RTOS direct,20,0,752.406,753.510,755.167,755.167,753.948,0.0
+A3 Sequences (reset, config, init),Tache ApplyConfig (spawn + join),20,0,856.115,861.229,864.229,864.229,860.708,0.0
+A3 Sequences (reset, config, init),SoftReset ACC (+ retour SPI),5,0,1121.240,1419.885,1419.885,1419.885,1360.156,0.0
+A3 Sequences (reset, config, init),SoftReset GYR,5,0,30945.906,30946.146,30946.146,30946.146,30946.094,0.0
+A3 Sequences (reset, config, init),ApplyConfig apres reset,5,0,12632.844,12632.844,12632.844,12632.844,12632.844,0.0
+A3 Sequences (reset, config, init),Tache Init complete,3,0,44999.176,44999.770,45008.258,45008.258,45002.398,0.0
+A4 Cycle d'acquisition (thread du banc),ReadAcc + ReadGyr,200,12,167.875,178.917,184.688,184.854,179.969,65.5
+A4 Cycle d'acquisition (thread du banc),data_topic_publish, 0 abonne,200,0,10.708,11.177,13.729,13.844,11.229,0.0
+A4 Cycle d'acquisition (thread du banc),data_topic_publish, 1 abonne,200,0,14.479,14.542,17.135,19.031,14.646,0.0
+A4 Cycle d'acquisition (thread du banc),Periode ACC+GYR+publication,200,12,190.927,201.927,207.375,207.542,201.469,58.0
+A4 Cycle d'acquisition (thread du banc),Periode ACC+GYR+TEMP+publication,200,14,275.271,288.646,291.792,291.833,287.917,47.4
+B2 Gigue de periode (abonne prio haute),Periode 1 ms : ecart entre reveils,199,0,669.698,1000.000,1002.792,1002.927,998.333,0.0
+B2 Gigue de periode (abonne prio haute),Periode 2 ms : ecart entre reveils,199,0,1641.208,2000.000,2002.594,2002.594,1998.208,0.0
+B2 Gigue de periode (abonne prio haute),Periode 5 ms : ecart entre reveils,100,0,4187.073,5000.000,5002.750,5002.948,4991.864,0.0
+B2 Gigue de periode (abonne prio haute),Periode 10 ms : ecart entre reveils,50,0,9950.562,10000.000,10002.542,10002.542,9999.042,0.0
+--- CSV END ---

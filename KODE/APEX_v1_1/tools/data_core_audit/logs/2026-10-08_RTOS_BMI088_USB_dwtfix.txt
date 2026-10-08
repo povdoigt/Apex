@@ -1,0 +1,28 @@
+===== BMI088 RTOS Tests Test Suite =====
+Suite de tests RTOS pour le driver BMI088 (23 cas), init capteur: OK (23 test cases)
+
+  [PASS] T0 Chip IDs                      ACC_ID=0x1E GYR_ID=0x0F
+  [PASS] T1 ACC SoftReset                 ID=0x1E apres reset, config reappliquee (tache)
+  [PASS] T2 GYR SoftReset                 ID=0x0F apres reset, config reappliquee (tache)
+  [PASS] T3 ACC Config R/W                ACC_CONF=0x99 ACC_RANGE=0x02 OK
+  [PASS] T4 GYR Config R/W                GYR_RANGE=0x02 GYR_BW=0x03 OK
+  [PASS] T5 ACC SelfTest                  dX=25059 dY=25206 dZ=22606 >= 1366 LSB OK
+  [PASS] T6 GYR BIST                      rate_ok=1 bist_fail=0 (reg=0x12)
+  [PASS] T7 ACC Temperature               T=22.5 C dans [-40, 85] OK
+  [PASS] T8 Re-init / Init Args           Re-init OK (meme semaphore), 4 inits invalides rejetees
+  [PASS] T9 Uninit Sensor                 Non init -> SEM_ERR (x8), Acquire: 6 erreurs, rien publie
+  [PASS] T10 Invalid Args                 15 appels invalides rejetes sans verrou, burst 32 o OK
+  [PASS] T11 NoLock Under Lock            Verrouille: LOCK_TIMEOUT (0 et 20 ms), _NoLock OK
+  [PASS] T12 Lock Timeout                 LOCK_TIMEOUT apres 50 ms, OK apres 130 ms d'attente
+  [PASS] T13 Acquire Nominal              51 cycles/500 ms, |a| 9.75..9.81, |w|<0.43, 11 temp
+  [PASS] T14 Acquire Invalid              imu NULL, periode 0, aucun topic -> INVALID_ARG immediat
+  [PASS] T15 Acquire Stall                Blocage 30 ms : 29 retards, 52 cycles/80 ms, sans rattrapage
+  [PASS] T16 Acquire Lock Errors          5 LOCK_TIMEOUT pendant le blocage, reprise 10 pub/50 ms
+  [PASS] T17 Acquire Subset/Stop          GYR seul : 6 pub, ACC/TEMP intacts, arret en 20 ms
+  [PASS] T18 Concurrent Readers           3 lecteurs x 100 iter (ID/ACC/GYR/TEMP), 1200 lectures exactes
+  [PASS] T19 Re-init Acquiring            Re-init 46 ms ; ACC stable +51 ms (15 zeros), 0 erreur
+  [PASS] T20 Range Chg Acquiring          Stabilisation +54 / +54 ms, 11+11 ech. perimes (ancienne plage)
+  [PASS] T21 Reset Atomic                 1 lecture(s) pendant le reset, 1re servie apres 31 ms, IDs exacts
+  [PASS] T22 Stack Headroom               Min 244 B libres (BMI088_Acquire[0]), 8 instances
+
+  23/23 PASS   0 FAIL  

@@ -120,7 +120,7 @@ static inline void W25Q_SPI_End(W25Q_t *chip) {
 /*                          Niveau 1 : Command primitives                     */
 /* -------------------------------------------------------------------------- */
 
-static inline W25Q_STATE W25Q_WaitForReady(W25Q_t *chip) {
+W25Q_STATE W25Q_WaitForReady(W25Q_t *chip) {
 	W25Q_STATE st;
 	do {
 		st = W25Q_ReadStatus(chip, 1);

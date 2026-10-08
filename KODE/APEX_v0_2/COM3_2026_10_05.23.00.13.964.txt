@@ -1,0 +1,32 @@
+[2J[H[36m===== DT RTOS Tests Test Suite =====[0m
+Suite de tests RTOS pour data_topic et circular_buffer (27 cas) (27 test cases)
+
+  [32m[PASS][0m T0  NULL args                    Tous les NULL/bad-arg correctement rejetes
+  [32m[PASS][0m T1  Pub/Read FIFO                FIFO {10,20,30} OK, pub_seq=3, num_to_read=0
+  [32m[PASS][0m T2  Empty read                   DT_EMPTY pour read et peek, out non modifie
+  [32m[PASS][0m T3  Attach OLDEST                FROM_OLDEST: num=3, {10,20,30} lus, DT_EMPTY OK
+  [32m[PASS][0m T4  Attach NOW                   FROM_NOW: historique ignore, pub 40 lue OK
+  [32m[PASS][0m T5  num_to_read                  num_to_read: 1->2->3 puis 2->1->0 apres reads OK
+  [32m[PASS][0m T6  Two subscribers              sub1={10,20} lu, sub2={10,20,30} intact, tails indep.
+  [32m[PASS][0m T7  Data loss                    read: LOSS+3 puis 4,5 ; peek signale la perte une fois (12)
+  [32m[PASS][0m T8  Sync                         NOW: num=0, tail=head, 40 lu ; OLDEST: 10..40 relus
+  [32m[PASS][0m T9  Detach/Reattach              Detach: sub_count=1, sub2 lit 99, re-attach OK, 2e topic refuse
+  [32m[PASS][0m T10 Peek non-dest.               peek[0..2]={10,20,30}, peek[3] vide, tail intact, read->10
+  [32m[PASS][0m T11 REJECT_NEW refuse            REJECT_NEW refuse ; OVERWRITE: 5 tours plein/vide sans blocage
+  [32m[PASS][0m T12 Zero-copy ptr                peek_ptr(0)=1 (plus ancien), peek_ptr(2)=3, read_ptr=1 puis 2
+  [32m[PASS][0m T13 Free detache                 free: 2 abonnes detaches, topic refuse, re-init + lecture OK
+  [32m[PASS][0m T14 Abonne prioritaire           50 publications lues immediatement par l'abonne High
+  [32m[PASS][0m T15 Wait sans donnee             Jeton residuel ignore : timeout en 0 ms, puis DT_EMPTY
+  [32m[PASS][0m T16 Wait reveil                  Reveil a 30 ms (attendu 30), timeout 20 ms en 20 ms
+  [32m[PASS][0m T17 Deux publieurs               pub_seq=40000 exact, publieurs entrelaces sur 455 ms
+  [32m[PASS][0m T18 Attach pendant pub           Attache pendant publish : DT_EMPTY, puis 2 recu
+  [32m[PASS][0m T19 Liste pendant notif          B notifie, C non ; listes A={B}, B={A,C}
+  [32m[PASS][0m T20 Lecture dechiree ISR         4800 trames lues / 5995 publiees en ISR, 0 dechiree, 85 pertes signalees
+  [32m[PASS][0m T21 Pertes signalees             High 300/300 ; lents 158+142 sautes (142 pertes), 68+232 (59)
+  [32m[PASS][0m T22 cb_pop concurrents           20000 valeurs retirees une fois (9856 / 10144), 312 attentes buffer plein
+  [32m[PASS][0m T23 cb_push ISR                  5993 poussees en ISR : 5892 depilees, 101 refusees, count coherent
+  [32m[PASS][0m T24 Publish ISR + wait           199 publications en ISR toutes recues, wait/attach refuses en ISR
+  [32m[PASS][0m T25 Free / re-init               free : semaphores supprimes ; re-init : reveil et lecture 77 OK
+  [32m[PASS][0m T26 Attach/detach rafale         300 x 2 attach/wait/read/detach, 304 publications, listes intactes
+
+[42m[30m  27/27 PASS   0 FAIL  [0m

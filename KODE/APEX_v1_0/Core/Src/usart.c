@@ -352,18 +352,18 @@ UART_buffer_t *UART_buffer_get(UART_HandleTypeDef *huart) {
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
-  // if (huart->Instance == USART6) {
-  //   switch (uart_mux_get_channel(&uart_mux)) {
-  //     case UART_MUX_CHANNEL_0:
-  //       WT901B_UART_Callback_RX_IRQHandler(&wt901b, Size);
-  //       break;
-  //     case UART_MUX_CHANNEL_1:
-  //       event_uart_consumer_callback(Size);
-  //       break;
-  //     default:
-  //       break;
-  //   }
-  // }
+  if (huart->Instance == USART6) {
+    switch (uart_mux_get_channel(&uart_mux)) {
+      case UART_MUX_CHANNEL_0:
+        WT901B_UART_Callback_RX_IRQHandler(&wt901b, Size);
+        break;
+      case UART_MUX_CHANNEL_1:
+        event_uart_consumer_callback(Size);
+        break;
+      default:
+        break;
+    }
+  }
 
   UART_buffer_t *uart_buffer = UART_buffer_get(huart);
   if (uart_buffer != NULL) {

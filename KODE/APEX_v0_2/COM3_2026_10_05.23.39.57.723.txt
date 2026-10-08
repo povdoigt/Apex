@@ -1,0 +1,92 @@
+[2J[H[36m===== DT RTOS Tests Test Suite =====[0m
+Suite RTOS de data_topic et circular_buffer (16 test cases)
+
+  [32m[PASS][0m T14 Abonne prioritaire           50 publications lues immediatement par l'abonne High
+  [32m[PASS][0m T15 Wait sans donnee             Jeton residuel ignore : timeout en 50 ms, puis DT_EMPTY
+  [32m[PASS][0m T16 Wait reveil                  Reveil a 30 ms (attendu 30), timeout 20 ms en 20 ms
+  [32m[PASS][0m T17 Deux publieurs               pub_seq=50819 exact (2 x 20000 + 10819 en ISR), entrelaces sur 541 ms
+  [32m[PASS][0m T18 Attach pendant pub           Attache pendant publish : DT_EMPTY, puis 2 recu
+  [32m[PASS][0m T19 Liste pendant notif          B notifie, C non ; listes A={B}, B={A,C}
+  [32m[PASS][0m T20 Lecture dechiree ISR         4800 trames lues / 5986 publiees en ISR, 0 dechiree, 73 pertes signalees
+  [32m[PASS][0m T21 Pertes signalees             High 300/300 ; lents 158+142 sautes (142 pertes), 68+232 (59)
+  [32m[PASS][0m T22 cb_pop concurrents           20000 valeurs retirees une fois (7740 / 9908 / ISR 2352), 294 attentes plein
+  [32m[PASS][0m T23 cb_push ISR                  5993 poussees en ISR : 5892 depilees, 101 refusees, count coherent
+  [32m[PASS][0m T24 Publish ISR + wait           199 publications en ISR toutes recues, wait/attach refuses en ISR
+  [32m[PASS][0m T25 Free / re-init               free : semaphores supprimes ; re-init : reveil et lecture 77 OK
+  [32m[PASS][0m T26 Attach/detach rafale         300 x 2 attach/wait/read/detach, 304 publications, listes intactes
+  [32m[PASS][0m T27 Publish avant noyau          3 publications avant noyau sans blocage, lues apres ; reveil OK ensuite
+  [32m[PASS][0m T28 Wait osWaitForever           osWaitForever reveille par tache (20 ms) et par ISR (20 ms)
+  [32m[PASS][0m T29 Attach/detach vs ISR         1500 x 2 attach/wait/read/detach face a 3261 publications ISR, listes intactes
+
+[42m[30m  16/16 PASS   0 FAIL  [0m
+[36m===== DT Seq sous RTOS Test Suite =====[0m
+Suite sequentielle de data_topic, rejouee sous RTOS (25 test cases)
+
+  [32m[PASS][0m T0  NULL args                    Tous les NULL/bad-arg correctement rejetes
+  [32m[PASS][0m T1  Pub/Read FIFO                FIFO {10,20,30} OK, pub_seq=3, num_to_read=0
+  [32m[PASS][0m T2  Empty read                   DT_EMPTY pour read et peek, out non modifie
+  [32m[PASS][0m T3  Attach OLDEST                FROM_OLDEST: num=3, {10,20,30} lus, DT_EMPTY OK
+  [32m[PASS][0m T4  Attach NOW                   FROM_NOW: historique ignore, pub 40 lue OK
+  [32m[PASS][0m T5  num_to_read                  num_to_read: 1->2->3 puis 2->1->0 apres reads OK
+  [32m[PASS][0m T6  Two subscribers              sub1={10,20} lu, sub2={10,20,30} intact, tails indep.
+  [32m[PASS][0m T7  Data loss                    read: LOSS+3 puis 4,5 ; peek signale la perte une fois (12)
+  [32m[PASS][0m T8  Sync                         NOW: num=0, tail=head, 40 lu ; OLDEST: 10..40 relus
+  [32m[PASS][0m T9  Detach/Reattach              Detach: sub_count=1, sub2 lit 99, re-attach OK, 2e topic refuse
+  [32m[PASS][0m T10 Peek non-dest.               peek[0..2]={10,20,30}, peek[3] vide, tail intact, read->10
+  [32m[PASS][0m T11 REJECT_NEW refuse            REJECT_NEW refuse ; OVERWRITE: 5 tours plein/vide sans blocage
+  [32m[PASS][0m T12 Zero-copy ptr                peek_ptr(0)=1 (plus ancien), peek_ptr(2)=3, read_ptr=1 puis 2
+  [32m[PASS][0m T13 Free detache                 free: 2 abonnes detaches, topic refuse, re-init + lecture OK
+  [32m[PASS][0m T14 Bornes de perte              lag=4 : 1..4 sans perte ; lag=5 : LOSS/6 puis 7,8,9
+  [32m[PASS][0m T15 Perte par peek(i)            peek(2) : LOSS/6 et recalage ; peek(0)=4, peek(3)=7, puis 4..7 lus
+  [32m[PASS][0m T16 Perte par _ptr               read_ptr LOSS/3, peek_ptr(1) LOSS/10, recalage puis 9
+  [32m[PASS][0m T17 Peek hors donnees            peek(4)/peek(100) vides sans recalage (num=7), read -> LOSS/4
+  [32m[PASS][0m T18 Detach milieu                detach milieu/tete/queue : chainage double et sub_count exacts
+  [32m[PASS][0m T19 pub_seq 2^32                 pub_seq repasse par 0 : num_to_read, FROM_OLDEST et perte exacts
+  [32m[PASS][0m T20 OLDEST + cap 1               OLDEST apres 10/4 : 7..10 sans perte ; cap 1 : pertes, peek, 2 abonnes
+  [32m[PASS][0m T21 Tailles+temoins              13 et 128 o : lectures, perte, peek exacts ; temoins intacts
+  [32m[PASS][0m T22 Attache refusee              mode 7 refuse ; abonne remis a zero encore chaine refuse (queue, tete)
+  [32m[PASS][0m T23 ISR dechirure                4800 trames lues / 5993 publiees en ISR, 0 dechiree, 74 pertes signalees
+  [32m[PASS][0m T24 ISR pertes                   5998 publiees en ISR = 4808 lues + 1190 sautees (149 pertes signalees)
+
+[42m[30m  25/25 PASS   0 FAIL  [0m
+[36m===== CB Seq sous RTOS Test Suite =====[0m
+Suite sequentielle de circular_buffer, rejouee sous RTOS (22 test cases)
+
+  [32m[PASS][0m T0 NULL args                     Tous les NULL/bad-arg correctement rejetes
+  [32m[PASS][0m T1 FIFO order                    FIFO {10,20,30} OK, count=0 en fin
+  [32m[PASS][0m T2 Empty read                    CB_EMPTY retourne, out intact, count=0
+  [32m[PASS][0m T3 Full REJECT_NEW               CB_FULL ok, {1,2,3} intacts, 99 rejete
+  [32m[PASS][0m T4 Full OVERWRITE                CB_OVERWROTE_OLDEST ok, FIFO={2,3,4} apres push 4
+  [32m[PASS][0m T5 Reset                         Reset: count=0, CB_EMPTY, reutilisable OK
+  [32m[PASS][0m T6 Peek absolute                 peek wrap-permissif: idx%cap OK (B,C,D,E), non-destructif OK
+  [32m[PASS][0m T7 Peek relative                 peek_rel wrap-permissif: A-J OK (pos/neg/grand/origin arb.), non-dest.
+  [32m[PASS][0m T8 Wrap-around                   Wrap-around: FIFO={3,4,5,6} correct, count=0
+  [32m[PASS][0m T9 Float elem_size               elem_size=float: {1.5,2.5,3.5} push/pop OK
+  [32m[PASS][0m T10 Fill/Drain x2                2 cycles fill/drain cap=8 OK, count=0 final
+  [32m[PASS][0m T11 Capacite 1                   cap=1 : REJECT 5 cycles, OVERWRITE garde la derniere (6)
+  [32m[PASS][0m T12 Ecrasements                  1..10 : 7 ecrasements, reste 8,9,10 ; 1000 pushes : reste 998..1000
+  [32m[PASS][0m T13 Sortie de plein              50 tours plein/pop/push/refus, FIFO 1..54 conserve
+  [32m[PASS][0m T14 Tailles+temoins              1/3/13/128 o : 23 push + pops, contenus exacts, temoins intacts
+  [32m[PASS][0m T15 Acces pointeur               peek_ptr x12, peek_relative_ptr 10x19 = copies ; NULL si invalide
+  [32m[PASS][0m T16 Wrap extremes                616 combinaisons (INT_MIN, INT_MAX, SIZE_MAX...) = reference 64 bits
+  [32m[PASS][0m T17 Args invalides               NULL, buffer a zero, politique 7, debordement SIZE_MAX : refuses
+  [32m[PASS][0m T18 Push en place                7 tours (head fait 2 tours) : push depuis le slot head, relu
+  [32m[PASS][0m T19 Aleatoire/modele             360000 operations aleatoires, 36 configurations : conformes au modele
+  [32m[PASS][0m T20 Push ISR                     5987 poussees en ISR : 5892 depilees, 95 refusees, count coherent
+  [32m[PASS][0m T21 Copies vs ISR                20896 copies de 64 o, 0 dechiree ; 5536 pops ordonnes, 458 ecrasements ISR
+
+[42m[30m  22/22 PASS   0 FAIL  [0m
+[36m===== DP Seq sous RTOS Test Suite =====[0m
+Suite sequentielle de data_packet, rejouee sous RTOS (6 test cases)
+
+  [32m[PASS][0m T0 Init / free                   10 refus sans abonne laisse ; init / free / init OK
+  [32m[PASS][0m T1 Paquet nominal                3 sources (16/8/64 o) : flags 0x7, horodatage et charges exacts
+  [32m[PASS][0m T2 Fenetre                       trop vieilles jetees, trop jeunes gardees, bornes T/2, passage par 2^32
+  [32m[PASS][0m T3 Copie, champs a 0             10 paquets dans 3 : LOSS puis 7,8,9 intacts, champ absent a zero
+  [32m[PASS][0m T4 Source liberee                source liberee : flag a 0 sans erreur, les autres continuent
+  [32m[PASS][0m T5 Concurrence ISR               1934 paquets (1933 avec C), 1934 relus + 1495 par l'ISR : 0 incoherent
+
+[42m[30m  6/6 PASS   0 FAIL  [0m
+
+Pile du thread de test jamais utilisee : 2308 octets
+END_OF_REPORT

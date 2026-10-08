@@ -1,0 +1,52 @@
+===== Stress data_topic / circular_buffer / data_packet =====
+1. Suites x 50 (609 s) : 0 echec(s)
+  DT RTOS  18 cas x 50 passes : 0 echec(s)
+    T27 Publish avant noyau    49/50 SKIP (attendu : etat pre-noyau unique)
+  DT seq   30 cas x 50 passes : 0 echec(s)
+  CB seq   22 cas x 50 passes : 0 echec(s)
+  DP seq    7 cas x 50 passes : 0 echec(s)
+
+===== Endurance (600 s) : PASS =====
+Publies : acc 599999 (ISR 1 kHz), gyr 300001 (500 Hz), baro 30001 (50 Hz) ; 600 controles d'invariants, 0 viole(s)
+  # abonne / topic          lus   sautes   pertes  corrompus  retard max
+  0 nav / acc              599999        0        0        0        1
+  1 nav / gyr              300001        0        0        0        2
+  2 logger / acc           599999        0        0        0       11
+  3 logger / gyr           300001        0        0        0        5
+  4 logger / baro           30001        0        0        0        1
+  5 telemetrie / acc        96000   503999     6000        0      100
+  6 telemetrie / gyr        96001   204000     6000        0       50
+  7 telemetrie / baro       30001        0        0        0        5
+Rafale d'attache : 12000 cycles, 47996 lectures, 0 echecs
+data_packet : 6000 paquets (acc 5999, gyr 6000, baro 6000), 6000 relus, 0 pertes, 0 incoherents
+Pile jamais utilisee (o, sur 1024) : GyrPub=744 BaroPub=744 Nav=744 Logger=760 Telemetry=760 Churn=744 Packer=660 Radio=768
+
+===== Durees (DWT, build Debug -O0) =====
+
+== Interruptions masquees : borne du temps masque
+Mesure                                 n octets     min us     med us     p99 us     max us     moy us     KiB/s
+cb_push                              200      4       2.73       3.22       3.22       3.22       3.19    1213.6
+cb_pop                               200      4       2.60       2.64       2.64       2.75       2.62    1482.2
+data_sub_read                        200      4       4.43       4.48       4.51       4.51       4.47     872.1
+cb_push                              200     16       3.35       3.84       3.84       3.84       3.81    4065.0
+cb_pop                               200     16       3.23       3.26       3.26       3.38       3.25    4792.3
+data_sub_read                        200     16       5.05       5.10       5.14       5.14       5.09    3061.2
+cb_push                              200     64       5.85       6.34       6.34       6.34       6.31    9852.2
+cb_pop                               200     64       5.73       5.76       5.76       5.88       5.75   10849.9
+data_sub_read                        200     64       7.55       7.60       7.64       7.64       7.59    8219.2
+cb_push                              200    128       9.19       9.68       9.68       9.68       9.65   12917.1
+cb_pop                               200    128       9.06       9.09       9.09       9.21       9.08   13745.7
+data_sub_read                        200    128      10.89      10.94      10.97      10.97      10.93   11428.6
+cb_push                              200    256      15.85      16.34      16.34      16.34      16.31   15296.4
+cb_pop                               200    256      15.73      15.76      15.88      15.88      15.75   15862.5
+data_sub_read                        200    256      17.54      17.60      17.64      17.64      17.59   14201.2
+
+== Publication complete (16 o, interruptions actives)
+Mesure                                 n octets     min us     med us     p99 us     max us     moy us     KiB/s
+publish, 0 abonne                    200     16      10.76      11.23      13.71      14.39      11.31    1391.5
+publish, 1 abonne                    200     16      13.99      14.50      17.08      17.55      14.59    1077.6
+publish, 4 abonnes                   200     16      22.88      23.39      26.47      28.86      23.58     668.2
+
+Verdict : suites PASS, endurance PASS
+Pile du thread de test jamais utilisee : 2516 octets
+END_OF_REPORT

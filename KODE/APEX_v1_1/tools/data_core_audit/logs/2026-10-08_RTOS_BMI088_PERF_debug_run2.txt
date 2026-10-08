@@ -1,0 +1,20 @@
+BMI088 RTOS - banc de performance
+Build : Debug (-O0)
+SYSCLK 96 MHz, SCK 0 kHz, init capteur : ECHEC
+Erreurs : aucune
+
+== B1 Tache BMI088_Acquire (ACC+GYR, TEMP 1/10), 1000 ms par periode
+periode ms     cycles         Hz    retards    erreurs  CPU libre
+       ref          -          -          -          -       0.0%
+
+== C Marge de pile (instance 0)
+Pool                                   pile o    libre o  utilise o
+BMI088_Init                              1024        464        560
+BMI088_ApplyConfig                       1024          -   non cree
+BMI088_Acquire                           1024          -   non cree
+BMIB_Spin                                 512          -   non cree
+BMIB_Probe                                768          -   non cree
+
+--- CSV BEGIN ---
+group,name,n,bytes,min_us,p50_us,p99_us,max_us,mean_us,kib_s
+--- CSV END ---

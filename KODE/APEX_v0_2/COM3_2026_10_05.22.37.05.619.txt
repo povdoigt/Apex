@@ -1,0 +1,28 @@
+[2J[H[36m===== BMI088 RTOS Tests Test Suite =====[0m
+Suite de tests RTOS pour le driver BMI088 (23 cas), init capteur: ECHEC (23 test cases)
+
+  [31m[FAIL][0m T0 Chip IDs                      ReadID: LOCK_TIMEOUT
+  [31m[FAIL][0m T1 ACC SoftReset                 SoftReset: LOCK_TIMEOUT
+  [31m[FAIL][0m T2 GYR SoftReset                 SoftReset: LOCK_TIMEOUT
+  [31m[FAIL][0m T3 ACC Config R/W                Tache ApplyConfig: SPAWN_FAIL
+  [31m[FAIL][0m T4 GYR Config R/W                ApplyConfig_RTOS: LOCK_TIMEOUT
+  [31m[FAIL][0m T5 ACC SelfTest                  ApplyConfig: LOCK_TIMEOUT
+  [31m[FAIL][0m T6 GYR BIST                      TriggerBIST: LOCK_TIMEOUT
+  [31m[FAIL][0m T10 Invalid Args                 Tache ApplyConfig range 7: SPAWN_FAIL (attendu INVALID_ARG)
+  [31m[FAIL][0m T8 Re-init / Init Args           Re-init: SPAWN_FAIL
+  [31m[FAIL][0m T9 Uninit Sensor                 Tache ApplyConfig: SPAWN_FAIL (attendu SEM_ERR)
+  [31m[FAIL][0m T7 ACC Temperature               ReadTemp: LOCK_TIMEOUT
+  [31m[FAIL][0m T11 NoLock Under Lock            Prise du semaphore: -2
+  [31m[FAIL][0m T12 Lock Timeout                 Le job Hold n'a pas pris le semaphore
+  [31m[FAIL][0m T13 Acquire Nominal              Acquire: join -2, ret NOT_SET
+  [31m[FAIL][0m T14 Acquire Invalid              Spawn imu NULL refuse
+  [31m[FAIL][0m T15 Acquire Stall                Spawn Hold refuse
+  [31m[FAIL][0m T16 Acquire Lock Errors          6 erreurs avant le blocage
+  [31m[FAIL][0m T17 Acquire Subset/Stop          Acquire: join -2, ret NOT_SET
+  [31m[FAIL][0m T18 Concurrent Readers           join_all: -2
+  [31m[FAIL][0m T19 Re-init Acquiring            Re-init: SPAWN_FAIL
+  [31m[FAIL][0m T20 Range Chg Acquiring          ApplyConfig: SPAWN_FAIL puis SPAWN_FAIL
+  [31m[FAIL][0m T21 Reset Atomic                 Job Reset: join 0, ret LOCK_TIMEOUT
+  [31m[FAIL][0m T22 Stack Headroom               Nettoyage : 5 job(s) encore actifs apres 5000 ms
+
+[41m[30m  0/23 PASS   23 FAIL  [0m

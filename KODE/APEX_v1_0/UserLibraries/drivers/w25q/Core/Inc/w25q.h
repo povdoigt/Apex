@@ -223,6 +223,7 @@ W25Q_STATE W25Q_SendCmdAddr(W25Q_t *chip, uint8_t cmd, uint32_t addr);
 W25Q_STATE W25Q_ReadStatus(W25Q_t *chip, uint8_t sr_index);
 W25Q_STATE W25Q_WriteStatus(W25Q_t *chip, uint8_t sr_index, uint8_t value);
 W25Q_STATE W25Q_ReadID(W25Q_t *chip, uint8_t *id);
+W25Q_STATE W25Q_WaitForReady(W25Q_t *chip);
 
 /* Niveau 2 : Logique périphérique */
 W25Q_STATE W25Q_Init(W25Q_t *chip, SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_bank, uint16_t cs_pin);
