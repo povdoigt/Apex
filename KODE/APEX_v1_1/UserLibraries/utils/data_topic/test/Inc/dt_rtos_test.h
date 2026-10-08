@@ -78,11 +78,11 @@ void DT_rtos_test_t17_two_publishers(TEST_case_t *tc);
  *   jamais ecrit). La publication suivante (2) lui parvient normalement. */
 void DT_rtos_test_t18_attach_during_publish(TEST_case_t *tc);
 
-/* T19 – Liste des abonnes modifiee pendant la notification (point 10)
- *   topic A : abonnes B puis A (A en tete) ; topic B : abonne C. La tache
- *   de A (High), reveillee par une publication sur A, se detache et
- *   s'attache au topic B. B a bien recu son jeton, C n'en a recu aucun, et
- *   les deux listes sont coherentes. */
+/* T19 – Registre des abonnes modifie pendant la notification (point 10)
+ *   topic A : abonnes A puis B (A dans le premier slot) ; topic B : abonne
+ *   C. La tache de A (High), reveillee par une publication sur A, se
+ *   detache et s'attache au topic B. B a bien recu son jeton, C n'en a recu
+ *   aucun, et les deux registres sont coherents. */
 void DT_rtos_test_t19_list_during_notify(TEST_case_t *tc);
 
 /* ========================================================================
@@ -143,8 +143,8 @@ void DT_rtos_test_t25_free_reinit(TEST_case_t *tc);
 /* T26 – Attache / detache en rafale pendant les publications (point 10)
  *   Un publieur AboveNormal alimente deux topics. Une tache High fait 300
  *   fois : attache au topic A, wait, read, detache, idem sur B. Tout
- *   reussit, et a la fin chaque liste ne contient que son abonne permanent
- *   (chainage et sub_count intacts). */
+ *   reussit, et a la fin chaque registre ne contient que son abonne
+ *   permanent (sub_count exact, aucune anomalie). */
 void DT_rtos_test_t26_attach_churn(TEST_case_t *tc);
 
 /* ========================================================================
@@ -176,27 +176,26 @@ void DT_rtos_test_t28_wait_forever(TEST_case_t *tc);
 
 /* T29 – Attache / detache en rafale face a un publieur en interruption
  *   Comme T26, mais TIM5 publie a 20 kHz alternativement sur les deux
- *   topics : l'ISR parcourt les listes pendant que la tache High les
- *   modifie. 3000 attach/wait/read/detach reussis, listes intactes, les
+ *   topics : l'ISR parcourt les registres pendant que la tache High les
+ *   modifie. 3000 attach/wait/read/detach reussis, registres intacts, les
  *   abonnes permanents ont tout compte (num_to_read == publications). */
 void DT_rtos_test_t29_churn_vs_isr(TEST_case_t *tc);
 
-/* T30 – Deux taches modifient la meme liste
+/* T30 – Deux taches modifient le meme registre
  *   Low (BelowNormal) attache / detache en boucle sur topic A. High,
  *   reveillee par TIM5 (publications sur B) a n'importe quelle instruction
- *   de Low, attache / detache 2000 fois sur A ; l'ISR parcourt aussi la
- *   liste de A. Aucun echec, et la liste de A ne contient plus que son
- *   abonne permanent. Seul cas ou deux modifications de liste peuvent
- *   s'entrelacer : sans section critique, la liste se corrompt. */
+ *   de Low, attache / detache 2000 fois sur A ; l'ISR parcourt aussi le
+ *   registre de A. Aucun echec, et le registre de A ne contient plus que son
+ *   abonne permanent, sans anomalie. Seul cas ou deux modifications du
+ *   registre peuvent s'entrelacer : sans section critique, il se corrompt. */
 void DT_rtos_test_t30_two_tasks_one_list(TEST_case_t *tc);
 
-/* T31 – Abonne fantome (tache terminee sans detach, memoire reutilisee)
- *   Un abonne encore chaine au milieu de la liste voit sa memoire ecrasee
- *   (0xA5, pointeurs compris). Publication en tache puis en ISR : aucun
- *   plantage, le parcours s'arrete sur le fantome (la tete est notifiee,
- *   pas l'abonne situe au-dela, dont les donnees restent lisibles), chaque
- *   arret est compte dans list_faults. Une nouvelle attache passe, et le
- *   detach du voisin du fantome n'ecrit rien dedans. */
+/* T31 – Abonnes fantomes (tache terminee sans detach, memoire reutilisee)
+ *   Deux abonnes inscrits entre d'autres voient leur memoire ecrasee (0xA5).
+ *   Publication en tache (1er fantome) puis en ISR (2e) : aucun plantage,
+ *   chaque slot fantome est libere une seule fois (list_faults = 2), les
+ *   autres abonnes sont tous notifies et leurs donnees lisibles. Attache et
+ *   detach fonctionnent ensuite, et les fantomes ne sont jamais ecrits. */
 void DT_rtos_test_t31_dangling_subscriber(TEST_case_t *tc);
 
 #endif /* APEX_CFG_SCHED_RTOS */

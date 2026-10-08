@@ -42,7 +42,7 @@ data_status_t data_packer_init(data_packer_t *packer, uint32_t window_ms, size_t
     }
     /* Packer à zéro ou libéré : un abonné encore attaché (ou un topic de
        paquets encore suivi) serait perdu par la réinitialisation. */
-    if (packer->topic.subs != NULL) {
+    if (packer->topic.sub_count != 0u) {
         return DT_BAD_ARG;
     }
     for (size_t i = 0; i < DATA_PACKET_MAX_TOPICS; i++) {
@@ -102,14 +102,24 @@ static data_packer_status_t data_packer_check(data_packer_t *packer, size_t i, u
      * reecrire le slot a tout moment. S'il en publie assez entre la copie et
      * l'avance du curseur pour provoquer une perte, l'avance saute un autre
      * echantillon que celui copie : un echantillon perdu de plus, jamais une
-     * donnee melangee. */
-    for (;;) {
+     * donnee melangee.
+     * Au plus `capacity` rejets par appel. Sans publication concurrente, la
+     * source ne contient pas plus de `capacity` echantillons : la borne n'est
+     * jamais atteinte. Face a un publieur qui produit des echantillons trop
+     * vieux plus vite qu'on ne les rejette (horloge figee, par exemple), elle
+     * garantit que l'appel rend la main ; le champ est alors absent. */
+    const data_topic_t *const src = sub->topic;
+    const size_t limit = (src != NULL) ? src->cb.capacity : 0u;
+    for (size_t discarded = 0u;; discarded++) {
         const data_status_t status = data_sub_peek(sub, sample, 0u);
         if (status != DT_OK && status != DT_DATA_LOSS) {
             return PACKER_EMPTY;
         }
         if ((int32_t)(current_time_ms - sample->ts) <= half) {
             break;
+        }
+        if (discarded >= limit) {
+            return PACKER_EMPTY;
         }
         (void)data_sub_read_ptr(sub, &consumed); // discard the old data (pointer never dereferenced)
     }

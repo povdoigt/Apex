@@ -32,98 +32,65 @@ static void dt_place_locked(data_sub_t *sub, const data_topic_t *topic, data_att
     }
 }
 
-/* Un abonné joignable par la liste est-il cohérent ? Sous RTOS, son sémaphore
-   est toujours celui créé dans sa propre structure : attach le crée avant de
-   le chaîner, detach et free ne le suppriment qu'après l'avoir retiré. Tout
-   autre contenu (abonné remis à zéro, mémoire d'une tâche terminée sans
-   detach puis réutilisée) rend le nœud inutilisable, et son `next` avec. */
-static inline bool dt_sub_sane(const data_sub_t *sub) {
+/* L'abonné d'un slot est-il validement attaché à CE topic ? attach l'inscrit
+   et le marque attaché dans la même section critique, detach et free le
+   désinscrivent et le démarquent de même : en usage normal, tout slot occupé
+   passe ce contrôle. Sous RTOS, son sémaphore doit aussi être celui de sa
+   propre structure (créé avant l'inscription, supprimé après la
+   désinscription). Un abonné remis à zéro, une mémoire réutilisée ou un
+   abonné rattaché à un autre topic ne le passe pas. */
+static inline bool dt_sub_valid(const data_sub_t *sub, const data_topic_t *topic) {
 #if (APEX_CFG_SCHED_RTOS == 1)
-    return (const void *)sub->sem == (const void *)&sub->sem_cm;
-#else
-    (void)sub;
-    return true;
+    if ((const void *)sub->sem != (const void *)&sub->sem_cm) {
+        return false;
+    }
 #endif
+    return (sub->attached != 0) && (sub->topic == topic);
 }
 
-/* Le nœud est-il un abonné cohérent, attaché à CE topic ? Un abonné remis à
-   zéro puis rattaché ailleurs reste cohérent, mais n'appartient plus à cette
-   liste : on ne doit ni le parcourir ni l'écrire au titre de ce topic. */
-static inline bool dt_sub_member(const data_sub_t *sub, const data_topic_t *topic) {
-    return dt_sub_sane(sub) && sub->attached && sub->topic == topic;
-}
-
-/* Retire un abonné de la liste ("safe unlink"). Un voisin n'est réécrit que
-   s'il appartient à ce topic et désigne bien `sub` en retour, la tête que si
-   elle vaut `sub` : un voisin incohérent (mémoire peut-être déjà réutilisée),
-   un voisin passé dans une autre liste, ou un lien périmé (liste coupée,
-   topic réinitialisé avec ses abonnés) n'est jamais écrit. La liste est alors
-   coupée à cet endroit, et l'anomalie comptée. En usage normal, tous les
-   contrôles passent. */
-static void dt_unlink_locked(data_sub_t *sub, data_topic_t *topic) {
-    data_sub_t *const next = sub->next;
-    data_sub_t *const prev = sub->prev;
-    const bool next_ok = (next == NULL) || (dt_sub_member(next, topic) && next->prev == sub);
-    bool fault   = !next_ok;
-    bool in_list = false;          /* décroché de son prédécesseur (ou de la tête) */
-
-    if (next != NULL && next_ok) {
-        next->prev = prev;
-    }
-    if (prev == NULL) {
-        if (topic->subs == sub) {
-            topic->subs = next_ok ? next : NULL;
-            in_list = true;
-        } else {
-            fault = true;
+/* Slot du registre qui désigne `sub` (NULL : premier slot libre), ou
+   DATA_TOPIC_MAX_SUBS s'il n'y en a pas. */
+static size_t dt_slot_locked(const data_topic_t *topic, const data_sub_t *sub) {
+    for (size_t i = 0u; i < DATA_TOPIC_MAX_SUBS; i++) {
+        if (topic->subs[i] == sub) {
+            return i;
         }
-    } else if (dt_sub_member(prev, topic) && prev->next == sub) {
-        prev->next = next_ok ? next : NULL;
-        in_list = true;
-    } else {
-        fault = true;
     }
-    if (fault) {
-        topic->list_faults++;
-    }
-    /* sub_count ne baisse que si l'abonné était bien dans la liste : un lien
-       périmé ne doit pas réduire le compte des abonnés actuels. Resté trop
-       haut (abonné au-delà d'un nœud incohérent), il ne fait qu'élargir les
-       parcours bornés. */
-    if (in_list && topic->sub_count > 0u) {
+    return DATA_TOPIC_MAX_SUBS;
+}
+
+static void dt_unregister_locked(data_topic_t *topic, size_t slot) {
+    topic->subs[slot] = NULL;
+    if (topic->sub_count > 0u) {
         topic->sub_count--;
     }
+}
 
-    sub->prev     = NULL;
-    sub->next     = NULL;
+/* Libère le slot `slot` si son abonné n'est pas valide (voir dt_sub_valid).
+   L'abonné n'est jamais écrit : sa mémoire appartient peut-être déjà à
+   quelqu'un d'autre. L'anomalie est comptée une fois, au moment où le slot
+   est libéré. */
+static void dt_drop_invalid_locked(data_topic_t *topic, size_t slot) {
+    const data_sub_t *sub = topic->subs[slot];
+    if (sub != NULL && !dt_sub_valid(sub, topic)) {
+        dt_unregister_locked(topic, slot);
+        topic->list_faults++;
+    }
+}
+
+/* Détache `sub` côté abonné. Son sémaphore éventuel reste à libérer, hors
+   section critique (dt_release_sem). */
+static void dt_reset_sub_locked(data_sub_t *sub) {
     sub->attached = 0;
     sub->topic    = NULL;
     sub->tail     = 0u;
     sub->last_seq = 0u;
 }
 
-/* L'abonné figure-t-il déjà dans la liste du topic ? Parcours borné par
-   sub_count : une liste plus longue que son compteur est corrompue, et la
-   réponse est alors "oui", pour refuser l'attache plutôt que boucler. Le
-   parcours s'arrête sur un nœud qui n'appartient pas (ou plus) au topic,
-   dont le `next` n'est pas fiable. */
-static bool dt_linked_locked(const data_topic_t *topic, const data_sub_t *sub) {
-    size_t n = 0u;
-    for (const data_sub_t *p = topic->subs; p != NULL; p = p->next) {
-        if (p == sub || ++n > topic->sub_count) {
-            return true;
-        }
-        if (!dt_sub_member(p, topic)) {
-            return false;
-        }
-    }
-    return false;
-}
-
 #if (APEX_CFG_SCHED_RTOS == 1)
 
-/* Le sémaphore d'un abonné n'est supprimé qu'une fois l'abonné retiré de la
-   liste : aucune notification ne peut plus le viser (voir dt_notify). */
+/* Le sémaphore d'un abonné n'est supprimé qu'une fois l'abonné désinscrit du
+   registre : aucune notification ne peut plus le viser (voir dt_notify). */
 static void dt_release_sem(data_sub_t *sub) {
     SemaphoreHandle_t sem = sub->sem;
     sub->sem = NULL;
@@ -134,13 +101,16 @@ static void dt_release_sem(data_sub_t *sub) {
 
 /* Réveille les abonnés d'un topic, la donnée étant déjà validée.
  *
- * La liste n'est modifiée que par attach/detach/free, en tâche et sous
- * section critique. Elle est donc stable :
+ * Le registre n'est modifié par une tâche (attach, detach, free) que sous
+ * section critique. Il est donc stable pendant le parcours :
  * - en interruption : aucune tâche ne tourne pendant le parcours ;
  * - en tâche : le scheduler est suspendu, aucune autre tâche ne tourne.
  *   xSemaphoreGive sans attente est explicitement permis scheduler suspendu
  *   (configASSERT de xQueueGenericSend) ; les abonnés réveillés plus
  *   prioritaires prennent la main à xTaskResumeAll, après le parcours.
+ * Seule une interruption plus prioritaire qui publie sur le même topic peut
+ * libérer un slot invalide pendant le parcours : dt_drop_invalid_locked
+ * refait son contrôle sous section critique.
  *
  * Noyau pas encore démarré : aucune tâche n'attend, il n'y a rien à
  * réveiller, et data_sub_wait_for_data regarde num_to_read avant de bloquer
@@ -150,49 +120,40 @@ static void dt_release_sem(data_sub_t *sub) {
  * tant que xPortStartScheduler n'a pas tourné, et bloque la carte (constaté
  * sur cible, revue du 05/10/2026, B1).
  *
- * Un nœud incohérent (voir dt_sub_sane) arrête le parcours : le notifier
- * reviendrait à appeler xSemaphoreGive sur un contenu quelconque, et à suivre
- * un `next` quelconque. Les abonnés situés au-delà ne sont plus réveillés
- * (leurs données restent lisibles), et topic->list_faults le signale. */
-static void dt_count_fault(data_topic_t *topic) {
-    cb_critical_t c = cb_critical_enter();
-    topic->list_faults++;
-    cb_critical_exit(c);
-}
-
+ * Un slot dont l'abonné n'est pas valide n'est pas notifié (ce serait
+ * appeler xSemaphoreGive sur un contenu quelconque) : il est libéré et compté
+ * (voir dt_drop_invalid_locked), et les autres slots sont notifiés. */
 static void dt_notify(data_topic_t *topic) {
     if (xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED) {
         return;
     }
 
-    bool fault = false;
-    if (dt_in_isr()) {
-        BaseType_t woken = pdFALSE;
-        for (data_sub_t *sub = topic->subs; sub != NULL; sub = sub->next) {
-            if (!dt_sub_member(sub, topic)) {
-                fault = true;
-                break;
+    const bool in_isr = dt_in_isr();
+    BaseType_t woken  = pdFALSE;
+    if (!in_isr) {
+        vTaskSuspendAll();
+    }
+    for (size_t i = 0u; i < DATA_TOPIC_MAX_SUBS; i++) {
+        data_sub_t *sub = topic->subs[i];
+        if (sub == NULL) {
+            continue;
+        }
+        if (dt_sub_valid(sub, topic)) {
+            if (in_isr) {
+                (void)xSemaphoreGiveFromISR(sub->sem, &woken);
+            } else {
+                (void)xSemaphoreGive(sub->sem);
             }
-            (void)xSemaphoreGiveFromISR(sub->sem, &woken);
+        } else {
+            cb_critical_t c = cb_critical_enter();
+            dt_drop_invalid_locked(topic, i);
+            cb_critical_exit(c);
         }
-        if (fault) {
-            dt_count_fault(topic);
-        }
+    }
+    if (in_isr) {
         portYIELD_FROM_ISR(woken);
-        return;
-    }
-
-    vTaskSuspendAll();
-    for (data_sub_t *sub = topic->subs; sub != NULL; sub = sub->next) {
-        if (!dt_sub_member(sub, topic)) {
-            fault = true;
-            break;
-        }
-        (void)xSemaphoreGive(sub->sem);
-    }
-    (void)xTaskResumeAll();
-    if (fault) {
-        dt_count_fault(topic);
+    } else {
+        (void)xTaskResumeAll();
     }
 }
 
@@ -225,8 +186,17 @@ static data_status_t dt_access(data_sub_t *sub, uint32_t idx,
         return DT_EMPTY;
     }
 
+    /* Curseur cohérent ? Tant que lag <= stored, la prochaine donnée à lire
+       est lag crans derrière head : sub->tail == (head - lag) mod capacity.
+       Un écart veut dire que lag est faux : plus de 2^32 publications sans
+       lecture (pub_seq - last_seq a fait un tour, voir "Limites"), ou
+       curseur abîmé. L'abonné est alors traité comme dépassé, ce qu'il est
+       forcément dans le premier cas. */
+    const bool consistent = (lag <= stored) &&
+                            (sub->tail == (cb->head + cb->capacity - (size_t)lag) % cb->capacity);
+
     data_status_t status = DT_OK;
-    if (lag > stored) {
+    if (!consistent) {
         /* Dépassé : les plus anciennes données non lues ont été écrasées.
            On repart de la plus ancienne encore présente. */
         dt_place_locked(sub, topic, DATA_ATTACH_FROM_OLDEST);
@@ -258,8 +228,10 @@ data_status_t data_topic_init(data_topic_t *topic,
 
     topic->pub_seq     = 0u;
     topic->sub_count   = 0u;
-    topic->subs        = NULL;
     topic->list_faults = 0u;
+    for (size_t i = 0u; i < DATA_TOPIC_MAX_SUBS; i++) {
+        topic->subs[i] = NULL;
+    }
     topic->cb.storage  = NULL;  /* refusé par publish/attach si l'init échoue */
 
     if (policy != CB_OVERWRITE_OLDEST) return DT_BAD_ARG;
@@ -272,27 +244,25 @@ data_status_t data_topic_init(data_topic_t *topic,
 void data_topic_free(data_topic_t *topic) {
     if (!topic) return;
 
-    /* Un abonné à la fois : son sémaphore est supprimé hors section critique,
-       une fois l'abonné retiré de la liste. Un abonné incohérent en tête (voir
-       dt_sub_sane) n'est pas touché : le reste de la liste est abandonné. */
-    for (;;) {
+    /* Un slot à la fois : le sémaphore d'un abonné est supprimé hors section
+       critique, une fois l'abonné désinscrit. Un abonné invalide n'est pas
+       touché (voir dt_drop_invalid_locked). */
+    for (size_t i = 0u; i < DATA_TOPIC_MAX_SUBS; i++) {
         cb_critical_t c = cb_critical_enter();
-        data_sub_t *sub = topic->subs;
-        const bool sane = (sub != NULL) && dt_sub_member(sub, topic);
-        if (sane) {
-            dt_unlink_locked(sub, topic);
-            if (topic->subs == sub) {
-                topic->subs = NULL;     /* tête aux liens incohérents : on s'arrête là */
-            }
-        } else if (sub != NULL) {
-            topic->subs = NULL;
-            topic->list_faults++;
+        data_sub_t *sub = topic->subs[i];
+        const bool valid = (sub != NULL) && dt_sub_valid(sub, topic);
+        if (valid) {
+            dt_unregister_locked(topic, i);
+            dt_reset_sub_locked(sub);
+        } else {
+            dt_drop_invalid_locked(topic, i);
         }
         cb_critical_exit(c);
 
-        if (!sane) break;
 #if (APEX_CFG_SCHED_RTOS == 1)
-        dt_release_sem(sub);
+        if (valid) {
+            dt_release_sem(sub);
+        }
 #endif
     }
 
@@ -343,50 +313,47 @@ data_status_t data_sub_attach(data_sub_t *sub,
     if (sub->attached) return (sub->topic == topic) ? DT_OK : DT_BAD_ARG;
 #if (APEX_CFG_SCHED_RTOS == 1)
     if (dt_in_isr()) return DT_BAD_ARG;
-#endif
 
-    /* Garde-fou : un abonné encore chaîné mais remis à zéro sans detach
-       (variable locale d'une tâche qui a rendu la main sans se détacher puis a
-       été relancée, structure réinitialisée...) refermerait la liste sur
-       elle-même, et dt_notify bouclerait sans fin, scheduler suspendu ou en
-       interruption. */
-    cb_critical_t c = cb_critical_enter();
-    const bool linked = dt_linked_locked(topic, sub);
-    cb_critical_exit(c);
-    if (linked) return DT_BAD_ARG;
-
-#if (APEX_CFG_SCHED_RTOS == 1)
-    /* Créé vide : data_sub_wait_for_data regarde num_to_read avant d'attendre. */
+    /* Créé vide, avant l'inscription : data_sub_wait_for_data regarde
+       num_to_read avant d'attendre. Tant que `attached` vaut 0, la
+       notification ne touche pas à ce sémaphore, même si un slot périmé
+       désigne déjà cet abonné. */
     sub->sem = xSemaphoreCreateBinaryStatic(&sub->sem_cm);
     if (sub->sem == NULL) return DT_BAD_ARG;
 #endif
 
-    c = cb_critical_enter();
+    data_status_t status = DT_OK;
+    cb_critical_t c = cb_critical_enter();
     if (!topic->cb.storage) {
-        /* data_topic_free est passé entre les deux sections critiques. */
-        cb_critical_exit(c);
-#if (APEX_CFG_SCHED_RTOS == 1)
-        dt_release_sem(sub);
-#endif
-        return DT_BAD_ARG;
-    }
-    dt_place_locked(sub, topic, mode);
-    sub->topic = topic;
-    sub->prev  = NULL;
-    sub->next  = topic->subs;
-    if (topic->subs != NULL) {
-        if (dt_sub_member(topic->subs, topic)) {
-            topic->subs->prev = sub;
+        status = DT_BAD_ARG;                /* data_topic_free est passé entre-temps */
+    } else {
+        /* Les slots invalides sont libérés d'abord, dont un éventuel slot
+           périmé de cet abonné (remis à zéro sans detach : `attached` vaut 0
+           ici) : pas de doublon. Puis le premier slot libre est pris. */
+        for (size_t i = 0u; i < DATA_TOPIC_MAX_SUBS; i++) {
+            dt_drop_invalid_locked(topic, i);
+        }
+        const size_t slot = dt_slot_locked(topic, NULL);
+        if (slot < DATA_TOPIC_MAX_SUBS) {
+            topic->subs[slot] = sub;
+            topic->sub_count++;
         } else {
-            topic->list_faults++;   /* tête incohérente : jamais écrite */
+            status = DT_NO_SLOT;
+        }
+        if (status == DT_OK) {
+            dt_place_locked(sub, topic, mode);
+            sub->topic    = topic;
+            sub->attached = 1;
         }
     }
-    topic->subs = sub;
-    topic->sub_count++;
-    sub->attached = 1;
     cb_critical_exit(c);
 
-    return DT_OK;
+#if (APEX_CFG_SCHED_RTOS == 1)
+    if (status != DT_OK) {
+        dt_release_sem(sub);
+    }
+#endif
+    return status;
 }
 
 data_status_t data_sub_detach(data_sub_t *sub) {
@@ -402,7 +369,13 @@ data_status_t data_sub_detach(data_sub_t *sub) {
         cb_critical_exit(c);
         return DT_BAD_ARG;
     }
-    dt_unlink_locked(sub, topic);
+    const size_t slot = dt_slot_locked(topic, sub);
+    if (slot < DATA_TOPIC_MAX_SUBS) {
+        dt_unregister_locked(topic, slot);
+    } else {
+        topic->list_faults++;               /* absent : topic ré-initialisé avec cet abonné attaché */
+    }
+    dt_reset_sub_locked(sub);
     cb_critical_exit(c);
 
 #if (APEX_CFG_SCHED_RTOS == 1)

@@ -1,0 +1,14 @@
+[attach_no_drop] KILLED by: T22 Attache,, T27 Abonne, T28 Registre
+[valid_no_topic] KILLED by: T27 Abonne
+[valid_no_attached] KILLED by: T22 Attache,
+[detach_no_fault] KILLED by: T25 Detach, T26 Detach
+[detach_count_always] KILLED by: T25 Detach, T26 Detach
+[free_all_valid] KILLED by: T27 Abonne
+[drop_no_fault] KILLED by: T22 Attache,, T27 Abonne, T28 Registre
+[slot_search_short] KILLED by: T28 Registre
+[attach_no_count] KILLED by: T6  Two, T9  Detach/Reattach, T18 Detach, T22 Attache,, T25 Detach, T26 Detach, T27 Abonne, T28 Registre, T0 Init
+[init_no_clear] KILLED by: CRASH (rc=139)
+[reset_keeps_topic] KILLED by: T18 Detach
+[cursor_unchecked] KILLED by: T29 Curseur
+[unregister_no_null] KILLED by: T9  Detach/Reattach, T13 Free, T18 Detach, T22 Attache,, T25 Detach, T27 Abonne, T28 Registre
+0 survivor(s) out of 13

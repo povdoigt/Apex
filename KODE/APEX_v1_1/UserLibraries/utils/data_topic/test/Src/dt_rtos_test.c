@@ -314,12 +314,19 @@ TASK_DEFINE(DTT_LossSub) {
 typedef struct { volatile dtt_res_t *r; } DTT_Popper_args_t;
 TASK_DECLARE(DTT_Popper, DTT_Popper_args_t, 1024);
 TASK_DEFINE(DTT_Popper) {
+    uint32_t after_stop = 0u;
     for (;;) {
         uint32_t    v;
         cb_status_t s = cb_pop(&cb_t, &v);
         if (s == CB_OK) {
             args->r->count++;
             args->r->sum += v;
+            /* Apres `stop`, il reste au plus CAP_CB valeurs : au-dela, count est
+               corrompu (mutant sans verrou), on s'arrete au lieu de tourner. */
+            if (stop && ++after_stop > CAP_CB) {
+                args->r->bad++;
+                break;
+            }
         } else if (s == CB_EMPTY) {
             if (stop) break;
             osThreadYield();
@@ -447,6 +454,40 @@ static inline uint32_t now_ms(void) {
 static data_status_t topic_u32_init(data_topic_t *t, uint32_t *store) {
     memset(store, 0, CAP_A * sizeof(uint32_t));
     return data_topic_init(t, store, sizeof(uint32_t), CAP_A, CB_OVERWRITE_OLDEST);
+}
+
+/* Registre du topic == exactement les abonnes `expected` (ordre indifferent,
+   chacun dans un seul slot, tous attaches a ce topic), sub_count == n, et
+   aucune anomalie comptee. */
+static bool subs_are(const data_topic_t *t, data_sub_t *const expected[], size_t n) {
+    if (t->sub_count != n || t->list_faults != 0u) {
+        return false;
+    }
+    size_t used = 0u;
+    for (size_t i = 0; i < DATA_TOPIC_MAX_SUBS; i++) {
+        const data_sub_t *p = t->subs[i];
+        if (p == NULL) {
+            continue;
+        }
+        used++;
+        bool known = false;
+        for (size_t k = 0; k < n; k++) {
+            known = known || (p == expected[k]);
+        }
+        if (!known || !p->attached || p->topic != t) {
+            return false;
+        }
+    }
+    for (size_t k = 0; k < n; k++) {
+        size_t hits = 0u;
+        for (size_t i = 0; i < DATA_TOPIC_MAX_SUBS; i++) {
+            hits += (t->subs[i] == expected[k]) ? 1u : 0u;
+        }
+        if (hits != 1u) {
+            return false;
+        }
+    }
+    return used == n;
 }
 
 /* Remet l'environnement a zero apres un cas, qu'il ait reussi ou non. */
@@ -691,11 +732,11 @@ DT_CASE(DT_rtos_test_t18_attach_during_publish) {
 DT_CASE(DT_rtos_test_t19_list_during_notify) {
     TEST_ASSERT(topic_u32_init(&topic_a, store_a) == DT_OK, "init topic_a");
     TEST_ASSERT(topic_u32_init(&topic_b, store_b) == DT_OK, "init topic_b");
-    /* topic_a : B puis A (A en tete de liste) ; topic_b : C */
-    TEST_ASSERT(data_sub_attach(&sub_b, &topic_a, DATA_ATTACH_FROM_NOW) == DT_OK, "attach B");
+    /* topic_a : A puis B (A notifie avant B) ; topic_b : C */
     TEST_ASSERT(data_sub_attach(&sub_a, &topic_a, DATA_ATTACH_FROM_NOW) == DT_OK, "attach A");
+    TEST_ASSERT(data_sub_attach(&sub_b, &topic_a, DATA_ATTACH_FROM_NOW) == DT_OK, "attach B");
     TEST_ASSERT(data_sub_attach(&sub_c, &topic_b, DATA_ATTACH_FROM_NOW) == DT_OK, "attach C");
-    TEST_ASSERT(topic_a.subs == &sub_a && sub_a.next == &sub_b, "Ordre de liste inattendu");
+    TEST_ASSERT(topic_a.subs[0] == &sub_a && topic_a.subs[1] == &sub_b, "Ordre des slots inattendu");
 
     task_h_t h = DTT_Mover_spawn(&(DTT_Mover_args_t){ .timeout_ms = 500u }, ATTR(osPriorityHigh, 0));
     TEST_ASSERT(task_h_valid(h), "Spawn Mover refuse");
@@ -709,11 +750,13 @@ DT_CASE(DT_rtos_test_t19_list_during_notify) {
 
     TEST_ASSERT(uxSemaphoreGetCount(sub_b.sem) == 1u, "B n'a pas ete notifie");
     TEST_ASSERT(uxSemaphoreGetCount(sub_c.sem) == 0u, "C (autre topic) a ete notifie");
-    TEST_ASSERT(topic_a.sub_count == 1u && topic_a.subs == &sub_b && sub_b.prev == NULL && sub_b.next == NULL,
-                "Liste A incoherente (sub_count=%lu)", (unsigned long)topic_a.sub_count);
-    TEST_ASSERT(topic_b.sub_count == 2u && topic_b.subs == &sub_a && sub_a.next == &sub_c && sub_c.prev == &sub_a,
-                "Liste B incoherente (sub_count=%lu)", (unsigned long)topic_b.sub_count);
-    PASS("B notifie, C non ; listes A={B}, B={A,C}");
+    TEST_ASSERT(subs_are(&topic_a, (data_sub_t *const[]){ &sub_b }, 1u),
+                "Registre A incoherent (sub_count=%lu, list_faults=%lu)", (unsigned long)topic_a.sub_count,
+                (unsigned long)topic_a.list_faults);
+    TEST_ASSERT(subs_are(&topic_b, (data_sub_t *const[]){ &sub_c, &sub_a }, 2u),
+                "Registre B incoherent (sub_count=%lu, list_faults=%lu)", (unsigned long)topic_b.sub_count,
+                (unsigned long)topic_b.list_faults);
+    PASS("B notifie, C non ; registres A={B}, B={A,C}");
 }
 
 /* ========================================================================
@@ -873,8 +916,10 @@ DT_CASE(DT_rtos_test_t23_cb_push_isr) {
     TEST_irq_start(20000u, hook_cb_push);
     const uint32_t t_end = now_ms() + 300u;
     while ((int32_t)(now_ms() - t_end) < 0) {
+        /* Vidange bornee : un count corrompu (mutant sans verrou) ne doit pas
+           faire boucler le test indefiniment. Jamais atteinte sinon. */
         uint32_t v;
-        while (cb_pop(&cb_t, &v) == CB_OK) {
+        for (uint32_t k = 0u; k < 2u * CAP_CB_ISR && cb_pop(&cb_t, &v) == CB_OK; k++) {
             if (v < next) bad++;                 /* dupliquee ou desordonnee */
             else          gaps += v - next;      /* refusee par l'ISR        */
             next = v + 1u;
@@ -896,11 +941,15 @@ DT_CASE(DT_rtos_test_t23_cb_push_isr) {
     TEST_irq_stop();
 
     uint32_t v;
-    while (cb_pop(&cb_t, &v) == CB_OK) {
+    for (uint32_t drained = 0u; cb_pop(&cb_t, &v) == CB_OK; ) {
         if (v < next) bad++;
         else          gaps += v - next;
         next = v + 1u;
         popped++;
+        if (++drained > CAP_CB_ISR) {            /* plus d'elements que de slots */
+            incoherent++;
+            break;
+        }
     }
 
     const uint32_t pushed   = isr_n;
@@ -1005,13 +1054,15 @@ DT_CASE(DT_rtos_test_t26_attach_churn) {
     TEST_ASSERT(res[1].timeouts == 0u, "%lu attente(s) expiree(s)", (unsigned long)res[1].timeouts);
     TEST_ASSERT(res[1].count == 2u * R26, "%lu lectures != %u", (unsigned long)res[1].count, 2u * R26);
     TEST_ASSERT(sub_n[0].attached == 0, "sub_n[0] encore attache");
-    TEST_ASSERT(topic_a.sub_count == 1u && topic_a.subs == &sub_b && sub_b.prev == NULL && sub_b.next == NULL,
-                "Liste A incoherente (sub_count=%lu)", (unsigned long)topic_a.sub_count);
-    TEST_ASSERT(topic_b.sub_count == 1u && topic_b.subs == &sub_c && sub_c.prev == NULL && sub_c.next == NULL,
-                "Liste B incoherente (sub_count=%lu)", (unsigned long)topic_b.sub_count);
+    TEST_ASSERT(subs_are(&topic_a, (data_sub_t *const[]){ &sub_b }, 1u),
+                "Registre A incoherent (sub_count=%lu, list_faults=%lu)", (unsigned long)topic_a.sub_count,
+                (unsigned long)topic_a.list_faults);
+    TEST_ASSERT(subs_are(&topic_b, (data_sub_t *const[]){ &sub_c }, 1u),
+                "Registre B incoherent (sub_count=%lu, list_faults=%lu)", (unsigned long)topic_b.sub_count,
+                (unsigned long)topic_b.list_faults);
     TEST_ASSERT(uxSemaphoreGetCount(sub_b.sem) == 1u && uxSemaphoreGetCount(sub_c.sem) == 1u,
                 "Abonne permanent jamais notifie");
-    PASS("%u x 2 attach/wait/read/detach, %lu publications, listes intactes",
+    PASS("%u x 2 attach/wait/read/detach, %lu publications, registres intacts",
          R26, (unsigned long)topic_a.pub_seq);
 #undef R26
 }
@@ -1147,16 +1198,18 @@ DT_CASE(DT_rtos_test_t29_churn_vs_isr) {
     TEST_ASSERT(res[1].count == 2u * R29, "%lu lectures != %u", (unsigned long)res[1].count, 2u * R29);
     TEST_ASSERT(published > 1000u, "ISR : %lu publications seulement", (unsigned long)published);
     TEST_ASSERT(sub_n[0].attached == 0, "sub_n[0] encore attache");
-    TEST_ASSERT(topic_a.sub_count == 1u && topic_a.subs == &sub_b && sub_b.prev == NULL && sub_b.next == NULL,
-                "Liste A incoherente (sub_count=%lu)", (unsigned long)topic_a.sub_count);
-    TEST_ASSERT(topic_b.sub_count == 1u && topic_b.subs == &sub_c && sub_c.prev == NULL && sub_c.next == NULL,
-                "Liste B incoherente (sub_count=%lu)", (unsigned long)topic_b.sub_count);
+    TEST_ASSERT(subs_are(&topic_a, (data_sub_t *const[]){ &sub_b }, 1u),
+                "Registre A incoherent (sub_count=%lu, list_faults=%lu)", (unsigned long)topic_a.sub_count,
+                (unsigned long)topic_a.list_faults);
+    TEST_ASSERT(subs_are(&topic_b, (data_sub_t *const[]){ &sub_c }, 1u),
+                "Registre B incoherent (sub_count=%lu, list_faults=%lu)", (unsigned long)topic_b.sub_count,
+                (unsigned long)topic_b.list_faults);
     TEST_ASSERT(uxSemaphoreGetCount(sub_b.sem) == 1u && uxSemaphoreGetCount(sub_c.sem) == 1u,
                 "Abonne permanent jamais notifie");
     TEST_ASSERT(data_sub_num_to_read(&sub_b) + data_sub_num_to_read(&sub_c) == published,
                 "Abonnes permanents : %lu + %lu != %lu publications", (unsigned long)data_sub_num_to_read(&sub_b),
                 (unsigned long)data_sub_num_to_read(&sub_c), (unsigned long)published);
-    PASS("%u x 2 attach/wait/read/detach face a %lu publications ISR, listes intactes", R29, (unsigned long)published);
+    PASS("%u x 2 attach/wait/read/detach face a %lu publications ISR, registres intacts", R29, (unsigned long)published);
 #undef R29
 }
 
@@ -1188,63 +1241,82 @@ DT_CASE(DT_rtos_test_t30_two_tasks_one_list) {
                 (unsigned long)res[1].count, (unsigned long)res[1].timeouts);
     TEST_ASSERT(res[0].count > 1000u, "Low : %lu tours seulement, test non concluant", (unsigned long)res[0].count);
     TEST_ASSERT(sub_n[1].attached == 0 && sub_n[2].attached == 0, "abonne encore attache en fin");
-    TEST_ASSERT(topic_a.sub_count == 1u && topic_a.subs == &sub_b && sub_b.prev == NULL && sub_b.next == NULL,
-                "Liste A incoherente (sub_count=%lu)", (unsigned long)topic_a.sub_count);
-    PASS("%u modifs High (reveil ISR) au milieu de %lu modifs Low : liste A intacte", R30, (unsigned long)res[0].count);
+    TEST_ASSERT(subs_are(&topic_a, (data_sub_t *const[]){ &sub_b }, 1u),
+                "Registre A incoherent (sub_count=%lu, list_faults=%lu)", (unsigned long)topic_a.sub_count,
+                (unsigned long)topic_a.list_faults);
+    PASS("%u modifs High (reveil ISR) au milieu de %lu modifs Low : registre A intact", R30, (unsigned long)res[0].count);
 #undef R30
 }
 
 DT_CASE(DT_rtos_test_t31_dangling_subscriber) {
     TEST_ASSERT(topic_u32_init(&topic_a, store_a) == DT_OK, "init topic_a");
-    /* Liste : sub_c (tete) -> sub_n[0] (futur fantome) -> sub_b (queue). */
     TEST_ASSERT(data_sub_attach(&sub_b, &topic_a, DATA_ATTACH_FROM_NOW) == DT_OK, "attach sub_b");
     TEST_ASSERT(data_sub_attach(&sub_n[0], &topic_a, DATA_ATTACH_FROM_NOW) == DT_OK, "attach sub_n[0]");
     TEST_ASSERT(data_sub_attach(&sub_c, &topic_a, DATA_ATTACH_FROM_NOW) == DT_OK, "attach sub_c");
+    TEST_ASSERT(data_sub_attach(&sub_n[1], &topic_a, DATA_ATTACH_FROM_NOW) == DT_OK, "attach sub_n[1]");
 
-    /* La tache de sub_n[0] a rendu la main sans detach, et sa memoire sert
-       maintenant a autre chose : contenu quelconque, pointeurs compris. */
-    static data_sub_t saved, garbage;
-    saved = sub_n[0];
+    /* Les taches de sub_n[0] et sub_n[1] ont rendu la main sans detach, et
+       leur memoire sert maintenant a autre chose : contenu quelconque. */
+    static data_sub_t saved0, saved1, garbage;
     memset(&garbage, 0xA5, sizeof(garbage));
+    saved0   = sub_n[0];
     sub_n[0] = garbage;
 
+    /* Publication en tache : le premier fantome est ignore puis libere. */
     uint32_t v = 1u;
-    const data_status_t pub = data_topic_publish(&topic_a, &v);       /* tache : ne doit pas planter */
-    const uint32_t faults_task = topic_a.list_faults;
-    const UBaseType_t tok_c = uxSemaphoreGetCount(sub_c.sem);
-    const UBaseType_t tok_b = uxSemaphoreGetCount(sub_b.sem);
+    const data_status_t pub = data_topic_publish(&topic_a, &v);       /* ne doit pas planter */
+    const uint32_t    faults_task = topic_a.list_faults;
+    const size_t      count_task  = topic_a.sub_count;
+    const UBaseType_t tok_b_task  = uxSemaphoreGetCount(sub_b.sem);
+    const UBaseType_t tok_c_task  = uxSemaphoreGetCount(sub_c.sem);
 
+    /* Second fantome, libere cette fois par une publication en interruption. */
+    saved1   = sub_n[1];
+    sub_n[1] = garbage;
+    (void)xSemaphoreTake(sub_b.sem, 0u);
+    (void)xSemaphoreTake(sub_c.sem, 0u);
     isr_n = 1u;                                                       /* l'ISR publie 2, 3, ... */
     TEST_irq_start(1000u, hook_one_pub);
     (void)osDelay(10u);
     TEST_irq_stop();
-    const uint32_t isr_pub    = isr_n - 1u;
-    const uint32_t faults_isr = topic_a.list_faults - faults_task;
-    const uint32_t lag_b      = data_sub_num_to_read(&sub_b);
+    const uint32_t    isr_pub    = isr_n - 1u;
+    const uint32_t    faults_isr = topic_a.list_faults - faults_task;
+    const UBaseType_t tok_b_isr  = uxSemaphoreGetCount(sub_b.sem);
+    const UBaseType_t tok_c_isr  = uxSemaphoreGetCount(sub_c.sem);
+    const uint32_t    lag_b      = data_sub_num_to_read(&sub_b);
+    const uint32_t    lag_c      = data_sub_num_to_read(&sub_c);
 
-    /* Attache d'un nouvel abonne (le parcours de controle s'arrete sur le
-       fantome), puis detach du voisin du fantome : rien n'est ecrit dedans. */
-    const data_status_t att = data_sub_attach(&sub_n[1], &topic_a, DATA_ATTACH_FROM_NOW);
-    const uint32_t before_det = topic_a.list_faults;
+    /* Attache et detach ensuite : slots recuperes, fantomes jamais ecrits. */
+    const data_status_t att = data_sub_attach(&sub_n[2], &topic_a, DATA_ATTACH_FROM_NOW);
     const data_status_t det = data_sub_detach(&sub_c);
-    const bool untouched = (memcmp(&sub_n[0], &garbage, sizeof(garbage)) == 0);
-    const bool fault_det = (topic_a.list_faults == before_det + 1u);
+    const bool untouched = (memcmp(&sub_n[0], &garbage, sizeof(garbage)) == 0) &&
+                           (memcmp(&sub_n[1], &garbage, sizeof(garbage)) == 0);
+    const uint32_t faults_end = topic_a.list_faults;
+    topic_a.list_faults = 0u;                                         /* pour subs_are */
+    const bool registry_ok = subs_are(&topic_a, (data_sub_t *const[]){ &sub_b, &sub_n[2] }, 2u);
 
-    /* Remise en etat avant toute assertion : le nettoyage detache le reste. */
-    sub_n[0] = saved;
+    /* Remise en etat avant toute assertion : contenu d'origine (semaphores
+       compris), puis detach explicite (absents du registre : anomalie). */
+    sub_n[0] = saved0;
+    sub_n[1] = saved1;
+    (void)data_sub_detach(&sub_n[0]);
+    (void)data_sub_detach(&sub_n[1]);
 
     TEST_ASSERT(pub == DT_OK, "publish avec un abonne fantome rend %d", pub);
-    TEST_ASSERT(faults_task == 1u, "anomalie comptee a la publication : %lu, attendu 1", (unsigned long)faults_task);
-    TEST_ASSERT(tok_c == 1u && tok_b == 0u, "jetons : tete %lu (attendu 1), au-dela du fantome %lu (attendu 0)",
-                (unsigned long)tok_c, (unsigned long)tok_b);
-    TEST_ASSERT(isr_pub >= 5u && faults_isr == isr_pub, "ISR : %lu publications, %lu anomalies comptees",
+    TEST_ASSERT(faults_task == 1u && count_task == 3u, "publication en tache : %lu anomalie(s) (1), %lu inscrits (3)",
+                (unsigned long)faults_task, (unsigned long)count_task);
+    TEST_ASSERT(tok_b_task == 1u && tok_c_task == 1u, "publication en tache : jetons b=%lu c=%lu (attendu 1, 1)",
+                (unsigned long)tok_b_task, (unsigned long)tok_c_task);
+    TEST_ASSERT(isr_pub >= 5u && faults_isr == 1u, "ISR : %lu publications, %lu anomalie(s) (1 attendue)",
                 (unsigned long)isr_pub, (unsigned long)faults_isr);
-    TEST_ASSERT(lag_b == 1u + isr_pub, "au-dela du fantome, num_to_read=%lu attendu %lu (donnees lisibles)",
-                (unsigned long)lag_b, (unsigned long)(1u + isr_pub));
-    TEST_ASSERT(att == DT_OK, "attache d'un nouvel abonne refusee (%d)", att);
-    TEST_ASSERT(det == DT_OK && untouched, "detach du voisin : s=%d, fantome %s", det, untouched ? "intact" : "ECRIT");
-    TEST_ASSERT(fault_det, "detach du voisin : anomalie non comptee");
-    PASS("fantome : 1 + %lu notifications arretees sans plantage, rien ecrit dedans", (unsigned long)isr_pub);
+    TEST_ASSERT(tok_b_isr == 1u && tok_c_isr == 1u, "ISR : jetons b=%lu c=%lu (attendu 1, 1)",
+                (unsigned long)tok_b_isr, (unsigned long)tok_c_isr);
+    TEST_ASSERT(lag_b == 1u + isr_pub && lag_c == 1u + isr_pub, "num_to_read b=%lu c=%lu, attendu %lu",
+                (unsigned long)lag_b, (unsigned long)lag_c, (unsigned long)(1u + isr_pub));
+    TEST_ASSERT(att == DT_OK && det == DT_OK, "ensuite : attach %d, detach %d", att, det);
+    TEST_ASSERT(untouched, "fantome ECRIT par la bibliotheque");
+    TEST_ASSERT(faults_end == 2u && registry_ok, "registre final != {b, n2} ou %lu anomalies (2)", (unsigned long)faults_end);
+    PASS("2 fantomes (tache, ISR) : liberes une fois chacun, autres abonnes notifies, jamais ecrits");
 }
 
 #endif /* APEX_CFG_SCHED_RTOS && APEX_CFG_PROFILE_TEST */

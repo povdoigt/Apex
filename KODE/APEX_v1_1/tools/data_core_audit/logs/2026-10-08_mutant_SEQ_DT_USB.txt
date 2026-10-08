@@ -1,0 +1,35 @@
+===== DT Sequential Tests Test Suite =====
+Suite de tests sequentiels pour data_topic (30 test cases)
+
+  [PASS] T0  NULL args                    Tous les NULL/bad-arg correctement rejetes
+  [PASS] T1  Pub/Read FIFO                FIFO {10,20,30} OK, pub_seq=3, num_to_read=0
+  [PASS] T2  Empty read                   DT_EMPTY pour read et peek, out non modifie
+  [PASS] T3  Attach OLDEST                FROM_OLDEST: num=3, {10,20,30} lus, DT_EMPTY OK
+  [PASS] T4  Attach NOW                   FROM_NOW: historique ignore, pub 40 lue OK
+  [PASS] T5  num_to_read                  num_to_read: 1->2->3 puis 2->1->0 apres reads OK
+  [PASS] T6  Two subscribers              sub1={10,20} lu, sub2={10,20,30} intact, tails indep.
+  [PASS] T7  Data loss                    read: LOSS+3 puis 4,5 ; peek signale la perte une fois (12)
+  [PASS] T8  Sync                         NOW: num=0, tail=head, 40 lu ; OLDEST: 10..40 relus
+  [PASS] T9  Detach/Reattach              Detach: sub_count=1, sub2 lit 99, re-attach OK, 2e topic refuse
+  [PASS] T10 Peek non-dest.               peek[0..2]={10,20,30}, peek[3] vide, tail intact, read->10
+  [PASS] T11 REJECT_NEW refuse            REJECT_NEW refuse ; OVERWRITE: 5 tours plein/vide sans blocage
+  [PASS] T12 Zero-copy ptr                peek_ptr(0)=1 (plus ancien), peek_ptr(2)=3, read_ptr=1 puis 2
+  [PASS] T13 Free detache                 free: 2 abonnes detaches, topic refuse, re-init + lecture OK
+  [PASS] T14 Bornes de perte              lag=4 : 1..4 sans perte ; lag=5 : LOSS/6 puis 7,8,9
+  [PASS] T15 Perte par peek(i)            peek(2) : LOSS/6 et recalage ; peek(0)=4, peek(3)=7, puis 4..7 lus
+  [PASS] T16 Perte par _ptr               read_ptr LOSS/3, peek_ptr(1) LOSS/10, recalage puis 9
+  [PASS] T17 Peek hors donnees            peek(4)/peek(100) vides sans recalage (num=7), read -> LOSS/4
+  [PASS] T18 Detach milieu                detach de chaque position : registre et sub_count exacts
+  [PASS] T19 pub_seq 2^32                 pub_seq repasse par 0 : num_to_read, FROM_OLDEST et perte exacts
+  [PASS] T20 OLDEST + cap 1               OLDEST apres 10/4 : 7..10 sans perte ; cap 1 : pertes, peek, 2 abonnes
+  [PASS] T21 Tailles+temoins              13 et 128 o : lectures, perte, peek exacts ; temoins intacts
+  [PASS] T22 Attache, perime              mode 7 refuse ; abonne remis a zero encore inscrit : slot repris sans doublon, anomalie comptee
+  [FAIL] T23 ISR dechirure                480 trame(s) dechiree(s) sur 3026 lues
+  [PASS] T24 ISR pertes                   5997 publiees en ISR = 4808 lues + 1189 sautees (149 pertes signalees)
+  [PASS] T25 Detach perime                detach apres re-init fautive : nouveau registre intact, 2 anomalies comptees
+  [PASS] T26 Detach perime inv            ordre inverse : sub_count exact, attache suivante acceptee, 2 anomalies
+  [PASS] T27 Abonne deplace               slots perimes liberes (attach, free), abonnes deplaces jamais ecrits, tb intact
+  [PASS] T28 Registre plein               8 slots : DT_NO_SLOT au-dela, slot libere repris, slot perime recupere
+  [PASS] T29 Curseur incoherent           curseur decale (repli 2^32, cap 3) : DT_DATA_LOSS + recalage, read et peek
+
+  29/30 PASS   1 FAIL  

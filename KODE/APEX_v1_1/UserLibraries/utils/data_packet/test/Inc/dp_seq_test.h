@@ -4,7 +4,7 @@
 #include "data_packet.h"
 #include "test.h"
 
-#define DP_seq_test_N_TESTS 6
+#define DP_seq_test_N_TESTS 7
 
 extern TEST_case_table_t DP_seq_test_cases[DP_seq_test_N_TESTS];
 
@@ -60,5 +60,15 @@ void DP_seq_test_t4_source_freed(TEST_case_t *tc);
  *   source lue par pointeur), les deux etaient possibles.
  * ======================================================================== */
 void DP_seq_test_t5_isr_concurrency(TEST_case_t *tc);
+
+/* ========================================================================
+ * T6 – Rejet borne face a un flot d'echantillons trop vieux (revue du 08/10, N4)
+ *   TIM5 publie sur une source de capacite 4 des echantillons toujours trop
+ *   vieux (100 kHz en sequentiel, 40 kHz sous RTOS), plus vite que le packer
+ *   ne les rejette. Chaque data_packer_build_publish rend la main en 2 ms au
+ *   plus, le champ de cette source est toujours absent. Sans borne sur la
+ *   boucle de rejet, le premier appel ne rendrait jamais la main.
+ * ======================================================================== */
+void DP_seq_test_t6_bounded_discard(TEST_case_t *tc);
 
 #endif /* DP_SEQ_TEST_H */

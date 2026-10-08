@@ -8,6 +8,39 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* Registre du topic == exactement les abonnes `expected` (ordre indifferent,
+   chacun dans un seul slot, tous attaches a ce topic), et sub_count == n. */
+static bool dts_subs_are(const data_topic_t *t, data_sub_t *const expected[], size_t n) {
+    if (t->sub_count != n) {
+        return false;
+    }
+    size_t used = 0u;
+    for (size_t i = 0; i < DATA_TOPIC_MAX_SUBS; i++) {
+        const data_sub_t *p = t->subs[i];
+        if (p == NULL) {
+            continue;
+        }
+        used++;
+        bool known = false;
+        for (size_t k = 0; k < n; k++) {
+            known = known || (p == expected[k]);
+        }
+        if (!known || !p->attached || p->topic != t) {
+            return false;
+        }
+    }
+    for (size_t k = 0; k < n; k++) {
+        size_t hits = 0u;
+        for (size_t i = 0; i < DATA_TOPIC_MAX_SUBS; i++) {
+            hits += (t->subs[i] == expected[k]) ? 1u : 0u;
+        }
+        if (hits != 1u) {
+            return false;
+        }
+    }
+    return used == n;
+}
+
 /* ========================================================================
  * Table des cas de test
  * ======================================================================== */
@@ -35,10 +68,14 @@ TEST_case_table_t DT_seq_test_cases[DT_seq_test_N_TESTS] = {
     { .case_info = { .name = "T19 pub_seq 2^32"     }, .func = DT_seq_test_t19_pub_seq_wrap     },
     { .case_info = { .name = "T20 OLDEST + cap 1"   }, .func = DT_seq_test_t20_oldest_after_wraps_cap1 },
     { .case_info = { .name = "T21 Tailles+temoins"  }, .func = DT_seq_test_t21_elem_sizes_guards },
-    { .case_info = { .name = "T22 Attache refusee"  }, .func = DT_seq_test_t22_attach_refusals  },
+    { .case_info = { .name = "T22 Attache, perime"  }, .func = DT_seq_test_t22_attach_refusals  },
     { .case_info = { .name = "T23 ISR dechirure"    }, .func = DT_seq_test_t23_isr_torn_read    },
     { .case_info = { .name = "T24 ISR pertes"       }, .func = DT_seq_test_t24_isr_loss_accounting },
     { .case_info = { .name = "T25 Detach perime"    }, .func = DT_seq_test_t25_stale_detach     },
+    { .case_info = { .name = "T26 Detach perime inv"}, .func = DT_seq_test_t26_stale_detach_reverse },
+    { .case_info = { .name = "T27 Abonne deplace"   }, .func = DT_seq_test_t27_sub_moved          },
+    { .case_info = { .name = "T28 Registre plein"   }, .func = DT_seq_test_t28_registry_full      },
+    { .case_info = { .name = "T29 Curseur incoherent"}, .func = DT_seq_test_t29_cursor_check      },
 };
 
 /* ========================================================================
@@ -714,8 +751,8 @@ void DT_seq_test_t13_free_detaches(TEST_case_t *tc) {
 
     TEST_ASSERT(sub1.attached == 0 && sub2.attached == 0,
               "abonnes encore attaches apres free (%d, %d)", sub1.attached, sub2.attached);
-    TEST_ASSERT(topic.subs == NULL && topic.sub_count == 0u,
-              "liste non vide apres free (sub_count=%u)", (unsigned)topic.sub_count);
+    TEST_ASSERT(dts_subs_are(&topic, NULL, 0u),
+              "registre non vide apres free (sub_count=%u)", (unsigned)topic.sub_count);
     TEST_ASSERT(data_sub_num_to_read(&sub1) == 0u, "num_to_read=%u != 0 apres free",
               (unsigned)data_sub_num_to_read(&sub1));
 
@@ -794,24 +831,6 @@ static uint32_t dts_publish_range(data_topic_t *t, uint32_t first, uint32_t last
         }
     }
     return refused;
-}
-
-/* Parcourt la liste dans les deux sens : rend true si elle vaut exactement
-   expected[0..n-1] (tete d'abord) et si sub_count == n. */
-static bool dts_list_is(const data_topic_t *t, data_sub_t *const expected[], size_t n) {
-    if (t->sub_count != n) {
-        return false;
-    }
-    const data_sub_t *prev = NULL;
-    const data_sub_t *p = t->subs;
-    for (size_t i = 0; i < n; i++) {
-        if (p != expected[i] || p->prev != prev || !p->attached || p->topic != t) {
-            return false;
-        }
-        prev = p;
-        p = p->next;
-    }
-    return p == NULL;
 }
 
 /* Attente active : T23/T24 tournent aussi bien en sequentiel qu'en RTOS. */
@@ -964,7 +983,7 @@ void DT_seq_test_t17_peek_beyond_while_lagging(TEST_case_t *tc) {
 }
 
 /* ========================================================================
- * T18 – Detach au milieu de la liste
+ * T18 – Detach dans n'importe quel slot du registre
  * ======================================================================== */
 void DT_seq_test_t18_detach_middle(TEST_case_t *tc) {
     tc->result = R_FAIL;
@@ -977,11 +996,11 @@ void DT_seq_test_t18_detach_middle(TEST_case_t *tc) {
     for (size_t i = 0; i < 4u; i++) {
         TEST_ASSERT(data_sub_attach(all[i], &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "attach s%u", (unsigned)i);
     }
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &s3, &s2, &s1, &s0 }, 4u), "liste initiale != {s3,s2,s1,s0}");
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &s3, &s2, &s1, &s0 }, 4u), "registre initial != {s0..s3}");
 
     TEST_ASSERT(data_sub_detach(&s1) == DT_OK, "detach s1 (milieu)");
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &s3, &s2, &s0 }, 3u), "apres detach s1 : liste != {s3,s2,s0}");
-    TEST_ASSERT(!s1.attached && s1.prev == NULL && s1.next == NULL && s1.topic == NULL, "s1 mal detache");
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &s3, &s2, &s0 }, 3u), "apres detach s1 : registre != {s3,s2,s0}");
+    TEST_ASSERT(!s1.attached && s1.topic == NULL, "s1 mal detache");
 
     uint32_t v = 42u, out;
     data_topic_publish(&topic, &v);
@@ -994,20 +1013,20 @@ void DT_seq_test_t18_detach_middle(TEST_case_t *tc) {
     TEST_ASSERT(data_sub_read(&s1, &out) == DT_BAD_ARG, "s1 detache lit encore");
 
     TEST_ASSERT(data_sub_detach(&s3) == DT_OK, "detach s3 (tete)");
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &s2, &s0 }, 2u), "apres detach s3 : liste != {s2,s0}");
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &s2, &s0 }, 2u), "apres detach s3 : registre != {s2,s0}");
     TEST_ASSERT(data_sub_detach(&s0) == DT_OK, "detach s0 (queue)");
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &s2 }, 1u), "apres detach s0 : liste != {s2}");
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &s2 }, 1u), "apres detach s0 : registre != {s2}");
     TEST_ASSERT(data_sub_detach(&s2) == DT_OK, "detach s2 (seul)");
-    TEST_ASSERT(topic.subs == NULL && topic.sub_count == 0u, "liste non vide en fin (sub_count=%u)", (unsigned)topic.sub_count);
+    TEST_ASSERT(dts_subs_are(&topic, NULL, 0u), "registre non vide en fin (sub_count=%u)", (unsigned)topic.sub_count);
 
     /* Re-attache dans un autre ordre, puis deux detach du milieu. */
     data_sub_t *const order[4] = { &s1, &s3, &s0, &s2 };
     for (size_t i = 0; i < 4u; i++) {
         TEST_ASSERT(data_sub_attach(order[i], &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "re-attach %u", (unsigned)i);
     }
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &s2, &s0, &s3, &s1 }, 4u), "re-attache : liste != {s2,s0,s3,s1}");
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &s2, &s0, &s3, &s1 }, 4u), "re-attache : registre != {s0..s3}");
     TEST_ASSERT(data_sub_detach(&s0) == DT_OK && data_sub_detach(&s3) == DT_OK, "detach s0, s3");
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &s2, &s1 }, 2u), "liste != {s2,s1}");
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &s2, &s1 }, 2u), "registre != {s2,s1}");
     v = 43u;
     data_topic_publish(&topic, &v);
     TEST_ASSERT(data_sub_read(&s2, &out) == DT_OK && out == 43u, "s2 ne recoit pas 43");
@@ -1016,7 +1035,7 @@ void DT_seq_test_t18_detach_middle(TEST_case_t *tc) {
     data_sub_detach(&s2);
     data_sub_detach(&s1);
     data_topic_free(&topic);
-    snprintf(tc->detail, sizeof(tc->detail), "detach milieu/tete/queue : chainage double et sub_count exacts");
+    snprintf(tc->detail, sizeof(tc->detail), "detach de chaque position : registre et sub_count exacts");
     tc->result = R_PASS;
 }
 
@@ -1187,7 +1206,7 @@ void DT_seq_test_t21_elem_sizes_guards(TEST_case_t *tc) {
 }
 
 /* ========================================================================
- * T22 – Refus a l'attache
+ * T22 – Attache : mode invalide, slot perime
  * ======================================================================== */
 void DT_seq_test_t22_attach_refusals(TEST_case_t *tc) {
     tc->result = R_FAIL;
@@ -1204,32 +1223,51 @@ void DT_seq_test_t22_attach_refusals(TEST_case_t *tc) {
     TEST_ASSERT(s == DT_BAD_ARG && !sub3.attached && topic.sub_count == 2u, "mode 7 : s=%d attached=%d sub_count=%u",
                 s, sub3.attached, (unsigned)topic.sub_count);
 
-    /* sub1 (queue) remis a zero sans detach, comme une variable locale reutilisee. */
-    const data_sub_t saved1 = sub1;
+    /* sub1 remis a zero sans detach, comme une variable locale reutilisee : son
+       slot est perime. La publication atteint toujours sub2, puis la
+       re-attache de sub1 ne cree pas de doublon et compte l'anomalie (sous
+       RTOS, la publication a deja libere le slot perime : meme etat final). */
     memset(&sub1, 0, sizeof(sub1));
-    s = data_sub_attach(&sub1, &topic, DATA_ATTACH_FROM_NOW);
-    TEST_ASSERT(s == DT_BAD_ARG, "abonne encore chaine (queue) re-attache : s=%d", s);
-    TEST_ASSERT(topic.sub_count == 2u && topic.subs == &sub2 && sub2.next == &sub1 && sub1.next == NULL,
-                "liste modifiee par le refus (sub_count=%u)", (unsigned)topic.sub_count);
     uint32_t v = 5u, out = 0u;
-    s = data_topic_publish(&topic, &v);             /* parcours de la liste : doit se terminer */
+    s = data_topic_publish(&topic, &v);
     TEST_ASSERT(s == DT_OK, "publish retourne %d", s);
     s = data_sub_read(&sub2, &out);
     TEST_ASSERT(s == DT_OK && out == 5u, "sub2 : s=%d out=%u attendu 5", s, (unsigned)out);
+    s = data_sub_attach(&sub1, &topic, DATA_ATTACH_FROM_NOW);
+    TEST_ASSERT(s == DT_OK, "re-attache de sub1 remis a zero : s=%d", s);
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &sub1, &sub2 }, 2u), "registre != {sub1,sub2} (sub_count=%u)",
+                (unsigned)topic.sub_count);
+    TEST_ASSERT(topic.list_faults == 1u, "list_faults=%u attendu 1", (unsigned)topic.list_faults);
 
-    /* sub2 (tete) remis a zero. */
-    const data_sub_t saved2 = sub2;
+    /* Idem pour sub2, re-attache FROM_OLDEST : il relit l'historique. */
     memset(&sub2, 0, sizeof(sub2));
     s = data_sub_attach(&sub2, &topic, DATA_ATTACH_FROM_OLDEST);
-    TEST_ASSERT(s == DT_BAD_ARG && topic.subs == &sub2 && sub2.next == NULL, "abonne encore chaine (tete) re-attache : s=%d", s);
+    TEST_ASSERT(s == DT_OK && dts_subs_are(&topic, (data_sub_t *const[]){ &sub1, &sub2 }, 2u) && topic.list_faults == 2u,
+                "re-attache de sub2 remis a zero : s=%d sub_count=%u list_faults=%u", s, (unsigned)topic.sub_count,
+                (unsigned)topic.list_faults);
+    out = 0u;
+    s = data_sub_read(&sub2, &out);
+    TEST_ASSERT(s == DT_OK && out == 5u, "sub2 FROM_OLDEST : s=%d out=%u attendu 5", s, (unsigned)out);
+    v = 6u;
+    data_topic_publish(&topic, &v);
+    data_status_t r1 = data_sub_read(&sub1, &out);
+    const uint32_t out1 = out;
+    data_status_t r2 = data_sub_read(&sub2, &out);
+    TEST_ASSERT(r1 == DT_OK && out1 == 6u && r2 == DT_OK && out == 6u, "publication suivante : sub1 %d/%u, sub2 %d/%u",
+                r1, (unsigned)out1, r2, (unsigned)out);
 
-    /* Remise en etat pour le nettoyage. */
-    sub2 = saved2;
-    sub1 = saved1;
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &sub2, &sub1 }, 2u), "liste != {sub2,sub1} apres remise en etat");
+    /* Ecrasement partiel : seul `attached` est remis a zero, `topic` reste.
+       Le slot reste invalide : pas de doublon a la re-attache. */
+    sub1.attached = 0;
+    s = data_sub_attach(&sub1, &topic, DATA_ATTACH_FROM_NOW);
+    TEST_ASSERT(s == DT_OK && dts_subs_are(&topic, (data_sub_t *const[]){ &sub1, &sub2 }, 2u) && topic.list_faults == 3u,
+                "re-attache apres ecrasement partiel : s=%d sub_count=%u list_faults=%u", s, (unsigned)topic.sub_count,
+                (unsigned)topic.list_faults);
+
     TEST_ASSERT(data_sub_detach(&sub1) == DT_OK && data_sub_detach(&sub2) == DT_OK, "detach");
+    TEST_ASSERT(dts_subs_are(&topic, NULL, 0u), "registre non vide en fin (sub_count=%u)", (unsigned)topic.sub_count);
     data_topic_free(&topic);
-    snprintf(tc->detail, sizeof(tc->detail), "mode 7 refuse ; abonne remis a zero encore chaine refuse (queue, tete)");
+    snprintf(tc->detail, sizeof(tc->detail), "mode 7 refuse ; abonne remis a zero encore inscrit : slot repris sans doublon, anomalie comptee");
     tc->result = R_PASS;
 }
 
@@ -1411,19 +1449,229 @@ void DT_seq_test_t25_stale_detach(TEST_case_t *tc) {
     data_status_t s2 = data_sub_detach(&old2);
     data_status_t s1 = data_sub_detach(&old1);
     TEST_ASSERT(s2 == DT_OK && s1 == DT_OK && !old1.attached && !old2.attached, "detach des anciens : %d / %d", s2, s1);
-    TEST_ASSERT(dts_list_is(&topic, (data_sub_t *const[]){ &fresh }, 1u),
-                "liste du topic reinitialise abimee (subs=%p, sub_count=%u)", (void *)topic.subs, (unsigned)topic.sub_count);
+    TEST_ASSERT(dts_subs_are(&topic, (data_sub_t *const[]){ &fresh }, 1u),
+                "registre du topic reinitialise abime (sub_count=%u)", (unsigned)topic.sub_count);
     TEST_ASSERT(topic.list_faults == 2u, "list_faults=%u attendu 2", (unsigned)topic.list_faults);
 
     uint32_t v = 7u, out = 0u;
     data_topic_publish(&topic, &v);
     data_status_t s = data_sub_read(&fresh, &out);
     TEST_ASSERT(s == DT_OK && out == 7u, "fresh : s=%d out=%u attendu 7", s, (unsigned)out);
-    TEST_ASSERT(data_sub_detach(&fresh) == DT_OK && topic.subs == NULL && topic.sub_count == 0u,
-                "detach fresh : liste non vide (sub_count=%u)", (unsigned)topic.sub_count);
+    TEST_ASSERT(data_sub_detach(&fresh) == DT_OK && dts_subs_are(&topic, NULL, 0u),
+                "detach fresh : registre non vide (sub_count=%u)", (unsigned)topic.sub_count);
     TEST_ASSERT(topic.list_faults == 2u, "detach normal compte une anomalie (%u)", (unsigned)topic.list_faults);
 
     data_topic_free(&topic);
-    snprintf(tc->detail, sizeof(tc->detail), "detach apres re-init fautive : nouvelle liste intacte, 2 anomalies comptees");
+    snprintf(tc->detail, sizeof(tc->detail), "detach apres re-init fautive : nouveau registre intact, 2 anomalies comptees");
+    tc->result = R_PASS;
+}
+
+/* ========================================================================
+ * T26 – Re-initialisation fautive, detach des anciens dans l'ordre inverse
+ * ======================================================================== */
+void DT_seq_test_t26_stale_detach_reverse(TEST_case_t *tc) {
+    tc->result = R_FAIL;
+
+    uint32_t storage[4];
+    data_topic_t topic;
+    data_topic_init(&topic, storage, sizeof(uint32_t), 4u, CB_OVERWRITE_OLDEST);
+    data_sub_t old1 = {0}, old2 = {0}, fresh = {0}, late = {0};
+    TEST_ASSERT(data_sub_attach(&old1, &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "attach old1");
+    TEST_ASSERT(data_sub_attach(&old2, &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "attach old2");
+
+    /* Erreur d'usage : re-init avec les abonnes encore attaches (il fallait free). */
+    TEST_ASSERT(data_topic_init(&topic, storage, sizeof(uint32_t), 4u, CB_OVERWRITE_OLDEST) == DT_OK, "re-init");
+    TEST_ASSERT(data_sub_attach(&fresh, &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "attach fresh");
+
+    data_status_t s1 = data_sub_detach(&old1);      /* le plus ancien d'abord */
+    data_status_t s2 = data_sub_detach(&old2);
+    TEST_ASSERT(s1 == DT_OK && s2 == DT_OK && !old1.attached && !old2.attached, "detach des anciens : %d / %d", s1, s2);
+    TEST_ASSERT(topic.sub_count == 1u, "sub_count=%u attendu 1 (fresh seul)", (unsigned)topic.sub_count);
+    TEST_ASSERT(topic.list_faults == 2u, "list_faults=%u attendu 2", (unsigned)topic.list_faults);
+
+    /* Le topic doit toujours accepter un nouvel abonne. */
+    data_status_t s = data_sub_attach(&late, &topic, DATA_ATTACH_FROM_NOW);
+    TEST_ASSERT(s == DT_OK && topic.sub_count == 2u, "attache apres detach perimes : s=%d sub_count=%u", s,
+                (unsigned)topic.sub_count);
+
+    uint32_t v = 9u, out1 = 0u, out2 = 0u;
+    data_topic_publish(&topic, &v);
+    data_status_t r1 = data_sub_read(&fresh, &out1);
+    data_status_t r2 = data_sub_read(&late, &out2);
+    TEST_ASSERT(r1 == DT_OK && out1 == 9u && r2 == DT_OK && out2 == 9u, "lectures : fresh %d/%u, late %d/%u",
+                r1, (unsigned)out1, r2, (unsigned)out2);
+    TEST_ASSERT(data_sub_detach(&fresh) == DT_OK && data_sub_detach(&late) == DT_OK && topic.sub_count == 0u,
+                "detach normaux : sub_count=%u", (unsigned)topic.sub_count);
+    TEST_ASSERT(topic.list_faults == 2u, "detach normaux comptent une anomalie (%u)", (unsigned)topic.list_faults);
+
+    data_topic_free(&topic);
+    snprintf(tc->detail, sizeof(tc->detail), "ordre inverse : sub_count exact, attache suivante acceptee, 2 anomalies");
+    tc->result = R_PASS;
+}
+
+/* ========================================================================
+ * T27 – Abonne remis a zero puis rattache a un autre topic
+ * ======================================================================== */
+void DT_seq_test_t27_sub_moved(TEST_case_t *tc) {
+    tc->result = R_FAIL;
+
+    uint32_t store_a[4], store_b[4];
+    data_topic_t ta, tb;
+    data_topic_init(&ta, store_a, sizeof(uint32_t), 4u, CB_OVERWRITE_OLDEST);
+    data_topic_init(&tb, store_b, sizeof(uint32_t), 4u, CB_OVERWRITE_OLDEST);
+    data_sub_t a1 = {0}, a2 = {0}, a3 = {0}, a4 = {0}, b1 = {0};
+    TEST_ASSERT(data_sub_attach(&a1, &ta, DATA_ATTACH_FROM_NOW) == DT_OK &&
+                data_sub_attach(&a2, &ta, DATA_ATTACH_FROM_NOW) == DT_OK &&
+                data_sub_attach(&a3, &ta, DATA_ATTACH_FROM_NOW) == DT_OK &&
+                data_sub_attach(&b1, &tb, DATA_ATTACH_FROM_NOW) == DT_OK, "attaches initiales");
+
+    /* Erreur d'usage : a2 remis a zero sans detach, puis rattache a tb. Son
+       slot dans ta est perime. */
+    memset(&a2, 0, sizeof(a2));
+    TEST_ASSERT(data_sub_attach(&a2, &tb, DATA_ATTACH_FROM_NOW) == DT_OK, "a2 vers tb");
+    TEST_ASSERT(dts_subs_are(&tb, (data_sub_t *const[]){ &b1, &a2 }, 2u), "registre tb != {b1,a2}");
+    const data_sub_t a2_before = a2;
+
+    /* Operations sur ta : le slot perime est libere une fois (anomalie
+       comptee), a2 n'est jamais ecrit au titre de ta, tb n'est pas touche. */
+    uint32_t v = 11u, out = 0u;
+    data_topic_publish(&ta, &v);
+    TEST_ASSERT(data_sub_attach(&a4, &ta, DATA_ATTACH_FROM_NOW) == DT_OK, "attache de a4 sur ta");
+    TEST_ASSERT(dts_subs_are(&ta, (data_sub_t *const[]){ &a1, &a3, &a4 }, 3u), "registre ta != {a1,a3,a4} (sub_count=%u)",
+                (unsigned)ta.sub_count);
+    TEST_ASSERT(ta.list_faults == 1u, "ta : list_faults=%u attendu 1", (unsigned)ta.list_faults);
+    TEST_ASSERT(memcmp(&a2, &a2_before, sizeof(a2)) == 0, "a2 ecrit par une operation sur ta");
+    TEST_ASSERT(tb.list_faults == 0u && dts_subs_are(&tb, (data_sub_t *const[]){ &b1, &a2 }, 2u), "tb modifie par ta");
+
+    /* Chaque abonne lit son propre topic. */
+    TEST_ASSERT(data_sub_read(&a1, &out) == DT_OK && out == 11u, "a1 ne lit pas 11");
+    TEST_ASSERT(data_sub_read(&a3, &out) == DT_OK && out == 11u, "a3 ne lit pas 11");
+    TEST_ASSERT(data_sub_read(&a4, &out) == DT_EMPTY, "a4 (FROM_NOW) lit une donnee anterieure");
+    v = 22u;
+    data_topic_publish(&tb, &v);
+    TEST_ASSERT(data_sub_read(&b1, &out) == DT_OK && out == 22u, "b1 ne lit pas 22");
+    TEST_ASSERT(data_sub_read(&a2, &out) == DT_OK && out == 22u, "a2 ne lit pas 22 sur tb");
+    TEST_ASSERT(data_sub_read(&a1, &out) == DT_EMPTY, "a1 lit une publication de tb");
+    v = 33u;
+    data_topic_publish(&ta, &v);
+    TEST_ASSERT(data_sub_read(&a4, &out) == DT_OK && out == 33u, "a4 ne lit pas 33");
+    TEST_ASSERT(data_sub_read(&a2, &out) == DT_EMPTY, "a2 lit une publication de ta");
+
+    /* free de ta alors que a1, remis a zero, est passe sur tb : a1 n'est pas
+       touche et reste attache a tb ; a3 et a4 sont detaches. */
+    memset(&a1, 0, sizeof(a1));
+    TEST_ASSERT(data_sub_attach(&a1, &tb, DATA_ATTACH_FROM_NOW) == DT_OK, "a1 vers tb");
+    const data_sub_t a1_before = a1;
+    data_topic_free(&ta);
+    TEST_ASSERT(memcmp(&a1, &a1_before, sizeof(a1)) == 0 && a1.attached && a1.topic == &tb, "free de ta a ecrit dans a1");
+    TEST_ASSERT(!a3.attached && !a4.attached, "free de ta n'a pas detache a3 / a4");
+    TEST_ASSERT(ta.list_faults == 2u, "ta : list_faults=%u attendu 2", (unsigned)ta.list_faults);
+    v = 44u;
+    data_topic_publish(&tb, &v);
+    TEST_ASSERT(data_sub_read(&a1, &out) == DT_OK && out == 44u, "a1 ne lit pas 44 sur tb");
+    TEST_ASSERT(data_sub_read(&a2, &out) == DT_OK && out == 44u, "a2 ne lit pas 44 sur tb");
+    TEST_ASSERT(data_sub_read(&b1, &out) == DT_OK && out == 44u, "b1 ne lit pas 44 sur tb");
+
+    TEST_ASSERT(data_sub_detach(&a1) == DT_OK && data_sub_detach(&a2) == DT_OK && data_sub_detach(&b1) == DT_OK, "detach");
+    TEST_ASSERT(dts_subs_are(&tb, NULL, 0u) && tb.list_faults == 0u, "tb : registre non vide ou %u anomalies en fin",
+                (unsigned)tb.list_faults);
+    data_topic_free(&tb);
+    snprintf(tc->detail, sizeof(tc->detail), "slots perimes liberes (attach, free), abonnes deplaces jamais ecrits, tb intact");
+    tc->result = R_PASS;
+}
+
+/* ========================================================================
+ * T28 – Registre plein
+ * ======================================================================== */
+void DT_seq_test_t28_registry_full(TEST_case_t *tc) {
+    tc->result = R_FAIL;
+
+    uint32_t storage[4];
+    data_topic_t topic;
+    data_topic_init(&topic, storage, sizeof(uint32_t), 4u, CB_OVERWRITE_OLDEST);
+    static data_sub_t subs[DATA_TOPIC_MAX_SUBS + 1u];   /* hors pile */
+    memset(subs, 0, sizeof(subs));
+    data_sub_t *const extra = &subs[DATA_TOPIC_MAX_SUBS];
+
+    for (size_t i = 0; i < DATA_TOPIC_MAX_SUBS; i++) {
+        TEST_ASSERT(data_sub_attach(&subs[i], &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "attach %u", (unsigned)i);
+    }
+    TEST_ASSERT(topic.sub_count == DATA_TOPIC_MAX_SUBS, "sub_count=%u", (unsigned)topic.sub_count);
+    data_status_t s = data_sub_attach(extra, &topic, DATA_ATTACH_FROM_NOW);
+    TEST_ASSERT(s == DT_NO_SLOT && !extra->attached && topic.sub_count == DATA_TOPIC_MAX_SUBS,
+                "attache de trop : s=%d attached=%d sub_count=%u", s, extra->attached, (unsigned)topic.sub_count);
+
+    uint32_t v = 7u, out = 0u;
+    data_topic_publish(&topic, &v);
+    for (size_t i = 0; i < DATA_TOPIC_MAX_SUBS; i++) {
+        TEST_ASSERT(data_sub_read(&subs[i], &out) == DT_OK && out == 7u, "abonne %u ne lit pas 7", (unsigned)i);
+    }
+
+    /* Un slot libere par detach est repris. */
+    TEST_ASSERT(data_sub_detach(&subs[3]) == DT_OK, "detach 3");
+    TEST_ASSERT(data_sub_attach(extra, &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "attache apres detach");
+    TEST_ASSERT(data_sub_attach(&subs[3], &topic, DATA_ATTACH_FROM_NOW) == DT_NO_SLOT, "plein de nouveau : DT_NO_SLOT attendu");
+
+    /* Un slot perime (abonne remis a zero sans detach) est recupere par une
+       attache quand le registre est plein. */
+    memset(&subs[0], 0, sizeof(subs[0]));
+    s = data_sub_attach(&subs[3], &topic, DATA_ATTACH_FROM_NOW);
+    TEST_ASSERT(s == DT_OK && topic.sub_count == DATA_TOPIC_MAX_SUBS && topic.list_faults == 1u,
+                "recuperation du slot perime : s=%d sub_count=%u list_faults=%u", s, (unsigned)topic.sub_count,
+                (unsigned)topic.list_faults);
+    v = 8u;
+    data_topic_publish(&topic, &v);
+    for (size_t i = 1; i <= DATA_TOPIC_MAX_SUBS; i++) {
+        TEST_ASSERT(data_sub_read(&subs[i], &out) == DT_OK && out == 8u, "abonne %u ne lit pas 8", (unsigned)i);
+    }
+
+    for (size_t i = 1; i <= DATA_TOPIC_MAX_SUBS; i++) {
+        TEST_ASSERT(data_sub_detach(&subs[i]) == DT_OK, "detach final %u", (unsigned)i);
+    }
+    TEST_ASSERT(dts_subs_are(&topic, NULL, 0u), "registre non vide en fin (sub_count=%u)", (unsigned)topic.sub_count);
+    data_topic_free(&topic);
+    snprintf(tc->detail, sizeof(tc->detail), "%u slots : DT_NO_SLOT au-dela, slot libere repris, slot perime recupere",
+             (unsigned)DATA_TOPIC_MAX_SUBS);
+    tc->result = R_PASS;
+}
+
+/* ========================================================================
+ * T29 – Curseur incoherent (repli de pub_seq - last_seq)
+ * ======================================================================== */
+void DT_seq_test_t29_cursor_check(TEST_case_t *tc) {
+    tc->result = R_FAIL;
+
+    uint32_t storage[3];
+    data_topic_t topic;
+    data_topic_init(&topic, storage, sizeof(uint32_t), 3u, CB_OVERWRITE_OLDEST);
+    data_sub_t sub = {0};
+    TEST_ASSERT(data_sub_attach(&sub, &topic, DATA_ATTACH_FROM_NOW) == DT_OK, "attach");
+    dts_publish_range(&topic, 1u, 2u);
+
+    /* 2^32 + 2 publications sans lecture donneraient le meme retard (2) mais
+       un head decale de 2^32 mod 3 = 1 slot : on reproduit ce decalage sur le
+       curseur. Sans controle, read rendrait DT_OK sur un slot faux. */
+    sub.tail = (sub.tail + 2u) % 3u;
+    uint32_t out = 0u;
+    data_status_t s = data_sub_read(&sub, &out);
+    TEST_ASSERT(s == DT_DATA_LOSS && out == 1u, "curseur incoherent : read s=%d out=%u (attendu DT_DATA_LOSS/1)", s, (unsigned)out);
+    s = data_sub_read(&sub, &out);
+    TEST_ASSERT(s == DT_OK && out == 2u, "apres recalage : s=%d out=%u (attendu DT_OK/2)", s, (unsigned)out);
+    TEST_ASSERT(data_sub_read(&sub, &out) == DT_EMPTY, "donnee en trop apres recalage");
+
+    /* Meme chose constatee par peek(idx > 0). */
+    dts_publish_range(&topic, 3u, 4u);              /* stockage : 2, 3, 4 */
+    sub.tail = (sub.tail + 1u) % 3u;
+    s = data_sub_peek(&sub, &out, 1u);
+    TEST_ASSERT(s == DT_DATA_LOSS && out == 3u, "peek(1) curseur incoherent : s=%d out=%u (attendu DT_DATA_LOSS/3)", s, (unsigned)out);
+    for (uint32_t want = 2u; want <= 4u; want++) {
+        s = data_sub_read(&sub, &out);
+        TEST_ASSERT(s == DT_OK && out == want, "apres peek : read s=%d out=%u (attendu DT_OK/%u)", s, (unsigned)out, (unsigned)want);
+    }
+    TEST_ASSERT(data_sub_read(&sub, &out) == DT_EMPTY, "donnee en trop en fin");
+
+    data_sub_detach(&sub);
+    data_topic_free(&topic);
+    snprintf(tc->detail, sizeof(tc->detail), "curseur decale (repli 2^32, cap 3) : DT_DATA_LOSS + recalage, read et peek");
     tc->result = R_PASS;
 }

@@ -38,18 +38,17 @@ extern "C" {
  *     interruption ; attach, detach, sync et wait sont réservés aux tâches.
  *   - Un abonné appartient à une seule tâche : deux tâches ne lisent pas sur
  *     le même data_sub_t.
- *   - Durée de vie : le topic garde l'adresse de chaque abonné attaché. Un
- *     data_sub_t doit être détaché (data_sub_detach) avant que sa mémoire
- *     ne serve à autre chose : variable locale d'une tâche, détacher avant
- *     que le corps ne rende la main. Un abonné oublié dans la liste est lu à
- *     chaque publication. Filets, qui ne remplacent pas le detach :
- *     data_sub_attach refuse un abonné encore chaîné (la liste ne se
- *     referme pas sur elle-même) ; sous RTOS, un abonné dont la mémoire a
- *     été réécrite est reconnu (son sémaphore n'est plus le sien), la
- *     notification s'arrête sur lui au lieu de suivre des pointeurs
- *     quelconques, detach et free n'écrivent jamais dedans, et
- *     topic->list_faults s'incrémente. Les abonnés situés au-delà ne sont
- *     alors plus réveillés (leurs données restent lisibles).
+ *   - Durée de vie : le topic garde l'adresse de chaque abonné attaché dans
+ *     un registre de DATA_TOPIC_MAX_SUBS slots. Un data_sub_t doit être
+ *     détaché (data_sub_detach) avant que sa mémoire ne serve à autre chose :
+ *     variable locale d'une tâche, détacher avant que le corps ne rende la
+ *     main. Filets, qui ne remplacent pas le detach : un slot dont l'abonné
+ *     n'est plus validement attaché à ce topic (remis à zéro, mémoire
+ *     réutilisée, rattaché ailleurs ; sous RTOS, sémaphore qui n'est plus le
+ *     sien) est ignoré par la notification puis libéré, sans jamais écrire
+ *     dans l'abonné, et compté une fois dans topic->list_faults. Les autres
+ *     abonnés n'en sont pas affectés. Un abonné remis à zéro encore inscrit
+ *     qui se ré-attache reprend son slot (anomalie comptée aussi).
  *   - Les accès "_ptr" (zéro copie) rendent une adresse dans le stockage du
  *     topic. Son contenu reste valide tant que le publieur n'a pas fait le
  *     tour du buffer, soit au moins (capacity - num_to_read) publications.
@@ -65,11 +64,28 @@ extern "C" {
  *   Avant osKernelStart(), init, attach et publish sont permis (depuis
  *   setup_pre_kernel() par exemple) : la publication ne notifie personne,
  *   aucune tâche ne pouvant attendre, et le premier wait la voit.
+ *
+ *   Limites
+ *   Le retard d'un abonné est pub_seq - last_seq, sur 32 bits. Un abonné qui
+ *   ne lit rien pendant 2^32 publications ou plus (49,7 jours à 1 kHz,
+ *   2,5 jours à 20 kHz) voit ce retard faire un tour. La lecture vérifie que
+ *   son curseur est cohérent avec ce retard, et signale DT_DATA_LOSS sinon.
+ *   Ce contrôle ne voit rien quand la capacité divise 2^32 (puissance de 2) :
+ *   l'abonné lit alors les données les plus récentes, dans l'ordre, mais
+ *   sans DT_DATA_LOSS pour la perte.
  * -------------------------------------------------------------------------- */
 
 /* --------------------------------------------------------------------------
  *   Types et constantes
  * -------------------------------------------------------------------------- */
+
+/** Nombre maximal d'abonnés attachés en même temps à un topic (taille du
+    registre ; la notification parcourt tous les slots). Il fixe la taille de
+    data_topic_t : le redéfinir pour tout le build (option -D), jamais dans un
+    seul fichier. */
+#ifndef DATA_TOPIC_MAX_SUBS
+#define DATA_TOPIC_MAX_SUBS  8u
+#endif
 
 /**
  * @brief Position de départ d’un abonné (attache) ou de recalage (sync).
@@ -86,7 +102,8 @@ typedef enum {
     DT_OK = 0,          /**< Opération réussie. */
     DT_EMPTY,           /**< Aucune donnée disponible à la lecture. */
     DT_DATA_LOSS,       /**< Donnée lue, mais l’abonné avait été dépassé : des données ont été perdues avant elle. */
-    DT_BAD_ARG          /**< Paramètre invalide, topic non initialisé ou abonné non attaché. */
+    DT_BAD_ARG,         /**< Paramètre invalide, topic non initialisé ou abonné non attaché. */
+    DT_NO_SLOT          /**< Attache refusée : les DATA_TOPIC_MAX_SUBS slots du topic sont pris. */
 } data_status_t;
 
 /* --------------------------------------------------------------------------
@@ -100,15 +117,15 @@ typedef enum {
  * des publications ainsi que le suivi des abonnés.
  * Il ne possède pas de mémoire propre pour les données.
  *
- * Champs internes : `pub_seq` et `sub_count` peuvent être lus (un mot,
- * lecture atomique), le reste ne doit pas être modifié hors de l’API.
+ * Champs internes : `pub_seq`, `sub_count` et `list_faults` peuvent être lus
+ * (un mot, lecture atomique), le reste ne doit pas être modifié hors de l’API.
  */
 typedef struct data_topic_t {
-    circular_buffer_t    cb;        /**< Buffer circulaire associé. */
-    uint32_t             pub_seq;   /**< Compteur global de publications. */
-    size_t               sub_count; /**< Nombre d’abonnés actuellement attachés. */
-    struct data_sub_t   *subs;      /**< Liste chainée des abonnés. */
-    uint32_t             list_faults; /**< Abonnés incohérents rencontrés dans la liste (voir "Durée de vie") : 0 en usage normal, à remonter en télémétrie. */
+    circular_buffer_t    cb;          /**< Buffer circulaire associé. */
+    uint32_t             pub_seq;     /**< Compteur global de publications. */
+    size_t               sub_count;   /**< Nombre de slots occupés du registre. */
+    struct data_sub_t   *subs[DATA_TOPIC_MAX_SUBS]; /**< Registre des abonnés (NULL = slot libre). */
+    uint32_t             list_faults; /**< Slots d'abonnés incohérents libérés, et detach d'abonnés absents du registre (voir "Durée de vie") : 0 en usage normal, à remonter en télémétrie. */
 } data_topic_t;
 
 /**
@@ -124,8 +141,6 @@ struct data_sub_t {
     size_t               tail;      /**< Slot de la prochaine donnée à lire. */
     uint32_t             last_seq;  /**< Nombre de publications déjà consommées (comparé à pub_seq). */
     int                  attached;  /**< 0 = détaché, 1 = attaché. */
-    struct data_sub_t   *prev;      /**< Pointeur vers l’abonné précédent (liste chainée). */
-    struct data_sub_t   *next;      /**< Pointeur vers l’abonné suivant (liste chainée). */
 #if (APEX_CFG_SCHED_RTOS == 1)
     StaticSemaphore_t    sem_cm;    /**< Mémoire statique du sémaphore de notification. */
     SemaphoreHandle_t    sem;       /**< Sémaphore binaire, NULL hors attache. */
@@ -188,10 +203,9 @@ data_status_t data_topic_publish(data_topic_t *topic, const void *elem);
  * @param topic Topic auquel s’attacher.
  * @param mode  Mode d’attache (FROM_NOW ou FROM_OLDEST).
  * @return DT_OK (y compris si déjà attaché à ce même topic, la position
- *         n’est alors pas modifiée), DT_BAD_ARG sinon (mode invalide, déjà
- *         attaché à un autre topic, topic non initialisé, appel depuis une
- *         ISR, ou abonné remis à zéro alors qu'il figure encore dans la liste
- *         du topic : voir "Durée de vie" en tête de fichier).
+ *         n’est alors pas modifiée), DT_NO_SLOT (registre plein), DT_BAD_ARG
+ *         sinon (mode invalide, déjà attaché à un autre topic, topic non
+ *         initialisé, appel depuis une ISR).
  */
 data_status_t data_sub_attach(data_sub_t *sub,
                               data_topic_t *topic,
@@ -202,6 +216,9 @@ data_status_t data_sub_attach(data_sub_t *sub,
  *
  * Aucune tâche ne doit être bloquée dans data_sub_wait_for_data sur cet
  * abonné (en pratique : c’est sa tâche propriétaire qui le détache).
+ * Un abonné attaché mais absent du registre (topic ré-initialisé sans
+ * data_topic_free) est remis à zéro quand même : DT_OK, et list_faults
+ * compte l'anomalie.
  */
 data_status_t data_sub_detach(data_sub_t *sub);
 
@@ -225,9 +242,9 @@ data_status_t data_sub_sync(data_sub_t *sub, data_attach_mode_t mode);
 /**
  * @brief Nombre de publications non lues par un abonné.
  *
- * Valeur brute pub_seq - last_seq : si elle dépasse la capacité du topic,
- * l’abonné a été dépassé et sa prochaine lecture renverra DT_DATA_LOSS.
- * Renvoie 0 pour un abonné NULL ou détaché.
+ * Valeur brute pub_seq - last_seq, modulo 2^32 (voir "Limites") : si elle
+ * dépasse la capacité du topic, l’abonné a été dépassé et sa prochaine
+ * lecture renverra DT_DATA_LOSS. Renvoie 0 pour un abonné NULL ou détaché.
  */
 uint32_t data_sub_num_to_read(const data_sub_t *sub);
 

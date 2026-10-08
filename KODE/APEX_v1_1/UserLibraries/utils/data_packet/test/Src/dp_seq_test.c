@@ -19,6 +19,7 @@ TEST_case_table_t DP_seq_test_cases[DP_seq_test_N_TESTS] = {
     { .case_info = { .name = "T3 Copie, champs a 0" }, .func = DP_seq_test_t3_copy_publish    },
     { .case_info = { .name = "T4 Source liberee"    }, .func = DP_seq_test_t4_source_freed    },
     { .case_info = { .name = "T5 Concurrence ISR"   }, .func = DP_seq_test_t5_isr_concurrency },
+    { .case_info = { .name = "T6 Rejet borne"       }, .func = DP_seq_test_t6_bounded_discard },
 };
 
 /* ========================================================================
@@ -447,5 +448,56 @@ void DP_seq_test_t5_isr_concurrency(TEST_case_t *tc) {
 
     snprintf(tc->detail, sizeof(tc->detail), "%lu paquets (%lu avec C), %lu relus + %lu par l'ISR : 0 incoherent",
              (unsigned long)built, (unsigned long)with_c, (unsigned long)reads, (unsigned long)dpt_isr_reads);
+    tc->result = R_PASS;
+}
+
+/* ========================================================================
+ * T6 – Rejet borne face a un flot d'echantillons trop vieux
+ * ======================================================================== */
+
+static volatile uint32_t dpt_old_n;
+
+static void dpt_hook_old(void) {
+    dpt_isr_sample.ts = HAL_GetTick() - 10000u;   /* toujours hors fenetre */
+    (void)data_topic_publish(&dpt_c, &dpt_isr_sample);
+    dpt_old_n++;
+}
+
+void DP_seq_test_t6_bounded_discard(TEST_case_t *tc) {
+    tc->result = R_FAIL;
+    dpt_setup(4u);
+    dpt_old_n = 0u;
+    data_topic_t *src[2] = { &dpt_a, &dpt_c };
+    TEST_ASSERT(data_packer_init(&dpt_packer, 1000u, 2u, src, DPT_PKT_CAP, dpt_packets) == DT_OK, "init");
+
+    /* L'ISR publie sur C des echantillons trop vieux plus vite que le packer
+       ne les rejette : sans borne, la boucle de rejet ne rendrait jamais la
+       main (revue du 08/10, N4). Sous RTOS, la
+       notification alourdit l'ISR : cadence reduite. */
+#if (APEX_CFG_SCHED_RTOS == 1)
+    TEST_irq_start(40000u, dpt_hook_old);
+#else
+    TEST_irq_start(100000u, dpt_hook_old);
+#endif
+    uint32_t built = 0u, with_c = 0u, max_ms = 0u;
+    const uint32_t t_start = HAL_GetTick();
+    while ((built < 500u || (HAL_GetTick() - t_start) < 50u) && built < 200000u) {
+        dpt_pub_a(HAL_GetTick(), built + 1u);
+        const uint32_t t0 = HAL_GetTick();
+        if ((data_packer_build_publish(&dpt_packer, t0) & 0x2u) != 0u) with_c++;
+        const uint32_t dt = HAL_GetTick() - t0;
+        if (dt > max_ms) max_ms = dt;
+        built++;
+    }
+    const uint32_t total_ms = HAL_GetTick() - t_start;
+    TEST_irq_stop();
+    const uint32_t published = dpt_old_n;
+    dpt_teardown();
+
+    TEST_ASSERT(published > 1000u, "ISR TIM5 : %lu publications seulement", (unsigned long)published);
+    TEST_ASSERT(with_c == 0u, "%lu paquets avec C alors que tout C est trop vieux", (unsigned long)with_c);
+    TEST_ASSERT(max_ms <= 2u, "un appel a dure %lu ms", (unsigned long)max_ms);
+    snprintf(tc->detail, sizeof(tc->detail), "%lu paquets en %lu ms face a %lu echantillons trop vieux (ISR), appel <= %lu ms",
+             (unsigned long)built, (unsigned long)total_ms, (unsigned long)published, (unsigned long)max_ms);
     tc->result = R_PASS;
 }

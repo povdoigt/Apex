@@ -16,9 +16,9 @@ set(CMAKE_APEX_PROJECT_PATH
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/missions/RTOS_LAUNCH_DETECTION
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/example_flash_selftest
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_PERF
-    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_USB
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_BMI088_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_DT_USB
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_DT_STRESS
+    # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_DT_STRESS
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_SCHED_USB
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_PERF
     # ${CMAKE_CURRENT_SOURCE_DIR}/../../UserProjects/tests/rtos/RTOS_W25Q_USB

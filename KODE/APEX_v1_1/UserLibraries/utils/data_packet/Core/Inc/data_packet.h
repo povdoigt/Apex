@@ -110,6 +110,10 @@ void data_packer_free(data_packer_t *packer);
 
 /**
  * @brief Construit le paquet de l'instant `current_time_ms` et le publie.
+ *
+ * Durée bornée : au plus `capacity` échantillons trop vieux sont rejetés par
+ * source et par appel, même si leur publieur en produit plus vite.
+ *
  * @return Les flags du paquet publié (bit i : topic i présent), 0 si le
  *         packer n'est pas initialisé.
  */

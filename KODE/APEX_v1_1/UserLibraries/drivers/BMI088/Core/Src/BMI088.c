@@ -79,7 +79,9 @@ float BMI088_DecodeTemp(const uint8_t raw[2]) {
 }
 
 void BMI088_DelayUs(uint32_t us) {
-    if ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0u) {
+    /* DWT_CTRL survit au reset systeme mais pas DEMCR (une sonde SWD peut remettre
+       TRCENA a 0) : CYCCNTENA seul laisserait CYCCNT fige et cette boucle sans fin. */
+    if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0u || (DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0u) {
         CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
         DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;
     }

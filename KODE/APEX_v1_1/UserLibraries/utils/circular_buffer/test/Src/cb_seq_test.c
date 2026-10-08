@@ -102,7 +102,7 @@ void CB_seq_test_t1_fifo_order(TEST_case_t *tc) {
         s = cb_push(&cb, &in[i]);
         TEST_ASSERT(s == CB_OK, "push[%d] retourne %d != CB_OK", i, s);
     }
-    TEST_ASSERT(cb.count == 3u, "count=%u != 3 apres 3 push", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 3u, "count=%u != 3 apres 3 push", (unsigned)cb_count(&cb));
 
     uint32_t out;
     for (int i = 0; i < 3; i++) {
@@ -110,7 +110,7 @@ void CB_seq_test_t1_fifo_order(TEST_case_t *tc) {
         TEST_ASSERT(s == CB_OK,       "pop[%d] retourne %d != CB_OK", i, s);
         TEST_ASSERT(out == in[i],     "pop[%d]=%u attendu %u", i, (unsigned)out, (unsigned)in[i]);
     }
-    TEST_ASSERT(cb.count == 0u, "count=%u != 0 apres 3 pop", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 0u, "count=%u != 0 apres 3 pop", (unsigned)cb_count(&cb));
 
     s = cb_free(&cb);
     TEST_ASSERT(s == CB_OK, "cb_free retourne %d != CB_OK", s);
@@ -134,7 +134,7 @@ void CB_seq_test_t2_empty_read(TEST_case_t *tc) {
 
     TEST_ASSERT(s == CB_EMPTY,          "cb_pop sur vide retourne %d != CB_EMPTY", s);
     TEST_ASSERT(out == 0xDEADBEEFu,     "cb_pop ne doit pas ecrire sur out (out=0x%08X)", (unsigned)out);
-    TEST_ASSERT(cb.count == 0u,         "count=%u != 0", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 0u,         "count=%u != 0", (unsigned)cb_count(&cb));
 
     s = cb_free(&cb);
     TEST_ASSERT(s == CB_OK, "cb_free retourne %d != CB_OK", s);
@@ -158,12 +158,12 @@ void CB_seq_test_t3_full_reject(TEST_case_t *tc) {
         s = cb_push(&cb, &i);
         TEST_ASSERT(s == CB_OK, "push #%u retourne %d != CB_OK", (unsigned)i, s);
     }
-    TEST_ASSERT(cb.count == 3u, "count=%u != 3 avant push de trop", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 3u, "count=%u != 3 avant push de trop", (unsigned)cb_count(&cb));
 
     val = 99u;
     s = cb_push(&cb, &val);
     TEST_ASSERT(s == CB_FULL, "4eme push retourne %d != CB_FULL", s);
-    TEST_ASSERT(cb.count == 3u, "count=%u != 3 apres refus", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 3u, "count=%u != 3 apres refus", (unsigned)cb_count(&cb));
 
     /* Verifie que les 3 premiers elements sont intacts */
     for (uint32_t i = 1u; i <= 3u; i++) {
@@ -197,7 +197,7 @@ void CB_seq_test_t4_full_overwrite(TEST_case_t *tc) {
     uint32_t val = 4u;
     s = cb_push(&cb, &val);
     TEST_ASSERT(s == CB_OVERWROTE_OLDEST, "4eme push retourne %d != CB_OVERWROTE_OLDEST", s);
-    TEST_ASSERT(cb.count == 3u, "count=%u != 3 apres overwrite", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 3u, "count=%u != 3 apres overwrite", (unsigned)cb_count(&cb));
 
     /* Apres overwrite de 1 par 4 : FIFO doit etre {2, 3, 4} */
     uint32_t expected[3] = {2u, 3u, 4u};
@@ -226,13 +226,15 @@ void CB_seq_test_t5_reset(TEST_case_t *tc) {
     TEST_ASSERT(s == CB_OK, "cb_init retourne %d != CB_OK", s);
 
     uint32_t val;
-    val = 11u; cb_push(&cb, &val);
-    val = 22u; cb_push(&cb, &val);
-    TEST_ASSERT(cb.count == 2u, "count=%u != 2 avant reset", (unsigned)cb.count);
+    val = 11u; s = cb_push(&cb, &val);
+    TEST_ASSERT(s == CB_OK, "push 11 retourne %d", s);
+    val = 22u; s = cb_push(&cb, &val);
+    TEST_ASSERT(s == CB_OK, "push 22 retourne %d", s);
+    TEST_ASSERT(cb_count(&cb) == 2u, "count=%u != 2 avant reset", (unsigned)cb_count(&cb));
 
     s = cb_reset(&cb);
     TEST_ASSERT(s == CB_OK, "cb_reset retourne %d != CB_OK", s);
-    TEST_ASSERT(cb.count == 0u, "count=%u != 0 apres reset", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 0u, "count=%u != 0 apres reset", (unsigned)cb_count(&cb));
 
     uint32_t out = 0xDEADBEEFu;
     s = cb_pop(&cb, &out);
@@ -278,7 +280,8 @@ void CB_seq_test_t6_peek_absolute(TEST_case_t *tc) {
 
     for (uint32_t i = 0u; i < CAP6; i++) {
         uint32_t v = (i + 1u) * 10u;   /* 10, 20, 30, 40 */
-        cb_push(&cb, &v);
+        s = cb_push(&cb, &v);
+        TEST_ASSERT(s == CB_OK, "push %u retourne %d", (unsigned)v, s);
     }
     /* head == 0 (wrap), tail == 0 : slots physiques [0..3] = {10,20,30,40} */
 
@@ -325,8 +328,8 @@ void CB_seq_test_t6_peek_absolute(TEST_case_t *tc) {
     }
 
     /* --- F) non destructif --- */
-    TEST_ASSERT(cb.count == CAP6, "[F] count=%u != %u apres tous les peek",
-              (unsigned)cb.count, (unsigned)CAP6);
+    TEST_ASSERT(cb_count(&cb) == CAP6, "[F] count=%u != %u apres tous les peek",
+              (unsigned)cb_count(&cb), (unsigned)CAP6);
 
     s = cb_free(&cb);
     TEST_ASSERT(s == CB_OK, "cb_free retourne %d != CB_OK", s);
@@ -372,7 +375,8 @@ void CB_seq_test_t7_peek_relative(TEST_case_t *tc) {
     /* Remplit les 5 slots : storage[i] = (i+1)*10 */
     for (uint32_t i = 0u; i < CAP7; i++) {
         uint32_t v = (i + 1u) * 10u;   /* 10, 20, 30, 40, 50 */
-        cb_push(&cb, &v);
+        s = cb_push(&cb, &v);
+        TEST_ASSERT(s == CB_OK, "push %u retourne %d", (unsigned)v, s);
     }
     /* head=0 (wrap), tail=0. storage[0..4] = {10,20,30,40,50} */
 
@@ -464,8 +468,8 @@ void CB_seq_test_t7_peek_relative(TEST_case_t *tc) {
     }
 
     /* --- K) non destructif --- */
-    TEST_ASSERT(cb.count == CAP7, "[K] count=%u != %u apres tous les peek_relative",
-              (unsigned)cb.count, (unsigned)CAP7);
+    TEST_ASSERT(cb_count(&cb) == CAP7, "[K] count=%u != %u apres tous les peek_relative",
+              (unsigned)cb_count(&cb), (unsigned)CAP7);
 
     s = cb_free(&cb);
     TEST_ASSERT(s == CB_OK, "cb_free retourne %d != CB_OK", s);
@@ -488,24 +492,27 @@ void CB_seq_test_t8_wraparound(TEST_case_t *tc) {
 
     /* Remplit le buffer : slots [0..3] = {1,2,3,4}, head wraps a 0 */
     for (uint32_t i = 1u; i <= 4u; i++) {
-        cb_push(&cb, &i);
+        s = cb_push(&cb, &i);
+        TEST_ASSERT(s == CB_OK, "push %u retourne %d", (unsigned)i, s);
     }
 
     /* Pop 2 elements : tail passe de 0 a 2 */
-    uint32_t out;
-    cb_pop(&cb, &out);
-    TEST_ASSERT(out == 1u, "pop #1 = %u attendu 1", (unsigned)out);
-    cb_pop(&cb, &out);
-    TEST_ASSERT(out == 2u, "pop #2 = %u attendu 2", (unsigned)out);
-    TEST_ASSERT(cb.count == 2u && cb.tail == 2u && cb.head == 0u,
+    uint32_t out = 0u;
+    s = cb_pop(&cb, &out);
+    TEST_ASSERT(s == CB_OK && out == 1u, "pop #1 : s=%d out=%u attendu 1", s, (unsigned)out);
+    s = cb_pop(&cb, &out);
+    TEST_ASSERT(s == CB_OK && out == 2u, "pop #2 : s=%d out=%u attendu 2", s, (unsigned)out);
+    TEST_ASSERT(cb_count(&cb) == 2u && cb.tail == 2u && cb.head == 0u,
               "Etat apres 2 pop: count=%u tail=%u head=%u",
-              (unsigned)cb.count, (unsigned)cb.tail, (unsigned)cb.head);
+              (unsigned)cb_count(&cb), (unsigned)cb.tail, (unsigned)cb.head);
 
     /* Push 5 et 6 : head passe par le slot 0 puis 1 (wrap effectif) */
     uint32_t v5 = 5u, v6 = 6u;
-    cb_push(&cb, &v5);
-    cb_push(&cb, &v6);
-    TEST_ASSERT(cb.count == 4u, "count=%u != 4 apres 2 push supplementaires", (unsigned)cb.count);
+    s = cb_push(&cb, &v5);
+    TEST_ASSERT(s == CB_OK, "push 5 retourne %d", s);
+    s = cb_push(&cb, &v6);
+    TEST_ASSERT(s == CB_OK, "push 6 retourne %d", s);
+    TEST_ASSERT(cb_count(&cb) == 4u, "count=%u != 4 apres 2 push supplementaires", (unsigned)cb_count(&cb));
 
     /* Le FIFO doit sortir {3, 4, 5, 6} */
     uint32_t expected[4] = {3u, 4u, 5u, 6u};
@@ -515,7 +522,7 @@ void CB_seq_test_t8_wraparound(TEST_case_t *tc) {
         TEST_ASSERT(out == expected[i],     "pop[%d]=%u attendu %u", i, (unsigned)out, (unsigned)expected[i]);
     }
 
-    TEST_ASSERT(cb.count == 0u, "count=%u != 0 apres vidange complete", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 0u, "count=%u != 0 apres vidange complete", (unsigned)cb_count(&cb));
 
     s = cb_free(&cb);
     TEST_ASSERT(s == CB_OK, "cb_free retourne %d != CB_OK", s);
@@ -547,7 +554,7 @@ void CB_seq_test_t9_float_elemsize(TEST_case_t *tc) {
         TEST_ASSERT(fabsf(out - in[i]) < 1e-6f,  "pop float[%d]=%.6f attendu %.6f", i, (double)out, (double)in[i]);
     }
 
-    TEST_ASSERT(cb.count == 0u, "count=%u != 0 apres pop complet", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 0u, "count=%u != 0 apres pop complet", (unsigned)cb_count(&cb));
 
     s = cb_free(&cb);
     TEST_ASSERT(s == CB_OK, "cb_free retourne %d != CB_OK", s);
@@ -573,7 +580,7 @@ void CB_seq_test_t10_fill_drain_cycle(TEST_case_t *tc) {
         s = cb_push(&cb, &i);
         TEST_ASSERT(s == CB_OK, "[C1] push[%u] retourne %d != CB_OK", (unsigned)i, s);
     }
-    TEST_ASSERT(cb.count == CB_TEST_CAP, "[C1] count=%u != %u", (unsigned)cb.count, (unsigned)CB_TEST_CAP);
+    TEST_ASSERT(cb_count(&cb) == CB_TEST_CAP, "[C1] count=%u != %u", (unsigned)cb_count(&cb), (unsigned)CB_TEST_CAP);
 
     for (uint32_t i = 0u; i < CB_TEST_CAP; i++) {
         uint32_t out = 0xFFu;
@@ -581,7 +588,7 @@ void CB_seq_test_t10_fill_drain_cycle(TEST_case_t *tc) {
         TEST_ASSERT(s   == CB_OK, "[C1] pop[%u] retourne %d != CB_OK", (unsigned)i, s);
         TEST_ASSERT(out == i,     "[C1] pop[%u]=%u attendu %u", (unsigned)i, (unsigned)out, (unsigned)i);
     }
-    TEST_ASSERT(cb.count == 0u, "[C1] count=%u != 0 apres vidange", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 0u, "[C1] count=%u != 0 apres vidange", (unsigned)cb_count(&cb));
 
     /* --- Cycle 2 : valeurs 8..15 --- */
     for (uint32_t i = 0u; i < CB_TEST_CAP; i++) {
@@ -597,7 +604,7 @@ void CB_seq_test_t10_fill_drain_cycle(TEST_case_t *tc) {
         TEST_ASSERT(s   == CB_OK,         "[C2] pop[%u] retourne %d != CB_OK", (unsigned)i, s);
         TEST_ASSERT(out == expected,       "[C2] pop[%u]=%u attendu %u", (unsigned)i, (unsigned)out, (unsigned)expected);
     }
-    TEST_ASSERT(cb.count == 0u, "[C2] count=%u != 0 apres vidange", (unsigned)cb.count);
+    TEST_ASSERT(cb_count(&cb) == 0u, "[C2] count=%u != 0 apres vidange", (unsigned)cb_count(&cb));
 
 #undef CB_TEST_CAP
 
@@ -1243,7 +1250,9 @@ void CB_seq_test_t20_isr_push(TEST_case_t *tc) {
     TEST_irq_start(20000u, cbt_hook_push_u32);
     const uint32_t t_end = HAL_GetTick() + 300u;
     while ((int32_t)(HAL_GetTick() - t_end) < 0) {
-        while (cb_pop(&cbt_isr_cb, &v) == CB_OK) {
+        /* Vidange bornee : un count corrompu (mutant sans verrou) ne doit pas
+           faire boucler le test indefiniment. Jamais atteinte sinon. */
+        for (uint32_t k = 0u; k < 2u * CBT_ISR_CAP && cb_pop(&cbt_isr_cb, &v) == CB_OK; k++) {
             if (v < next) bad++;                    /* dupliquee ou desordonnee */
             else          gaps += v - next;         /* refusee par l'ISR        */
             next = v + 1u;
@@ -1263,11 +1272,15 @@ void CB_seq_test_t20_isr_push(TEST_case_t *tc) {
     }
     TEST_irq_stop();
 
-    while (cb_pop(&cbt_isr_cb, &v) == CB_OK) {
+    for (uint32_t drained = 0u; cb_pop(&cbt_isr_cb, &v) == CB_OK; ) {
         if (v < next) bad++;
         else          gaps += v - next;
         next = v + 1u;
         popped++;
+        if (++drained > CBT_ISR_CAP) {           /* plus d'elements que de slots */
+            incoherent++;
+            break;
+        }
     }
 
     const uint32_t pushed   = cbt_isr_n;

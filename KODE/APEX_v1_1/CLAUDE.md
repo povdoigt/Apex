@@ -19,7 +19,7 @@ STM32_Programmer_CLI --connect port=swd --download build/Debug/APEX_v1_0.elf -ha
 ```
 
 - The `Release` preset is also available. In VS Code, the STM32Cube extension wraps CMake as `cube-cmake`. Use these tasks from `.vscode/tasks.json`: **CMake: clean rebuild**, **CubeProg: Flash project (SWD)** and **Build + Flash**.
-- There is no host-side unit-test runner. All tests run **on target**, and their results are printed over USB CDC (see Tests below).
+- All tests run **on target**, and their results are printed over USB CDC (see Tests below). The only host-side runner is [tools/data_core_audit/host/build.sh](tools/data_core_audit/host/build.sh): it runs the data-core sequential suites with gcc. The TIM5 interrupt cases always fail there.
 
 ## Selecting what gets built (most important concept)
 
@@ -59,7 +59,7 @@ Naming: `SEQ_*` projects use the bare-metal super-loop, and `RTOS_*` projects us
   - Spawn with `<name>_spawn(&args, &(task_attr_t){ .priority, .ret, .join_bit })`, then call `task_join(...)`. Join bits 1..30 belong to the joiner. Slots are created lazily, then parked and reused. Call these from thread context only, never from an ISR.
 - **SPI under RTOS** goes through the DMA + per-bus semaphore wrappers in [Core/Src/spi.c](Core/Src/spi.c) / [Core/Inc/spi.h](Core/Inc/spi.h): `SPI_Begin_DMA_RTOS` (takes the bus and asserts CS) → `SPI_*_DMA_RTOS` → `SPI_End_DMA_RTOS`. Don't call the HAL SPI functions directly from tasks.
 - For inter-task data, use `data_topic` (pub/sub ring with per-subscriber cursors and `DT_DATA_LOSS` signalling). Read its header doc. Three rules matter most:
-  - A `data_sub_t` must be detached before its memory is reused. A task-local subscriber is detached before the task body returns. The topic keeps its address, and `topic->list_faults` counts subscribers found corrupted.
+  - A `data_sub_t` must be detached before its memory is reused. A task-local subscriber is detached before the task body returns. The topic keeps its address in a fixed registry of `DATA_TOPIC_MAX_SUBS` (8) slots. A 9th attach returns `DT_NO_SLOT`. A slot whose subscriber is no longer validly attached is skipped, freed and counted in `topic->list_faults` (0 in correct use, report it in telemetry). The other subscribers are unaffected.
   - Publishing from an ISR requires an NVIC priority numerically ≥ `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY` (5). Publishing before `osKernelStart()` is allowed.
   - The `_ptr` (zero-copy) reads are only safe when the publisher cannot run during the read. Otherwise use the copying `read` / `peek`.
 
@@ -83,7 +83,18 @@ The on-target test harness is in [UserLibraries/utils/test/Core/Inc/test.h](User
   - `SEQ_CB_USB`, `SEQ_DT_USB` and `SEQ_DP_USB` run the sequential suites.
   - `RTOS_DT_USB` runs the RTOS suite and replays all three sequential suites under RTOS.
   - `RTOS_DT_STRESS` runs every suite ×50, then a 10-min mission-like endurance, then DWT critical-section timing. Its report ends with `END_OF_REPORT`.
-  - When changing a locking path, re-check that the concurrency cases still fail with `cb_critical_enter/exit` emptied (mutation).
+  - When changing a locking path, re-check that the concurrency cases still fail with `cb_critical_enter/exit` emptied (mutation): `tools/data_core_audit/run_mutant.sh <PROJECT> <timeout_s> <log>`. Guards of the subscriber registry and the cursor check are mutation-tested on host by `tools/data_core_audit/host/mutate_registry.py`. Flash and capture with `tools/data_core_audit/run_target.sh` (see `tools/data_core_audit/PROGRESS.md`).
+
+### Running a project on the board yourself (agents)
+
+An agent can build, flash and read any project's report with no human in the loop. Full documentation, pitfalls and the hang-debugging recipe are in [tools/README.md](tools/README.md). Read it before the first run. The essentials:
+
+- `bash tools/data_core_audit/run_target.sh <PROJECT> <timeout_s> <YYYY-MM-DD_PROJECT[_variant]> [--no-build]`, run from the repo root in Git Bash. It selects the project, builds **Debug** into `build/audit` (never `build/Debug`), flashes over SWD, resets with COM3 already open, and saves the report to `tools/data_core_audit/logs/<name>.txt`. Despite the folder name, it works for every project.
+- Set `MARK` to the report's last line. Test suites and `END_OF_REPORT` are matched by default. Benchmarks (`*_PERF`) need `MARK='--- CSV END ---'`.
+- Exit code 0 only means a report was captured. Read it for `FAIL` / `ECHEC`. Exit 1 = build or flash error (see `tools/data_core_audit/tmp/`), exit 2 = timeout.
+- The script **rewrites the project selection** in `cmake/stm32cubemx/CMakeLists.txt`. Restore the user's project with `tools/data_core_audit/select_project.sh <PROJECT>` before finishing.
+- Give the tool call a timeout of about 420 s. `RTOS_DT_STRESS` takes more than 10 min, so run it in the background.
+- If the board hangs or a step fails silently, halt the live core with `STM32_Programmer_CLI -c port=swd mode=hotplug -halt -coreReg PC LR -run`, then map PC with `arm-none-eabi-addr2line -f -e build/audit/APEX_v1_0.elf <PC>`.
 
 ## Conventions
 

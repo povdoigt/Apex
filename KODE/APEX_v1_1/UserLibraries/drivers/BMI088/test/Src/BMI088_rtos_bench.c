@@ -674,9 +674,9 @@ void BMI088_rtos_bench_print(void (*print)(const char *), BMI_STATE init_st) {
 #else
     print("Build : Release (-Os)\r\n");
 #endif
-    snprintf(line, sizeof(line), "SYSCLK %lu MHz, SCK %lu kHz, init capteur : %s\r\n",
+    snprintf(line, sizeof(line), "SYSCLK %lu MHz, SCK %lu kHz, init capteur : %s (code %d)\r\n",
              (unsigned long)(SystemCoreClock / 1000000u), (unsigned long)sck_khz,
-             (init_st == BMI_OK) ? "OK" : "ECHEC");
+             (init_st == BMI_OK) ? "OK" : "ECHEC", (int)init_st);
     print(line);
     if (bench_err.count == 0u) {
         print("Erreurs : aucune\r\n");

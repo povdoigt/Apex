@@ -16,6 +16,7 @@ void setup(void) {
         true,   /* T3  Copy publish, absent = 0     */
         true,   /* T4  Source freed while in use    */
         true,   /* T5  Concurrency with an ISR      */
+        true,   /* T6  Bounded discard vs ISR flood */
     });
 
     /* Execute all tests sequentially and fill the results. */

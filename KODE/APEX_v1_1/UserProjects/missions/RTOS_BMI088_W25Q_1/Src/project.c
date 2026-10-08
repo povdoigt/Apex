@@ -509,6 +509,7 @@ void TASK_SaveData(void *argument) {
 		osEventFlagsWait(w25q_done_id, EVENT_FLAGS_DONE_BIT, osFlagsWaitAll, osWaitForever);
 		if (w25q_state != W25Q_OK) {
 			osSemaphoreRelease(flash_addr_sem_id);
+			data_sub_detach(&sub);   // the topic keeps the address of `sub` (stack): detach before exiting
 			osThreadExit_Cstm();
 		}
 
@@ -518,6 +519,7 @@ void TASK_SaveData(void *argument) {
 	}
 
 	if (args->done_flags) { osEventFlagsSet(args->done_flags, EVENT_FLAGS_DONE_BIT); }
+	data_sub_detach(&sub);   // the topic keeps the address of `sub` (stack): detach before exiting
 	osThreadExit_Cstm();
 }
 

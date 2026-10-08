@@ -4,7 +4,7 @@
 #include "data_topic.h"
 #include "test.h"
 
-#define DT_seq_test_N_TESTS 26
+#define DT_seq_test_N_TESTS 30
 
 extern TEST_case_table_t DT_seq_test_cases[DT_seq_test_N_TESTS];
 
@@ -161,11 +161,11 @@ void DT_seq_test_t16_loss_by_ptr(TEST_case_t *tc);
 void DT_seq_test_t17_peek_beyond_while_lagging(TEST_case_t *tc);
 
 /* ========================================================================
- * T18 – Detach au milieu de la liste des abonnes
- *   4 abonnes ; detach du milieu, de la tete, de la queue : chainage avant
- *   et arriere et sub_count verifies a chaque etape, les restants recoivent
- *   les publications. Puis re-attache dans un autre ordre et 2 detach du
- *   milieu.
+ * T18 – Detach dans n'importe quel slot du registre
+ *   4 abonnes ; detach d'un abonne attache entre d'autres, du dernier
+ *   attache, du premier : registre et sub_count verifies a chaque etape, les
+ *   restants recoivent les publications. Puis re-attache dans un autre ordre
+ *   et 2 detach.
  * ======================================================================== */
 void DT_seq_test_t18_detach_middle(TEST_case_t *tc);
 
@@ -192,10 +192,12 @@ void DT_seq_test_t20_oldest_after_wraps_cap1(TEST_case_t *tc);
 void DT_seq_test_t21_elem_sizes_guards(TEST_case_t *tc);
 
 /* ========================================================================
- * T22 – Refus a l'attache : mode invalide, abonne remis a zero encore chaine
- *   Mode 7 -> DT_BAD_ARG. Un abonne remis a zero sans detach (queue puis
- *   tete de liste) est refuse au lieu de refermer la liste sur elle-meme :
- *   la publication suivante se termine normalement.
+ * T22 – Attache : mode invalide, abonne remis a zero encore inscrit
+ *   Mode 7 -> DT_BAD_ARG. Un abonne remis a zero sans detach : la
+ *   publication atteint toujours les autres ; sa re-attache (FROM_NOW, puis
+ *   FROM_OLDEST pour un second) reprend un slot sans doublon et compte une
+ *   anomalie par abonne. Idem apres un ecrasement partiel (seul `attached`
+ *   remis a zero).
  * ======================================================================== */
 void DT_seq_test_t22_attach_refusals(TEST_case_t *tc);
 
@@ -222,9 +224,47 @@ void DT_seq_test_t24_isr_loss_accounting(TEST_case_t *tc);
  * T25 – Detach apres une re-initialisation fautive du topic
  *   Erreur d'usage : topic reinitialise avec deux abonnes encore attaches,
  *   puis un nouvel abonne s'y attache. Le detach des anciens ne touche pas
- *   la nouvelle liste (ni tete, ni sub_count) et compte 2 anomalies dans
+ *   le nouveau registre (ni slots, ni sub_count) et compte 2 anomalies dans
  *   list_faults ; le nouvel abonne recoit toujours les publications.
  * ======================================================================== */
 void DT_seq_test_t25_stale_detach(TEST_case_t *tc);
+
+/* ========================================================================
+ * T26 – Re-initialisation fautive, detach des anciens dans l'ordre inverse
+ *   Comme T25, mais le plus ancien abonne se detache le premier. sub_count
+ *   reste exact (1), 2 anomalies sont comptees, et le topic accepte encore
+ *   de nouvelles attaches (regression N1 du 08/10/2026 : sub_count tombait
+ *   a 0 et toute attache suivante etait refusee).
+ * ======================================================================== */
+void DT_seq_test_t26_stale_detach_reverse(TEST_case_t *tc);
+
+/* ========================================================================
+ * T27 – Abonne remis a zero puis rattache a un autre topic
+ *   a2 (ta) remis a zero sans detach puis attache a tb. Publication et
+ *   attache sur ta : le slot perime est libere une seule fois (list_faults
+ *   1), a2 n'est jamais ecrit au titre de ta, le registre de tb n'est pas
+ *   touche ; chaque abonne ne lit que son topic. Puis a1 remis a zero passe
+ *   sur tb et ta est libere : a1 n'est pas touche, a3/a4 sont detaches.
+ * ======================================================================== */
+void DT_seq_test_t27_sub_moved(TEST_case_t *tc);
+
+/* ========================================================================
+ * T28 – Registre plein
+ *   DATA_TOPIC_MAX_SUBS attaches, la suivante rend DT_NO_SLOT sans rien
+ *   modifier ; un slot libere par detach est repris ; registre plein avec
+ *   un slot perime : l'attache le recupere (1 anomalie) ; tous les inscrits
+ *   lisent chaque publication.
+ * ======================================================================== */
+void DT_seq_test_t28_registry_full(TEST_case_t *tc);
+
+/* ========================================================================
+ * T29 – Curseur incoherent (repli de pub_seq - last_seq, revue du 08/10, N3)
+ *   Capacite 3. Un abonne qui ne lit rien pendant 2^32 + 2 publications a
+ *   le meme retard (2) qu'apres 2 publications, mais un curseur decale de
+ *   2^32 mod 3 = 1 slot : on reproduit ce decalage. read, puis peek(1),
+ *   rendent DT_DATA_LOSS avec la plus ancienne donnee, et les lectures
+ *   suivantes sont exactes.
+ * ======================================================================== */
+void DT_seq_test_t29_cursor_check(TEST_case_t *tc);
 
 #endif /* DT_SEQ_TEST_H */

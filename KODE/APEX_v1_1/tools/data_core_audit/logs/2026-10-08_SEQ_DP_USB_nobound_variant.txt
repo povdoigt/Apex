@@ -1,0 +1,14 @@
+Preuve rouge N4 (2026-10-08) : SEQ_DP_USB compile avec data_packet.c SANS la borne de rejet
+(ligne "if (discarded >= limit) return PACKER_EMPTY;" remplacee par "(void)limit;"), puis restaure.
+
+Resultat : aucun rapport USB en 90 s (### TIMEOUT). Le firmware ne sort jamais de DP T6.
+Echantillons de PC (SWD, halt/run successifs) :
+  memcpy <- cb_push (circular_buffer.c:99)   [ISR TIM5 qui publie sur la source C]
+  cb_next
+  memcpy
+  cb_critical_enter
+  data_packer_check                          [boucle de rejet]
+=> livelock : l'ISR (100 kHz) publie des echantillons trop vieux plus vite que data_packer_check
+   ne les rejette ; data_packer_build_publish ne rend jamais la main.
+Avec la borne (code livre) : DP T6 PASS, 500 paquets en 242 ms, appel <= 1 ms
+(logs/2026-10-08_SEQ_DP_USB.txt).

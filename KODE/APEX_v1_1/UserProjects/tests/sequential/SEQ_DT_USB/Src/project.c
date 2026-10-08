@@ -32,10 +32,14 @@ void setup(void) {
         true,   /* T19 pub_seq wrap-around          */
         true,   /* T20 OLDEST after wraps, cap 1    */
         true,   /* T21 Elem sizes + guards          */
-        true,   /* T22 Attach refusals              */
+        true,   /* T22 Attach: bad mode, stale slot */
         true,   /* T23 ISR publisher, torn read     */
         true,   /* T24 ISR publisher, loss count    */
         true,   /* T25 Detach after faulty re-init  */
+        true,   /* T26 Same, reverse detach order   */
+        true,   /* T27 Subscriber moved elsewhere   */
+        true,   /* T28 Registry full                */
+        true,   /* T29 Inconsistent cursor (2^32)   */
     });
 
     /* Execute all tests sequentially and fill the results. */

@@ -307,12 +307,14 @@ static bool str_topic_ok(const data_topic_t *t, uint32_t published, size_t subs_
     bool ok = (cb->count <= cb->capacity) &&
               ((cb->count == calc) || (cb->count == cb->capacity && calc == 0u)) &&
               (t->pub_seq == published) &&
-              (t->sub_count >= subs_min) && (t->sub_count <= subs_max);
+              (t->sub_count >= subs_min) && (t->sub_count <= subs_max) &&
+              (t->list_faults == 0u);
     size_t n = 0u;
-    const data_sub_t *prev = NULL;
-    for (const data_sub_t *p = t->subs; p != NULL && n <= t->sub_count; p = p->next, n++) {
-        if (p->prev != prev || p->topic != t || !p->attached) ok = false;
-        prev = p;
+    for (size_t i = 0u; i < DATA_TOPIC_MAX_SUBS; i++) {
+        const data_sub_t *p = t->subs[i];
+        if (p == NULL) continue;
+        n++;
+        if (p->topic != t || !p->attached) ok = false;
     }
     if (n != t->sub_count) ok = false;
     cb_critical_exit(c);
